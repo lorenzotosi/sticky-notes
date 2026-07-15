@@ -30,7 +30,7 @@ tasks.register("verifyLicense") {
     description = "Checks SPDX headers in source and configuration files."
     val checkedFiles = fileTree(projectDir) {
         include("**/*.kt", "**/*.java", "**/*.kts", "**/*.js", "**/*.vue", "**/*.md", "**/*.yml", "**/*.yaml", "**/*.dockerignore", "Dockerfile*")
-        exclude("**/build/**", "**/node_modules/**")
+        exclude("**/build/**", "**/node_modules/**", "**/dist/**")
     }
     inputs.files(checkedFiles)
     doLast {
