@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Lorenzo Tosi
+
+.gradle/
+.gradle-user-home/
+.kotlin/
+**/build/
+**/*.class
+
+# Node/Vite
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+
+# Local environment and logs
+.env
+.env.*
+!.env.example
+*.log
+hs_err_pid*
+
+# IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# Operating systems
+.DS_Store
+Thumbs.db

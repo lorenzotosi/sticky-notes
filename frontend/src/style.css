@@ -1,0 +1,8 @@
+/* SPDX-License-Identifier: MIT */
+/* SPDX-FileCopyrightText: 2026 Lorenzo Tosi */
+
+body { background: #f7f4ed; font-family: system-ui, sans-serif; margin: 0; }
+main { margin: 3rem auto; max-width: 42rem; padding: 0 1rem; }
+form, article { background: #fff9a8; box-shadow: 3px 4px 10px #0002; padding: 1rem; }
+textarea { box-sizing: border-box; display: block; height: 6rem; margin: .5rem 0; width: 100%; }
+section { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); margin-top: 2rem; }
