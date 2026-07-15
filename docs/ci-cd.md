@@ -3,6 +3,6 @@
 
 # CI/CD
 
-Every pull request runs `./gradlew fullBuild verifyLicense`. Pull request titles follow Conventional Commits and are checked before merge. Branch protection must require both workflows and squash merges.
+Every pull request runs commit validation and `./gradlew fullBuild verifyLicense`. Pull request titles follow Conventional Commits and are checked before merge.
 
-Semantic release will run from `main`: the squash-merge title determines the next version and creates the GitHub release. Add the `NPM_TOKEN` repository secret before enabling package publication.
+After a successful push to `main`, semantic-release derives the next version from squash-merge titles and creates the GitHub release. It uses the workflow `GITHUB_TOKEN`; no repository secret is required. The same push publishes the Markdown documentation through GitHub Pages.
