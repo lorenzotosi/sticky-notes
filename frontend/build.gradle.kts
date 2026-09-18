@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Lorenzo Tosi
 
-val npm = providers.environmentVariable("NPM_EXECUTABLE").orElse("npm")
+val defaultNpmExecutable =
+    if (System.getProperty("os.name").lowercase().contains("win")) {
+        "npm.cmd"
+    } else {
+        "npm"
+    }
+val npm = providers.environmentVariable("NPM_EXECUTABLE").orElse(defaultNpmExecutable)
 
 tasks.register<Exec>("frontendInstall") {
     group = "frontend"
