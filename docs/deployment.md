@@ -3,6 +3,6 @@
 
 # Deployment
 
-The first deployment target is Docker Compose: one container for the frontend and one for the Java API. Database persistence is deliberately deferred until note persistence is introduced.
+The current continuous-delivery targets are GitHub Releases for version metadata and GitHub Pages for project documentation. Application deliverables are retained as CI artifacts but are not deployed automatically.
 
-The CI pipeline builds the same artifacts used locally; credentials for registries or hosting are GitHub Actions secrets, never repository files.
+The planned application deployment target is Docker Compose: one container for the frontend and one for the Java API. Database persistence is deliberately deferred until note persistence is introduced. Future registry or hosting credentials will use GitHub Actions secrets, never repository files.
