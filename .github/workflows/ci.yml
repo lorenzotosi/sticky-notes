@@ -24,7 +24,6 @@ jobs:
       issues: write
       pull-requests: write
     uses: ./.github/workflows/release.yml
-    secrets: inherit
 
   docs:
     needs: quality
