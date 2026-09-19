@@ -12,8 +12,8 @@ val npm = providers.environmentVariable("NPM_EXECUTABLE").orElse(defaultNpmExecu
 tasks.register<Exec>("frontendInstall") {
     group = "frontend"
     workingDir = projectDir
-    commandLine(npm.get(), "install")
-    inputs.file("package.json")
+    commandLine(npm.get(), "ci")
+    inputs.files("package.json", "package-lock.json")
     outputs.dir("node_modules")
 }
 
