@@ -8,5 +8,7 @@
 - [Glossary](glossary.md)
 - [UI & Interaction Design](ux.md)
 - [Architecture](architecture.md)
+    - [ADR 001: Board Aggregate](adr/001-board-aggregate.md)
+    - [ADR 002: Local Scope](adr/002-local-scope.md)
 - [CI/CD](ci-cd.md)
 - [Deployment](deployment.md)
