@@ -4,8 +4,8 @@
 # Initial Project Audit and Baseline Gaps
 
 ## 1. Baseline Context
-- **Starting Commit**: `ecfb281bbf7b18b98b6c53c159bbb31186c434be`
-- **Initial Tag**: `v1.0.0` (present in repository history; must remain immutable)
+- **Starting Commit**: `ecfb281bbf7b18b98b6c53c159bbb31186c434be` 
+- **Initial Tag**: `v0.0.1` (present in repository history; must remain immutable)
 - **Local Working Tree**: Untracked root `package-lock.json` detected and preserved for subsequent dependency locking in task T008.
 
 ---

@@ -4,6 +4,8 @@
 # Sticky Notes documentation
 
 - [Initial Audit](initial-audit.md)
+- [Requirements](requirements.md)
+- [Glossary](glossary.md)
 - [Architecture](architecture.md)
 - [CI/CD](ci-cd.md)
 - [Deployment](deployment.md)
