@@ -1,0 +1,517 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Lorenzo Tosi
+
+openapi: 3.0.3
+info:
+  title: Sticky Notes Kanban API
+  description: REST API contract for the Sticky Notes collaborative Kanban board.
+  version: 1.0.0
+servers:
+  - url: /api
+    description: Relative API root behind web reverse proxy
+
+paths:
+  /board:
+    get:
+      summary: Retrieve current board snapshot
+      operationId: getBoard
+      responses:
+        '200':
+          description: Canonical board snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardSnapshot'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /board/wip-limit:
+    put:
+      summary: Update DOING column WIP limit
+      operationId: updateWipLimit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetWipLimitRequest'
+      responses:
+        '200':
+          description: Board snapshot with updated WIP limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardSnapshot'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /board/notes:
+    post:
+      summary: Create a new note
+      operationId: createNote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNoteRequest'
+      responses:
+        '201':
+          description: Note created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateNoteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /board/notes/{id}:
+    patch:
+      summary: Update note content and/or color
+      operationId: updateNote
+      parameters:
+        - $ref: '#/components/parameters/NoteIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNoteRequest'
+      responses:
+        '200':
+          description: Updated board snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardSnapshot'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      summary: Delete a note
+      operationId: deleteNote
+      parameters:
+        - $ref: '#/components/parameters/NoteIdPath'
+        - name: expectedRevision
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        '200':
+          description: Board snapshot with note removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardSnapshot'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /board/notes/{id}/move:
+    post:
+      summary: Move or reorder a note
+      operationId: moveNote
+      parameters:
+        - $ref: '#/components/parameters/NoteIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoveNoteRequest'
+      responses:
+        '200':
+          description: Board snapshot after movement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardSnapshot'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /board/notes/{id}/block:
+    put:
+      summary: Block a note with reason
+      operationId: blockNote
+      parameters:
+        - $ref: '#/components/parameters/NoteIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BlockNoteRequest'
+      responses:
+        '200':
+          description: Board snapshot with blocked note
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardSnapshot'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      summary: Unblock a note
+      operationId: unblockNote
+      parameters:
+        - $ref: '#/components/parameters/NoteIdPath'
+        - name: expectedRevision
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        '200':
+          description: Board snapshot with unblocked note
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardSnapshot'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /board/notes/{id}/checklist:
+    post:
+      summary: Add a checklist item to a note
+      operationId: addChecklistItem
+      parameters:
+        - $ref: '#/components/parameters/NoteIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddChecklistItemRequest'
+      responses:
+        '201':
+          description: Checklist item added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddChecklistItemResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /board/notes/{id}/checklist/{itemId}:
+    patch:
+      summary: Update checklist item label or completion status
+      operationId: updateChecklistItem
+      parameters:
+        - $ref: '#/components/parameters/NoteIdPath'
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateChecklistItemRequest'
+      responses:
+        '200':
+          description: Board snapshot with updated item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardSnapshot'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      summary: Delete checklist item
+      operationId: deleteChecklistItem
+      parameters:
+        - $ref: '#/components/parameters/NoteIdPath'
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: expectedRevision
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        '200':
+          description: Board snapshot with item removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardSnapshot'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+components:
+  parameters:
+    NoteIdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+
+  schemas:
+    NoteStatus:
+      type: string
+      enum: [TODO, DOING, DONE]
+
+    NoteColor:
+      type: string
+      enum: [YELLOW, BLUE, GREEN, PINK]
+
+    ChecklistItemSnapshot:
+      type: object
+      required: [id, label, completed]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+          minLength: 1
+          maxLength: 120
+        completed:
+          type: boolean
+
+    NoteSnapshot:
+      type: object
+      required: [id, content, color, status, blockedReason, checklist]
+      properties:
+        id:
+          type: string
+        content:
+          type: string
+          minLength: 1
+          maxLength: 500
+        color:
+          $ref: '#/components/schemas/NoteColor'
+        status:
+          $ref: '#/components/schemas/NoteStatus'
+        blockedReason:
+          type: string
+          nullable: true
+          maxLength: 200
+        checklist:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/ChecklistItemSnapshot'
+
+    BoardSnapshot:
+      type: object
+      required: [id, schemaVersion, revision, wipLimit, notes]
+      properties:
+        id:
+          type: string
+          example: main
+        schemaVersion:
+          type: integer
+          example: 1
+        revision:
+          type: integer
+          minimum: 0
+          example: 0
+        wipLimit:
+          type: integer
+          minimum: 1
+          maximum: 20
+          example: 3
+        notes:
+          type: array
+          maxItems: 200
+          items:
+            $ref: '#/components/schemas/NoteSnapshot'
+
+    CreateNoteRequest:
+      type: object
+      required: [content, expectedRevision]
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 500
+        color:
+          $ref: '#/components/schemas/NoteColor'
+          default: YELLOW
+        expectedRevision:
+          type: integer
+          minimum: 0
+
+    CreateNoteResponse:
+      type: object
+      required: [board, createdNoteId]
+      properties:
+        board:
+          $ref: '#/components/schemas/BoardSnapshot'
+        createdNoteId:
+          type: string
+
+    UpdateNoteRequest:
+      type: object
+      required: [expectedRevision]
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 500
+        color:
+          $ref: '#/components/schemas/NoteColor'
+        expectedRevision:
+          type: integer
+          minimum: 0
+
+    MoveNoteRequest:
+      type: object
+      required: [targetStatus, destinationIndex, expectedRevision]
+      properties:
+        targetStatus:
+          $ref: '#/components/schemas/NoteStatus'
+        destinationIndex:
+          type: integer
+          minimum: 0
+        expectedRevision:
+          type: integer
+          minimum: 0
+
+    SetWipLimitRequest:
+      type: object
+      required: [limit, expectedRevision]
+      properties:
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 20
+        expectedRevision:
+          type: integer
+          minimum: 0
+
+    BlockNoteRequest:
+      type: object
+      required: [reason, expectedRevision]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
+        expectedRevision:
+          type: integer
+          minimum: 0
+
+    AddChecklistItemRequest:
+      type: object
+      required: [label, expectedRevision]
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 120
+        expectedRevision:
+          type: integer
+          minimum: 0
+
+    AddChecklistItemResponse:
+      type: object
+      required: [board, createdItemId]
+      properties:
+        board:
+          $ref: '#/components/schemas/BoardSnapshot'
+        createdItemId:
+          type: string
+
+    UpdateChecklistItemRequest:
+      type: object
+      required: [expectedRevision]
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 120
+        completed:
+          type: boolean
+        expectedRevision:
+          type: integer
+          minimum: 0
+
+    ApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: REVISION_CONFLICT
+        message:
+          type: string
+          example: Board revision does not match expected revision.
+        field:
+          type: string
+          nullable: true
+          example: content
+        currentRevision:
+          type: integer
+          nullable: true
+          example: 4
+
+  responses:
+    BadRequest:
+      description: Malformed payload, invalid syntax, or out-of-range value
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: Requested note or checklist item not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Conflict:
+      description: Domain rule violation or revision concurrency conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    ServiceUnavailable:
+      description: Database connectivity failure
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'

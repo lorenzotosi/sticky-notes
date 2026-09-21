@@ -1,0 +1,16 @@
+{
+  "id": "main",
+  "schemaVersion": 1,
+  "revision": 5,
+  "wipLimit": 3,
+  "notes": [
+    {
+      "id": "44444444-4444-4444-8444-444444444444",
+      "content": "Deploy backend to staging",
+      "color": "PINK",
+      "status": "DOING",
+      "blockedReason": "Waiting for network credentials",
+      "checklist": []
+    }
+  ]
+}
