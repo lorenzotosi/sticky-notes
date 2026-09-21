@@ -3,12 +3,30 @@
 
 plugins {
     base
-    kotlin("multiplatform") version "2.2.20" apply false
-    id("com.diffplug.spotless") version "6.25.0" apply false
-    id("io.gitlab.arturbosch.detekt") version "1.23.8" apply false
+    alias(libs.plugins.kotlin.multiplatform) apply false
+    alias(libs.plugins.spotless) apply false
+    alias(libs.plugins.detekt) apply false
 }
 
 subprojects {
+    val lockableConfigurations =
+        setOf(
+            "compileClasspath",
+            "runtimeClasspath",
+            "testCompileClasspath",
+            "testRuntimeClasspath",
+            "jvmCompileClasspath",
+            "jvmRuntimeClasspath",
+            "jvmTestCompileClasspath",
+            "jvmTestRuntimeClasspath",
+        )
+
+    configurations.configureEach {
+        if (name in lockableConfigurations) {
+            resolutionStrategy.activateDependencyLocking()
+        }
+    }
+
     pluginManager.apply("com.diffplug.spotless")
     pluginManager.apply("io.gitlab.arturbosch.detekt")
 

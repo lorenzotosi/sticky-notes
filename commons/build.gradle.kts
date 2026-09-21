@@ -2,11 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Lorenzo Tosi
 
 plugins {
-    kotlin("multiplatform")
+    alias(libs.plugins.kotlin.multiplatform)
 }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(libs.versions.java.get().toInt())
     jvm()
     js {
         browser()
