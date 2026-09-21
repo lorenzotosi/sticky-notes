@@ -6,9 +6,14 @@ info:
   title: Sticky Notes Kanban API
   description: REST API contract for the Sticky Notes collaborative Kanban board.
   version: 1.0.0
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
 servers:
   - url: /api
     description: Relative API root behind web reverse proxy
+
+security: []
 
 paths:
   /board:
@@ -22,6 +27,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BoardSnapshot'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
 
@@ -370,7 +377,8 @@ components:
           minLength: 1
           maxLength: 500
         color:
-          $ref: '#/components/schemas/NoteColor'
+          allOf:
+            - $ref: '#/components/schemas/NoteColor'
           default: YELLOW
         expectedRevision:
           type: integer
