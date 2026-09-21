@@ -1,0 +1,27 @@
+{
+  "id": "main",
+  "schemaVersion": 1,
+  "revision": 8,
+  "wipLimit": 3,
+  "notes": [
+    {
+      "id": "55555555-5555-4555-8555-555555555555",
+      "content": "Complete course submission checklist",
+      "color": "YELLOW",
+      "status": "DOING",
+      "blockedReason": null,
+      "checklist": [
+        {
+          "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "label": "Run linters and tests",
+          "completed": true
+        },
+        {
+          "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+          "label": "Write release notes and audit",
+          "completed": false
+        }
+      ]
+    }
+  ]
+}
