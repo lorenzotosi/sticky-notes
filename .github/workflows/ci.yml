@@ -15,6 +15,8 @@ permissions:
 
 jobs:
   quality:
+    permissions:
+      contents: read
     uses: ./.github/workflows/quality.yml
 
   release:
