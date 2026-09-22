@@ -4,10 +4,21 @@
 plugins {
     application
     java
+    alias(libs.plugins.spotless)
 }
 
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get().toInt()))
+}
+
+spotless {
+    java {
+        target("src/**/*.java")
+        googleJavaFormat()
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
 }
 
 dependencies {
@@ -28,4 +39,8 @@ tasks.withType<JavaCompile>().configureEach {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+tasks.named("check") {
+    dependsOn("spotlessCheck")
 }
