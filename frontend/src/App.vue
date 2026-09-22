@@ -17,11 +17,21 @@ const addNote = () => {
     <h1>Sticky Notes</h1>
     <form @submit.prevent="addNote">
       <label for="note">New note</label>
-      <textarea id="note" v-model="text" maxlength="500" required />
+      <textarea
+        id="note"
+        v-model="text"
+        maxlength="500"
+        required
+      />
       <button>Create</button>
     </form>
     <section aria-label="Notes">
-      <article v-for="note in notes" :key="note.id">{{ note.text }}</article>
+      <article
+        v-for="note in notes"
+        :key="note.id"
+      >
+        {{ note.text }}
+      </article>
     </section>
   </main>
 </template>
