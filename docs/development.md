@@ -1,22 +1,19 @@
 <!-- SPDX-License-Identifier: MIT -->
 <!-- SPDX-FileCopyrightText: 2026 Lorenzo Tosi -->
 
-# Sviluppo locale
+# Local Development Guide
 
-## Toolchain
+## Toolchain Requirements
 
-- JDK 21 per il progetto Java e Kotlin.
-- Gradle 9.7.1 tramite il wrapper ufficiale `./gradlew`.
-- Node.js 24.21.0, fissato in `.nvmrc`, compatibile con semantic-release 25.0.3 e Vite.
+- **JDK 21** for Java and Kotlin multiplatform modules.
+- **Gradle 9.7.1** managed via the official `./gradlew` wrapper.
+- **Node.js 24.21.0**, pinned in `.nvmrc`, compatible with semantic-release and Vite.
 
-Il repository usa il wrapper Gradle già aggiornato nella baseline corrente. La
-distribuzione binaria è verificata da `distributionSha256Sum` nel file
-`gradle/wrapper/gradle-wrapper.properties`.
+The repository uses the official Gradle wrapper. Binary distribution integrity is verified via `distributionSha256Sum` declared in `gradle/wrapper/gradle-wrapper.properties`.
 
-## Bootstrap della shell
+## Shell Bootstrap
 
-Impostare JDK 21 solo nella shell corrente, senza modificare le variabili
-globali della macchina:
+Set JDK 21 in the active shell without altering machine-wide global variables:
 
 ```sh
 export JAVA_HOME="$(/usr/libexec/java_home -v 21)"
@@ -24,10 +21,9 @@ java -version
 ./gradlew --version
 ```
 
-Su Windows, impostare `JAVA_HOME` alla directory del JDK 21 nella sessione
-PowerShell prima di eseguire `./gradlew.bat --version`.
+On Windows, point `JAVA_HOME` to your JDK 21 installation path in your active PowerShell session before running `.\gradlew.bat --version`.
 
-Per Node.js, usare un gestore di versioni che legga `.nvmrc`, quindi verificare:
+For Node.js, use a version manager that supports `.nvmrc` (such as nvm or fnm), then verify:
 
 ```sh
 nvm use
@@ -35,29 +31,43 @@ node --version
 npm --version
 ```
 
-La prova minima della toolchain deve mostrare Java 21 nella sezione `Daemon
-JVM` di Gradle e Node.js `v24.21.0`.
+The toolchain verification must display Java 21 under Gradle's `Daemon JVM` section and Node.js `v24.21.0`.
 
-## Dipendenze Gradle
+## Build and Verification Entry Points
+The project unifies all module checks into a non-circular Gradle task graph.
 
-Le versioni condivise sono in `gradle/libs.versions.toml`. I lock Gradle sono
-generati per i classpath di compilazione, runtime e test dell'applicazione JVM:
+### Quick Module Commands
+- **Commons (KMP):** `./gradlew :commons:check`
+- **Backend (Spring Boot / Java):** `./gradlew :backend:check`
+- **Frontend (Vue / Vite):** `./gradlew :frontend:frontendCheck` (or `cd frontend && npm run lint && npm test`)
+
+### Repository-Wide Verification
+- **Run all tests (JVM, JS browser, Vue):** `./gradlew fullTest`
+- **Run all linters, static analysis, and license checks:** `./gradlew check`
+- **Full end-to-end deliverable build:** `./gradlew fullBuild`
+
+### Gradle Configuration Cache
+Gradle configuration cache is supported across the task graph. You can execute:
+```sh
+./gradlew fullBuild --configuration-cache
+```
+Subsequent runs will reuse the cached task graph (`Configuration cache entry reused`).
+
+*Note: MongoDB and end-to-end integration test execution will be wired into `fullVerify` during later database implementation tasks, rather than skipped.*
+
+## Dependency Management and Locking
+
+Shared dependencies and versions are declared in `gradle/libs.versions.toml`. Gradle lockfiles are generated for compile, runtime, and test classpaths:
 
 ```sh
 ./gradlew :commons:dependencies :backend:dependencies --write-locks
 ```
 
-Eseguire poi lo stesso comando senza `--write-locks`: i file di lock non devono
-cambiare. Il lock npm del frontend resta `frontend/package-lock.json`; il lock
-Kotlin/JS resta `kotlin-js-store/yarn.lock` ed è gestito dai task Kotlin/JS.
+Re-running the same command without `--write-locks` must not produce any Git diff. Frontend dependencies are pinned via `frontend/package-lock.json`, while Kotlin/JS browser dependencies are managed via `kotlin-js-store/yarn.lock`.
 
-I classpath interni del compilatore Kotlin, di Detekt, dei plugin Gradle e degli
-strumenti Kotlin Multiplatform sono esclusi intenzionalmente dai lock di
-progetto. Le versioni dirette dei plugin sono comunque fissate nel catalogo.
-Non forzare la stdlib Kotlin usata internamente da Gradle o da Detekt alla
-versione dell'applicazione.
+Internal classpaths for Detekt, Gradle build plugins, and Kotlin Multiplatform compiler tooling are intentionally excluded from project application locks.
 
-Per controllare la stdlib risolta dal runtime applicativo:
+To inspect the resolved stdlib in the application runtime:
 
 ```sh
 ./gradlew :commons:dependencyInsight \
