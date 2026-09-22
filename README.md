@@ -16,7 +16,7 @@ The frontend is started separately during development:
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 

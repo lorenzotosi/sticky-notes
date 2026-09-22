@@ -9,34 +9,54 @@ val defaultNpmExecutable =
     }
 val npm = providers.environmentVariable("NPM_EXECUTABLE").orElse(defaultNpmExecutable)
 
-tasks.register<Exec>("frontendInstall") {
+val frontendInstall = tasks.register<Exec>("frontendInstall") {
     group = "frontend"
+    description = "Installa le dipendenze npm con risoluzione deterministica da lockfile"
     workingDir = projectDir
     commandLine(npm.get(), "ci")
     inputs.files("package.json", "package-lock.json")
     outputs.dir("node_modules")
 }
 
-tasks.register<Exec>("frontendTest") {
+val frontendLint = tasks.register<Exec>("frontendLint") {
     group = "verification"
-    dependsOn("frontendInstall", "frontendLint")
-    workingDir = projectDir
-    commandLine(npm.get(), "run", "test")
-}
-
-tasks.register<Exec>("frontendLint") {
-    group = "verification"
-    dependsOn("frontendInstall")
+    description = "Esegue il linting statico del frontend"
+    dependsOn(frontendInstall)
     workingDir = projectDir
     commandLine(npm.get(), "run", "lint")
+    inputs.dir("src")
+    inputs.file("eslint.config.js")
+    inputs.file("package.json")
+}
+
+val frontendTest = tasks.register<Exec>("frontendTest") {
+    group = "verification"
+    description = "Esegue la suite di test unitari frontend"
+    dependsOn(frontendInstall)
+    workingDir = projectDir
+    commandLine(npm.get(), "run", "test")
+    inputs.dir("src")
+    inputs.file("package.json")
+}
+
+val frontendCheck = tasks.register("frontendCheck") {
+    group = "verification"
+    description = "Aggrega i controlli di verifica del frontend"
+    dependsOn(frontendLint, frontendTest)
 }
 
 tasks.register<Exec>("frontendBuild") {
     group = "build"
-    dependsOn("frontendTest")
+    description = "Compila gli asset di produzione tramite Vite"
+    dependsOn(frontendInstall, frontendCheck)
     workingDir = projectDir
     commandLine(npm.get(), "run", "build")
+
     inputs.dir("src")
+    inputs.file("index.html")
+    inputs.file("vite.config.js")
     inputs.file("package.json")
+    inputs.file("package-lock.json")
+
     outputs.dir("dist")
 }
