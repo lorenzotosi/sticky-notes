@@ -36,18 +36,6 @@ subprojects {
     }
 }
 
-tasks.register("fullTest") {
-    group = "verification"
-    description = "Runs tests for Kotlin, Java, and Vue."
-    dependsOn(":commons:allTests", ":backend:test", ":frontend:frontendTest")
-}
-
-tasks.register("fullBuild") {
-    group = "build"
-    description = "Builds every deliverable from one Gradle entry point."
-    dependsOn("fullTest", "documentation", ":commons:build", ":backend:build", ":frontend:frontendBuild")
-}
-
 tasks.register<Sync>("documentation") {
     group = "documentation"
     description = "Builds the versioned documentation artifact."
@@ -55,43 +43,68 @@ tasks.register<Sync>("documentation") {
     into(layout.buildDirectory.dir("docs"))
 }
 
-tasks.register("verifyLicense") {
-    group = "verification"
-    description = "Checks SPDX headers in source and configuration files."
-    val checkedFiles =
-        fileTree(projectDir) {
-            include(
-                "**/*.kt",
-                "**/*.java",
-                "**/*.kts",
-                "**/*.js",
-                "**/*.vue",
-                "**/*.css",
-                "**/*.sh",
-                "**/*.md",
-                "**/*.yml",
-                "**/*.yaml",
-                "**/*.dockerignore",
-                "Dockerfile*",
-            )
-            exclude(
-                ".gradle/**",
-                ".gradle-user-home/**",
-                ".kotlin/**",
-                "**/build/**",
-                "**/node_modules/**",
-                "**/dist/**",
-                "gradlew*",
-                "**/gradle-wrapper.properties",
-            )
+val verifyLicense =
+    tasks.register("verifyLicense") {
+        group = "verification"
+        description = "Checks SPDX headers in source and configuration files."
+        val checkedFiles =
+            fileTree(projectDir) {
+                include(
+                    "**/*.kt",
+                    "**/*.java",
+                    "**/*.kts",
+                    "**/*.js",
+                    "**/*.vue",
+                    "**/*.css",
+                    "**/*.sh",
+                    "**/*.md",
+                    "**/*.yml",
+                    "**/*.yaml",
+                    "**/*.dockerignore",
+                    "Dockerfile*",
+                )
+                exclude(
+                    ".gradle/**",
+                    ".gradle-user-home/**",
+                    ".kotlin/**",
+                    "**/build/**",
+                    "**/node_modules/**",
+                    "**/dist/**",
+                    "gradlew*",
+                    "**/gradle-wrapper.properties",
+                )
+            }
+        inputs.files(checkedFiles)
+        doLast {
+            val missing = checkedFiles.files.filterNot { it.readText().contains("SPDX-License-Identifier: MIT") }
+            check(missing.isEmpty()) { "Files without SPDX header:\n${missing.joinToString("\n")}" }
         }
-    inputs.files(checkedFiles)
-    doLast {
-        val missing = checkedFiles.files.filterNot { it.readText().contains("SPDX-License-Identifier: MIT") }
-        check(missing.isEmpty()) { "Files without SPDX header:\n${missing.joinToString("\n")}" }
     }
+
+tasks.register("fullTest") {
+    group = "verification"
+    description = "Runs tests across commons, backend, and frontend."
+    dependsOn(":commons:check", ":backend:test", ":frontend:frontendTest")
 }
 
 tasks.named("check") {
-    dependsOn("spotlessCheck", "verifyLicense", "fullTest")
+    dependsOn(
+        "spotlessCheck",
+        verifyLicense,
+        ":commons:check",
+        ":backend:check",
+        ":frontend:frontendCheck",
+    )
+}
+
+tasks.register("fullBuild") {
+    group = "build"
+    description = "Builds and verifies every deliverable from a single Gradle entry point."
+    dependsOn(
+        "check",
+        "documentation",
+        ":commons:build",
+        ":backend:build",
+        ":frontend:frontendBuild",
+    )
 }
