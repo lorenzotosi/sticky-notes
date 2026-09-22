@@ -4,8 +4,16 @@
 plugins {
     base
     alias(libs.plugins.kotlin.multiplatform) apply false
-    alias(libs.plugins.spotless) apply false
+    alias(libs.plugins.spotless)
     alias(libs.plugins.detekt) apply false
+}
+
+spotless {
+    kotlinGradle {
+        target("**/*.gradle.kts")
+        targetExclude("**/build/**", ".gradle/**")
+        ktlint()
+    }
 }
 
 subprojects {
@@ -25,33 +33,6 @@ subprojects {
         if (name in lockableConfigurations) {
             resolutionStrategy.activateDependencyLocking()
         }
-    }
-
-    pluginManager.apply("com.diffplug.spotless")
-    pluginManager.apply("io.gitlab.arturbosch.detekt")
-
-    extensions.configure<com.diffplug.gradle.spotless.SpotlessExtension> {
-        java {
-            target("**/*.java")
-            targetExclude("**/build/**/*.java")
-            removeUnusedImports()
-            trimTrailingWhitespace()
-            endWithNewline()
-        }
-        kotlin {
-            target("**/*.kt")
-            targetExclude("**/build/**/*.kt")
-            ktlint()
-        }
-        kotlinGradle {
-            target("**/*.kts")
-            targetExclude("**/build/**/*.kts")
-            ktlint()
-        }
-    }
-
-    tasks.matching { it.name == "check" }.configureEach {
-        dependsOn("spotlessCheck", "detekt")
     }
 }
 
@@ -77,10 +58,33 @@ tasks.register<Sync>("documentation") {
 tasks.register("verifyLicense") {
     group = "verification"
     description = "Checks SPDX headers in source and configuration files."
-    val checkedFiles = fileTree(projectDir) {
-        include("**/*.kt", "**/*.java", "**/*.kts", "**/*.js", "**/*.vue", "**/*.md", "**/*.yml", "**/*.yaml", "**/*.dockerignore", "Dockerfile*")
-        exclude(".gradle/**", ".gradle-user-home/**", ".kotlin/**", "**/build/**", "**/node_modules/**", "**/dist/**")
-    }
+    val checkedFiles =
+        fileTree(projectDir) {
+            include(
+                "**/*.kt",
+                "**/*.java",
+                "**/*.kts",
+                "**/*.js",
+                "**/*.vue",
+                "**/*.css",
+                "**/*.sh",
+                "**/*.md",
+                "**/*.yml",
+                "**/*.yaml",
+                "**/*.dockerignore",
+                "Dockerfile*",
+            )
+            exclude(
+                ".gradle/**",
+                ".gradle-user-home/**",
+                ".kotlin/**",
+                "**/build/**",
+                "**/node_modules/**",
+                "**/dist/**",
+                "gradlew*",
+                "**/gradle-wrapper.properties",
+            )
+        }
     inputs.files(checkedFiles)
     doLast {
         val missing = checkedFiles.files.filterNot { it.readText().contains("SPDX-License-Identifier: MIT") }
@@ -89,5 +93,5 @@ tasks.register("verifyLicense") {
 }
 
 tasks.named("check") {
-    dependsOn("verifyLicense", "fullTest")
+    dependsOn("spotlessCheck", "verifyLicense", "fullTest")
 }

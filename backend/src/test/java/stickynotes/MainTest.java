@@ -4,11 +4,12 @@
 package stickynotes;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 import org.junit.jupiter.api.Test;
 
 class MainTest {
-    @Test
-    void mainClassExists() {
-        assertNotNull(Main.class);
-    }
+  @Test
+  void mainClassExists() {
+    assertNotNull(Main.class);
+  }
 }

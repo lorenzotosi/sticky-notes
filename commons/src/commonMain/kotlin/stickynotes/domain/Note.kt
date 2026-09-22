@@ -5,6 +5,8 @@ package stickynotes.domain
 
 import kotlin.jvm.JvmInline
 
+const val MAX_NOTE_LENGTH = 500
+
 @JvmInline
 value class NoteId(val value: String)
 
@@ -20,6 +22,6 @@ data class Note(
 ) {
     init {
         require(content.isNotBlank()) { "A note needs content." }
-        require(content.length <= 500) { "A note cannot exceed 500 characters." }
+        require(content.length <= MAX_NOTE_LENGTH) { "A note cannot exceed $MAX_NOTE_LENGTH characters." }
     }
 }
