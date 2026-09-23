@@ -47,3 +47,9 @@ kotlin {
 tasks.named("check") {
     dependsOn("spotlessCheck", "detekt")
 }
+
+tasks.register("browserDomainTest") {
+    description = "Runs the domain tests in a headless browser environment."
+    group = "verification"
+    dependsOn("jsBrowserTest")
+}
