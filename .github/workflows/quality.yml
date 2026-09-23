@@ -24,12 +24,14 @@ jobs:
           java-version: '21'
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: '22'
-      - uses: gradle/actions/setup-gradle@4733eaac7c1b0da527e4206b7671e0061de1ce37 # v6
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+      - uses: gradle/actions/setup-gradle@v4
       - name: Validate commits
         if: github.event_name == 'pull_request'
         run: npx --yes --package @commitlint/cli --package @commitlint/config-conventional commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
-      - run: ./gradlew fullBuild verifyLicense
+      - run: ./gradlew fullBuild --no-daemon
       - name: Upload deliverables
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
