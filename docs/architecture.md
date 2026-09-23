@@ -71,6 +71,8 @@ classDiagram
 
 - Consistency Boundary: Invariants spanning multiple cards (such as ensuring the number of `DOING` notes does not exceed `wipLimit`) are evaluated synchronously within `Board`.
 
+- Prototype Migration: `NotePosition(x, y)` is removed. A note's canonical position is its index within the ordered collection owned by `Board`, not an independent coordinate stored on `Note`.
+
 ## 2. Layered Architecture & Module Dependencies
 The codebase applies Clean/Hexagonal Architecture dependency rules. The domain core remains completely independent of frameworks, web libraries, and databases.
 
