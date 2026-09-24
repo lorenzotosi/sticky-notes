@@ -7,7 +7,7 @@ assignees: ''
 ---
 
 <!-- SPDX-License-Identifier: MIT -->
-<!-- SPDX-FileCopyrightText: 2026 Lorenzo Tosi -->
+<!-- SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani -->
 
 ### Task Metadata
 - **Task ID**: TXXX
