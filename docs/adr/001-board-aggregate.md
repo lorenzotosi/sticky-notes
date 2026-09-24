@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: MIT -->
-<!-- SPDX-FileCopyrightText: 2026 Lorenzo Tosi -->
+<!-- SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani -->
 
 # ADR 001: Board as the Sole Aggregate Root and Persistence Document
 
