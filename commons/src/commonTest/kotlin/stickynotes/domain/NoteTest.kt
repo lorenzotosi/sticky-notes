@@ -10,7 +10,7 @@ import kotlin.test.assertNotEquals
 
 class NoteTest {
     @Test
-    fun `C01 blank content is rejected without changing an existing note`() {
+    fun `blank content is rejected without changing an existing note`() {
         val existing = fixtureNote("existing", "still here")
 
         assertFailsWith<IllegalArgumentException> { fixtureNote("empty", " \r\n ") }
@@ -21,7 +21,7 @@ class NoteTest {
     }
 
     @Test
-    fun `C02 content length boundaries are checked after normalization`() {
+    fun `content length boundaries are checked after normalization`() {
         assertEquals("a", fixtureNote("one", " a ").content)
         assertEquals(500, fixtureNote("five-hundred", "a".repeat(500)).content.length)
         assertFailsWith<IllegalArgumentException> {
@@ -30,7 +30,7 @@ class NoteTest {
     }
 
     @Test
-    fun `C03 emoji line endings and whitespace normalize identically`() {
+    fun `emoji line endings and whitespace normalize identically`() {
         val note = fixtureNote("note-1", "  first\r\ninside  space\r😀  ")
 
         assertEquals("first\ninside  space\n😀", note.content)
@@ -40,7 +40,7 @@ class NoteTest {
     }
 
     @Test
-    fun `C04 equality uses identity and board notes are copied`() {
+    fun `equality uses identity and board notes are copied`() {
         val id = NoteId("same-id")
         val first = Note(id, "first")
         val second = Note(id, "second", NoteColor.BLUE, NoteStatus.DOING)
