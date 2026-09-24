@@ -10,25 +10,28 @@ import kotlin.test.assertNotEquals
 
 class NoteTest {
     @Test
-    fun `identifiers reject blank values`() {
+    fun `C01 blank content is rejected without changing an existing note`() {
+        val existing = fixtureNote("existing", "still here")
+
+        assertFailsWith<IllegalArgumentException> { fixtureNote("empty", " \r\n ") }
+        assertEquals("still here", existing.content)
         assertFailsWith<IllegalArgumentException> { BoardId(" ") }
         assertFailsWith<IllegalArgumentException> { NoteId(" ") }
         assertFailsWith<IllegalArgumentException> { ChecklistItemId(" ") }
     }
 
     @Test
-    fun `content boundaries are enforced after normalization`() {
-        assertFailsWith<IllegalArgumentException> { Note(NoteId("empty"), " \r\n ") }
-        assertEquals("a", Note(NoteId("one"), " a ").content)
-        assertEquals(500, Note(NoteId("five-hundred"), "a".repeat(500)).content.length)
+    fun `C02 content length boundaries are checked after normalization`() {
+        assertEquals("a", fixtureNote("one", " a ").content)
+        assertEquals(500, fixtureNote("five-hundred", "a".repeat(500)).content.length)
         assertFailsWith<IllegalArgumentException> {
-            Note(NoteId("five-hundred-and-one"), "a".repeat(501))
+            fixtureNote("five-hundred-and-one", " ${"a".repeat(501)} ")
         }
     }
 
     @Test
-    fun `normalization is deterministic in UTF-16 code units`() {
-        val note = Note(NoteId("note-1"), "  first\r\ninside  space\r😀  ")
+    fun `C03 emoji line endings and whitespace normalize identically`() {
+        val note = fixtureNote("note-1", "  first\r\ninside  space\r😀  ")
 
         assertEquals("first\ninside  space\n😀", note.content)
         assertEquals(2, "😀".length)
@@ -37,22 +40,21 @@ class NoteTest {
     }
 
     @Test
-    fun `note equality uses identity rather than attributes`() {
+    fun `C04 equality uses identity and board notes are copied`() {
         val id = NoteId("same-id")
         val first = Note(id, "first")
         val second = Note(id, "second", NoteColor.BLUE, NoteStatus.DOING)
 
         assertEquals(first, second)
         assertEquals(first.hashCode(), second.hashCode())
-        assertNotEquals(first.content, second.content)
-        assertNotEquals(first, Note(NoteId("different-id"), "first"))
-    }
+        val firstSnapshot = listOf(first.content, first.color, first.status)
+        val secondSnapshot = listOf(second.content, second.color, second.status)
+        assertNotEquals(firstSnapshot, secondSnapshot)
+        assertNotEquals(first, fixtureNote("different-id", "first"))
 
-    @Test
-    fun `board equality uses identity and protects its note collection`() {
-        val originalNotes = mutableListOf(Note(NoteId("note-1"), "first"))
+        val originalNotes = mutableListOf(first)
         val board = Board(BoardId("main"), originalNotes)
-        val sameBoard = Board(BoardId("main"), listOf(Note(NoteId("note-2"), "second")))
+        val sameBoard = Board(BoardId("main"), listOf(second))
 
         originalNotes.clear()
 
@@ -62,3 +64,8 @@ class NoteTest {
         assertNotEquals(board, Board(BoardId("other")))
     }
 }
+
+private fun fixtureNote(
+    id: String,
+    content: String,
+) = Note(NoteId(id), content)
