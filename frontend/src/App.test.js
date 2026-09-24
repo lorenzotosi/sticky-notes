@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2026 Lorenzo Tosi
+// SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani
 
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'

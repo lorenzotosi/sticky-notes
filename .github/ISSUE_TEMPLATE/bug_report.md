@@ -7,7 +7,7 @@ assignees: ''
 ---
 
 <!-- SPDX-License-Identifier: MIT -->
-<!-- SPDX-FileCopyrightText: 2026 Lorenzo Tosi -->
+<!-- SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani -->
 
 ### Description
 A clear and concise description of what the bug is.
