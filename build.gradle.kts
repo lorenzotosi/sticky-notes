@@ -36,6 +36,17 @@ subprojects {
     }
 }
 
+tasks.register<GradleBuild>("updateDependencyLocks") {
+    group = "build setup"
+    description = "Updates dependency lockfiles for every Gradle subproject."
+    dir = projectDir
+    startParameter =
+        gradle.startParameter.newBuild().apply {
+            isWriteDependencyLocks = true
+        }
+    tasks = subprojects.map { "${it.path}:dependencies" }
+}
+
 tasks.register<Sync>("documentation") {
     group = "documentation"
     description = "Builds the versioned documentation artifact."
