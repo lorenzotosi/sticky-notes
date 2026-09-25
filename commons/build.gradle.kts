@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.spotless)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.kotlinx.serialization)
 }
 
 spotless {
@@ -37,6 +38,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(kotlin("stdlib"))
+            implementation(libs.kotlinx.serialization.json)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

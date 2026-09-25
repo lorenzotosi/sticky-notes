@@ -3,9 +3,20 @@
 
 # CI/CD
 
-Every pull request runs commit validation and `./gradlew fullBuild verifyLicense`. Pull request titles follow Conventional Commits and are checked before merge. Successful quality runs retain the backend distributions, shared libraries, frontend bundle and test reports as workflow artifacts. Branch pushes are verified through their pull request, avoiding a duplicate run for the same commit.
+## Workflow execution policy
 
-After a successful push to `main`, semantic-release derives the next version from squash-merge titles and creates the GitHub release. The release includes a ZIP containing the compiled backend distributions, shared library and frontend bundle produced by the quality job. Release executions are serialized to prevent concurrent version calculations. It uses the workflow `GITHUB_TOKEN`; no repository secret is required. The same push publishes the Markdown documentation through GitHub Pages.
+| Event | Gradle command | Purpose |
+| --- | --- | --- |
+| Push to a development branch | `./gradlew check --no-daemon` | Gives immediate feedback before the pull request is merged. It verifies formatting, SPDX licenses, Detekt rules, JVM and JavaScript tests, frontend linting, and frontend tests. |
+| Pull request targeting `main` | `./gradlew check --no-daemon` | Repeats the verification on the proposed revision and also validates the commits. The pull request title is checked separately against Conventional Commits. |
+| Merge or other push to `main` | `./gradlew fullBuild --no-daemon` | Runs the complete `check` task and then builds every publishable deliverable: Commons libraries, backend distributions, frontend production bundle, and documentation artifact. |
+| Manual CI/CD execution | `./gradlew fullBuild --no-daemon` | Allows maintainers to verify and rebuild every deliverable on demand. |
+
+The development-branch check is the fast quality gate: its purpose is to discover broken code as soon as it is pushed. A merge into `main` appears to GitHub Actions as a push to `main`; this activates the stronger `fullBuild` gate. Because `fullBuild` already depends on `check`, it includes every branch-level control before creating the final artifacts.
+
+Test reports are retained after quality runs. Deliverables are uploaded only by successful full builds, so ordinary branch pushes do not create release artifacts.
+
+After a successful full build on `main`, semantic-release derives the next version from squash-merge titles and creates the GitHub release from those deliverables. Release executions are serialized to prevent concurrent version calculations. It uses the workflow `GITHUB_TOKEN`; no repository secret is required. The same push publishes the Markdown documentation through GitHub Pages.
 
 ## Version rules
 

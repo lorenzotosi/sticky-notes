@@ -5,7 +5,17 @@ name: Quality
 
 on:
   workflow_call:
+    inputs:
+      full_build:
+        description: Build every deliverable after running the checks
+        type: boolean
+        default: false
   workflow_dispatch:
+    inputs:
+      full_build:
+        description: Build every deliverable after running the checks
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -35,8 +45,14 @@ jobs:
       - name: Validate commits
         if: github.event_name == 'pull_request'
         run: npx --yes --package @commitlint/cli --package @commitlint/config-conventional commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
-      - run: ./gradlew fullBuild --no-daemon
+      - name: Run checks
+        if: ${{ !inputs.full_build }}
+        run: ./gradlew check --no-daemon
+      - name: Run full build
+        if: ${{ inputs.full_build }}
+        run: ./gradlew fullBuild --no-daemon
       - name: Upload deliverables
+        if: ${{ inputs.full_build }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: deliverables
