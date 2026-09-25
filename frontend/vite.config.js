@@ -6,8 +6,15 @@ import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
   plugins: [vue()],
+  optimizeDeps: {
+    include: ['sticky-notes-domain']
+  },
   test: {
     environment: 'jsdom',
-    globals: true
+    server: {
+      deps: {
+        inline: ['sticky-notes-domain']
+      }
+    }
   }
 })

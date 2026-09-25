@@ -9,20 +9,25 @@ val defaultNpmExecutable =
     }
 val npm = providers.environmentVariable("NPM_EXECUTABLE").orElse(defaultNpmExecutable)
 
+val exportJsPackageTask = evaluationDependsOn(":commons").tasks.named("exportJsPackage")
+val domainPackageDir = project(":commons").layout.buildDirectory.dir("npm/sticky-notes-domain")
+
 val frontendInstall =
     tasks.register<Exec>("frontendInstall") {
         group = "frontend"
-        description = "Installa le dipendenze npm con risoluzione deterministica da lockfile"
+        description = "Install npm dependencies from lockfile"
+        dependsOn(exportJsPackageTask)
         workingDir = projectDir
         commandLine(npm.get(), "ci")
         inputs.files("package.json", "package-lock.json")
+        inputs.dir(domainPackageDir)
         outputs.dir("node_modules")
     }
 
 val frontendLint =
     tasks.register<Exec>("frontendLint") {
         group = "verification"
-        description = "Esegue il linting statico del frontend"
+        description = "Execute lint"
         dependsOn(frontendInstall)
         workingDir = projectDir
         commandLine(npm.get(), "run", "lint")
@@ -34,29 +39,31 @@ val frontendLint =
 val frontendTest =
     tasks.register<Exec>("frontendTest") {
         group = "verification"
-        description = "Esegue la suite di test unitari frontend"
+        description = "Execute test suits"
         dependsOn(frontendInstall)
         workingDir = projectDir
         commandLine(npm.get(), "run", "test")
         inputs.dir("src")
+        inputs.dir(domainPackageDir)
         inputs.file("package.json")
     }
 
 val frontendCheck =
     tasks.register("frontendCheck") {
         group = "verification"
-        description = "Aggrega i controlli di verifica del frontend"
+        description = "Aggregate frontend checks"
         dependsOn(frontendLint, frontendTest)
     }
 
 tasks.register<Exec>("frontendBuild") {
     group = "build"
-    description = "Compila gli asset di produzione tramite Vite"
+    description = "Compile production assets w Vite"
     dependsOn(frontendInstall, frontendCheck)
     workingDir = projectDir
     commandLine(npm.get(), "run", "build")
 
     inputs.dir("src")
+    inputs.dir(domainPackageDir)
     inputs.file("index.html")
     inputs.file("vite.config.js")
     inputs.file("package.json")
