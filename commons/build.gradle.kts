@@ -33,6 +33,8 @@ kotlin {
                 }
             }
         }
+        useEsModules()
+        binaries.library()
         generateTypeScriptDefinitions()
     }
     sourceSets {
@@ -55,3 +57,49 @@ tasks.register("browserDomainTest") {
     group = "verification"
     dependsOn("jsBrowserTest")
 }
+
+abstract class GenerateNpmPackageJson : DefaultTask() {
+    @get:OutputFile
+    abstract val packageJsonFile: RegularFileProperty
+
+    @TaskAction
+    fun generate() {
+        packageJsonFile.get().asFile.writeText(
+            """
+            {
+              "name": "sticky-notes-domain",
+              "version": "1.0.0",
+              "type": "module",
+              "main": "./sticky-notes-commons.mjs",
+              "module": "./sticky-notes-commons.mjs",
+              "types": "./sticky-notes-commons.d.ts",
+              "exports": {
+                ".": {
+                  "types": "./sticky-notes-commons.d.ts",
+                  "import": "./sticky-notes-commons.mjs",
+                  "default": "./sticky-notes-commons.mjs"
+                }
+              }
+            }
+            """.trimIndent() + "\n",
+        )
+    }
+}
+
+val generateNpmPackageJson =
+    tasks.register<GenerateNpmPackageJson>("generateNpmPackageJson") {
+        group = "build"
+        description = "Genera il package.json per il modulo npm sticky-notes-domain"
+        packageJsonFile.set(layout.buildDirectory.file("generated/npm/package.json"))
+    }
+
+val exportJsPackage =
+    tasks.register<Sync>("exportJsPackage") {
+        group = "build"
+        description = "Esporta il pacchetto JS/ESM del dominio Kotlin per il frontend"
+        dependsOn("jsProductionLibraryCompileSync", generateNpmPackageJson)
+
+        from(tasks.named("jsProductionLibraryCompileSync"))
+        from(generateNpmPackageJson.flatMap { it.packageJsonFile })
+        into(layout.buildDirectory.dir("npm/sticky-notes-domain"))
+    }

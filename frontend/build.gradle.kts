@@ -9,13 +9,18 @@ val defaultNpmExecutable =
     }
 val npm = providers.environmentVariable("NPM_EXECUTABLE").orElse(defaultNpmExecutable)
 
+val exportJsPackageTask = evaluationDependsOn(":commons").tasks.named("exportJsPackage")
+val domainPackageDir = project(":commons").layout.buildDirectory.dir("npm/sticky-notes-domain")
+
 val frontendInstall =
     tasks.register<Exec>("frontendInstall") {
         group = "frontend"
         description = "Installa le dipendenze npm con risoluzione deterministica da lockfile"
+        dependsOn(exportJsPackageTask)
         workingDir = projectDir
         commandLine(npm.get(), "ci")
         inputs.files("package.json", "package-lock.json")
+        inputs.dir(domainPackageDir)
         outputs.dir("node_modules")
     }
 
@@ -39,6 +44,7 @@ val frontendTest =
         workingDir = projectDir
         commandLine(npm.get(), "run", "test")
         inputs.dir("src")
+        inputs.dir(domainPackageDir)
         inputs.file("package.json")
     }
 
@@ -57,6 +63,7 @@ tasks.register<Exec>("frontendBuild") {
     commandLine(npm.get(), "run", "build")
 
     inputs.dir("src")
+    inputs.dir(domainPackageDir)
     inputs.file("index.html")
     inputs.file("vite.config.js")
     inputs.file("package.json")

@@ -11,6 +11,7 @@
     "lint:openapi": "redocly lint ../docs/openapi.yaml"
   },
   "dependencies": {
+    "sticky-notes-domain": "file:../commons/build/npm/sticky-notes-domain",
     "vue": "^3.5.16"
   },
   "devDependencies": {
