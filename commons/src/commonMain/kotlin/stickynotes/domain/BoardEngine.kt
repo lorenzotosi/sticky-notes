@@ -21,36 +21,7 @@ object BoardEngine {
                 return CommandResponse.Failure("INVALID_SNAPSHOT")
             }
 
-        val result =
-            when (command) {
-                is BoardCommand.CreateNote ->
-                    board.createNote(
-                        id = NoteId(command.newId),
-                        content = command.content,
-                        color = command.color,
-                    )
-                is BoardCommand.UpdateNote ->
-                    board.updateNote(
-                        id = NoteId(command.noteId),
-                        content = command.content,
-                        color = command.color,
-                    )
-                is BoardCommand.DeleteNote ->
-                    board.deleteNote(
-                        id = NoteId(command.noteId),
-                    )
-                is BoardCommand.MoveNote ->
-                    board.moveNote(
-                        id = NoteId(command.noteId),
-                        targetStatus = command.targetStatus,
-                        destinationIndex = command.destinationIndex,
-                    )
-                is BoardCommand.SetWipLimit ->
-                    board.setWipLimit(
-                        limit = command.limit,
-                    )
-                else -> BoardCommandResult.Failure("INVALID_REQUEST")
-            }
+        val result = executeCommand(board, command)
 
         return when (result) {
             is BoardCommandResult.Success -> {
@@ -70,3 +41,63 @@ object BoardEngine {
         }
     }
 }
+
+private fun executeCommand(
+    board: Board,
+    command: BoardCommand,
+): BoardCommandResult =
+    when (command) {
+        is BoardCommand.CreateNote ->
+            board.createNote(
+                id = NoteId(command.newId),
+                content = command.content,
+                color = command.color,
+            )
+        is BoardCommand.UpdateNote ->
+            board.updateNote(
+                id = NoteId(command.noteId),
+                content = command.content,
+                color = command.color,
+            )
+        is BoardCommand.DeleteNote ->
+            board.deleteNote(
+                id = NoteId(command.noteId),
+            )
+        is BoardCommand.MoveNote ->
+            board.moveNote(
+                id = NoteId(command.noteId),
+                targetStatus = command.targetStatus,
+                destinationIndex = command.destinationIndex,
+            )
+        is BoardCommand.SetWipLimit ->
+            board.setWipLimit(
+                limit = command.limit,
+            )
+        is BoardCommand.BlockNote ->
+            board.blockNote(
+                id = NoteId(command.noteId),
+                reason = command.reason,
+            )
+        is BoardCommand.UnblockNote ->
+            board.unblockNote(
+                id = NoteId(command.noteId),
+            )
+        is BoardCommand.AddItem ->
+            board.addChecklistItem(
+                noteId = NoteId(command.noteId),
+                label = command.label,
+                itemId = ChecklistItemId(command.newId),
+            )
+        is BoardCommand.UpdateItem ->
+            board.updateChecklistItem(
+                noteId = NoteId(command.noteId),
+                itemId = ChecklistItemId(command.itemId),
+                label = command.label,
+                completed = command.completed,
+            )
+        is BoardCommand.DeleteItem ->
+            board.deleteChecklistItem(
+                noteId = NoteId(command.noteId),
+                itemId = ChecklistItemId(command.itemId),
+            )
+    }

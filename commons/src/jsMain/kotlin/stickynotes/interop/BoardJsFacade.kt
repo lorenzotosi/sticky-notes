@@ -3,7 +3,6 @@
 
 package stickynotes.interop
 
-import kotlinx.serialization.encodeToString
 import stickynotes.contract.BoardCommand
 import stickynotes.contract.BoardSnapshot
 import stickynotes.contract.CommandResponse
