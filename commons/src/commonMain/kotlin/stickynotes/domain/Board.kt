@@ -53,13 +53,7 @@ class Board(
             return failure
         }
 
-        val newNote =
-            Note(
-                id = id,
-                content = normalizeNoteContent(content),
-                color = color,
-                status = NoteStatus.TODO,
-            )
+        val newNote = Note(id = id, content = content, color = color, status = NoteStatus.TODO)
         return BoardCommandResult.Success(
             Board(id = this.id, notes = noteState + newNote, wipLimit = this.wipLimit),
         )
@@ -70,10 +64,10 @@ class Board(
         content: String? = null,
         color: NoteColor? = null,
     ): BoardCommandResult {
-        val existingIndex = noteState.indexOfFirst { it.id == id }
+        val index = noteState.indexOfFirst { it.id == id }
         val failure =
             when {
-                existingIndex == -1 -> BoardCommandResult.Failure("NOTE_NOT_FOUND", "id")
+                index == -1 -> BoardCommandResult.Failure("NOTE_NOT_FOUND", "id")
                 content != null -> validateContent(content)
                 else -> null
             }
@@ -81,39 +75,24 @@ class Board(
             return failure
         }
 
-        val existing = noteState[existingIndex]
-        val newContent = if (content != null) normalizeNoteContent(content) else existing.content
-        val newColor = color ?: existing.color
-
+        val existing = noteState[index]
         val updatedNote =
-            Note(
-                id = existing.id,
-                content = newContent,
-                color = newColor,
-                status = existing.status,
+            existing.copy(
+                content = if (content != null) normalizeNoteContent(content) else existing.content,
+                color = color ?: existing.color,
             )
-        val updatedList =
-            noteState.toMutableList().apply {
-                this[existingIndex] = updatedNote
-            }
-        return BoardCommandResult.Success(
-            Board(id = this.id, notes = updatedList, wipLimit = this.wipLimit),
-        )
+        val updatedList = noteState.toMutableList().apply { this[index] = updatedNote }
+        return BoardCommandResult.Success(Board(id = this.id, notes = updatedList, wipLimit = this.wipLimit))
     }
 
     fun deleteNote(id: NoteId): BoardCommandResult {
-        val existingIndex = noteState.indexOfFirst { it.id == id }
-        if (existingIndex == -1) {
+        val index = noteState.indexOfFirst { it.id == id }
+        if (index == -1) {
             return BoardCommandResult.Failure("NOTE_NOT_FOUND", "id")
         }
 
-        val updatedList =
-            noteState.toMutableList().apply {
-                removeAt(existingIndex)
-            }
-        return BoardCommandResult.Success(
-            Board(id = this.id, notes = updatedList, wipLimit = this.wipLimit),
-        )
+        val updatedList = noteState.toMutableList().apply { removeAt(index) }
+        return BoardCommandResult.Success(Board(id = this.id, notes = updatedList, wipLimit = this.wipLimit))
     }
 
     fun moveNote(
@@ -133,9 +112,7 @@ class Board(
 
         val resolvedNote = requireNotNull(note)
         val nextNotes = reorderNotes(resolvedNote, targetStatus, destinationIndex, noteState)
-        return BoardCommandResult.Success(
-            Board(id = this.id, notes = nextNotes, wipLimit = this.wipLimit),
-        )
+        return BoardCommandResult.Success(Board(id = this.id, notes = nextNotes, wipLimit = this.wipLimit))
     }
 
     fun setWipLimit(limit: Int): BoardCommandResult {
@@ -170,7 +147,7 @@ private fun reorderNotes(
     val doingList = noteState.filter { it.status == NoteStatus.DOING && it.id != note.id }.toMutableList()
     val doneList = noteState.filter { it.status == NoteStatus.DONE && it.id != note.id }.toMutableList()
 
-    val movedNote = Note(id = note.id, content = note.content, color = note.color, status = targetStatus)
+    val movedNote = note.copy(status = targetStatus)
     val targetList =
         when (targetStatus) {
             NoteStatus.TODO -> todoList
@@ -193,8 +170,14 @@ private fun validateMove(
     val doingCount = noteState.count { it.status == NoteStatus.DOING }
 
     return when {
+        note.isBlocked && note.status != targetStatus -> {
+            BoardCommandResult.Failure("NOTE_BLOCKED")
+        }
         !isValidTransition(note.status, targetStatus) -> {
             BoardCommandResult.Failure("INVALID_TRANSITION", "targetStatus")
+        }
+        targetStatus == NoteStatus.DONE && !note.isChecklistComplete -> {
+            BoardCommandResult.Failure("CHECKLIST_INCOMPLETE")
         }
         destinationIndex !in 0..destinationSize -> {
             BoardCommandResult.Failure("INVALID_INDEX", "destinationIndex")
