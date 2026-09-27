@@ -48,6 +48,22 @@ class DomainInteropTest {
     assertEquals("CHECKLIST_INCOMPLETE", failure.getCode());
   }
 
+  @Test
+  void rejectsWipLimitBelowCurrentDoingOccupancy() {
+    BoardSnapshot board = JvmBoardFacade.createEmptyBoard("main", 3);
+
+    board = executeSuccess(board, JvmBoardFacade.createNote("n1", "Task 1", NoteColor.YELLOW));
+    board = executeSuccess(board, JvmBoardFacade.createNote("n2", "Task 2", NoteColor.BLUE));
+
+    board = executeSuccess(board, JvmBoardFacade.moveNote("n1", NoteStatus.DOING, 0));
+    board = executeSuccess(board, JvmBoardFacade.moveNote("n2", NoteStatus.DOING, 1));
+
+    CommandResponse response = JvmBoardFacade.execute(board, JvmBoardFacade.setWipLimit(1));
+
+    CommandResponse.Failure failure = assertInstanceOf(CommandResponse.Failure.class, response);
+    assertEquals("WIP_BELOW_OCCUPANCY", failure.getCode());
+  }
+
   private BoardSnapshot executeSuccess(
       BoardSnapshot snapshot, stickynotes.contract.BoardCommand command) {
     CommandResponse response = JvmBoardFacade.execute(snapshot, command);
