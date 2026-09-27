@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: MIT -->
-<!-- SPDX-FileCopyrightText: 2026 Lorenzo Tosi -->
+<!-- SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani -->
 
 # Shared domain tests
 
@@ -22,3 +22,46 @@ On Windows PowerShell, set `$env:CHROME_BIN` to the full path of `chrome.exe` (n
 CI uses the Chrome installation on the [GitHub Actions Ubuntu runner](https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md). The quality workflow checks `google-chrome --version`, exports `CHROME_BIN`, and runs `fullBuild`, which includes both common test targets. Compare `commons/build/test-results/jvmTest/` and `commons/build/test-results/jsBrowserTest/`: both must show the shared scenarios executed, with no skipped tests. The workflow uploads these reports even when a test fails.
 
 To check that both targets detect a core regression, temporarily change an expected value in a shared domain test to an incorrect value. Run `./gradlew :commons:jvmTest :commons:browserDomainTest --rerun-tasks --continue` and confirm that test fails in both reports. Restore the assertion and rerun the command; both targets must pass.
+
+## Domain Invariant Coverage Matrix
+
+The shared multiplatform suite (`commons/src/commonTest`) and frontend interop suite (`frontend/src/domain.test.js`) cover the full range of domain boundaries and edge cases:
+
+| Domain Rule & Boundary | Expected Behavior | Verification Target |
+| :--- | :--- | :--- |
+| **Empty or Whitespace Content** | Reject with `INVALID_CONTENT` without mutating state. | `NoteTest`, `BoardTest`, `domain.test.js` |
+| **Content Length Boundaries (1, 500, 501)** | Allow 1 and 500 UTF-16 units; reject 501 after trimming and newline normalization. | `NoteTest`, `InvariantBoundaryTest`, `domain.test.js` |
+| **Astral Plane Unicode & Internal Spaces** | Non-BMP emoji counts as 2 UTF-16 units; preserve internal whitespace across JVM/JS. | `NoteTest`, `InvariantBoundaryTest` |
+| **Entity Identity & Defensive Copies** | Equality based strictly on identifier; mutating external collections does not affect the board. | `NoteTest` |
+| **Note Creation & Deletion Lifecycle** | New notes enter `TODO` as `YELLOW`; deletion removes target and compacts column order. | `BoardTest` |
+| **Identifier Uniqueness & Existence** | Reject duplicate IDs on creation; return `NOTE_NOT_FOUND` on missing target note. | `BoardTest` |
+| **WIP Capacity on State Transition** | Moving into `DOING` rejected with `WIP_LIMIT_REACHED` if `DOING` count equals limit. | `MovementTest`, `domain.test.js` |
+| **State Transition Rules** | Allow only adjacent transitions (`TODO` <-> `DOING` <-> `DONE`); reject illegal moves with `INVALID_TRANSITION`. | `MovementTest`, `InvariantBoundaryTest` |
+| **In-Column Reordering** | Reordering notes within the same column succeeds without consuming or checking WIP. | `MovementTest`, `InvariantBoundaryTest` |
+| **WIP Limit Configuration Range** | Limit must be between 1 and 20; reject values below current active `DOING` occupancy. | `MovementTest`, `InvariantBoundaryTest` |
+| **Blocker Protection** | Blocked notes reject all column changes (`NOTE_BLOCKED`) while permitting in-column reordering. | `BlockerAndChecklistTest` |
+| **Blocker Reason Boundaries** | Mandatory reason between 1 and 200 UTF-16 units; unblocking clears the reason. | `BlockerAndChecklistTest` |
+| **DONE Note Constraints** | Notes in `DONE` cannot be blocked, but allow text and color updates. | `BlockerAndChecklistTest` |
+| **Checklist Completion Guard** | Moving to `DONE` rejected with `CHECKLIST_INCOMPLETE` if any item is incomplete. | `BlockerAndChecklistTest`, `domain.test.js` |
+| **Empty & Completed Checklist Transition** | Empty checklist or fully completed items allow transition to `DONE`. | `BlockerAndChecklistTest` |
+| **DONE Checklist Immutability** | All checklist mutations on `DONE` notes are rejected with `NOTE_DONE_READ_ONLY`. | `BlockerAndChecklistTest` |
+| **Reopening Completed Notes** | Moving from `DONE` back to `DOING` verifies available WIP capacity. | `BlockerAndChecklistTest` |
+| **Capacity Boundaries** | Board cap of 200 notes (`BOARD_FULL`) and note cap of 20 items (`CHECKLIST_FULL`). | `BoardTest`, `BlockerAndChecklistTest` |
+| **Destination Index Range** | Reject indices outside `0..targetSize` with `INVALID_INDEX` without automatic clamping. | `MovementTest`, `InvariantBoundaryTest` |
+| **JavaScript Facade & Serialization Failures** | Reject malformed JSON and unknown command structures with `INVALID_REQUEST`. | `domain.test.js` |
+
+## Verified Defect Regressions
+
+To confirm that the test suite detects logical defects across the core model and interop layers, three deliberate regressions were introduced and verified:
+
+1. **WIP Condition Weakening (`<=` instead of `<`)**:
+    - *Mutation*: Allowing transition when active `DOING` count is less than or equal to `wipLimit`.
+    - *Detection*: Caught by `MovementTest` and `domain.test.js` (`WIP_LIMIT_REACHED`).
+
+2. **Checklist Validation Bypass on DONE**:
+    - *Mutation*: Bypassing checklist completion check when transitioning into `DONE`.
+    - *Detection*: Caught by `BlockerAndChecklistTest` and `domain.test.js` (`CHECKLIST_INCOMPLETE`).
+
+3. **Premature State Mutation on Rejection**:
+    - *Mutation*: Mutating the note's status before completing invariant checks.
+    - *Detection*: Caught by `InvariantBoundaryTest` and `BlockerAndChecklistTest` verifying that the board snapshot remains strictly unchanged upon failure.
