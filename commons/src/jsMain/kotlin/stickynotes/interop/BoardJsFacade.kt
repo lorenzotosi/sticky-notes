@@ -18,10 +18,11 @@ fun evaluateBoardCommand(
     try {
         val snapshot = boardJson.decodeFromString<BoardSnapshot>(snapshotJson)
         val command = boardJson.decodeFromString<BoardCommand>(commandJson)
-        val response = BoardEngine.execute(snapshot, command)
+        val response: CommandResponse = BoardEngine.execute(snapshot, command)
         boardJson.encodeToString(response)
     } catch (_: Exception) {
-        boardJson.encodeToString(CommandResponse.Failure("INVALID_REQUEST"))
+        val failure: CommandResponse = CommandResponse.Failure("INVALID_REQUEST")
+        boardJson.encodeToString(failure)
     }
 
 @JsExport
