@@ -10,6 +10,7 @@ import stickynotes.contract.boardJson
 import stickynotes.domain.BoardEngine
 import stickynotes.domain.normalizeNoteContent
 
+/** Applies a JSON command to a JSON board snapshot. Malformed input returns `INVALID_REQUEST`. */
 @JsExport
 fun evaluateBoardCommand(
     snapshotJson: String,
@@ -25,6 +26,7 @@ fun evaluateBoardCommand(
         boardJson.encodeToString(failure)
     }
 
+/** Validates and normalizes note content without changing a board. */
 @JsExport
 fun validateNoteContent(content: String): String =
     try {

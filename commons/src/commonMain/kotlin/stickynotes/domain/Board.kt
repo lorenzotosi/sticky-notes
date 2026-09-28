@@ -8,12 +8,19 @@ const val DEFAULT_WIP_LIMIT = 3
 const val MIN_WIP_LIMIT = 1
 const val MAX_WIP_LIMIT = 20
 
+/** The result of a domain command. A failure never contains a partially changed board. */
 sealed interface BoardCommandResult {
     data class Success(val board: Board) : BoardCommandResult
 
     data class Failure(val code: String, val field: String? = null) : BoardCommandResult
 }
 
+/**
+ * The aggregate that enforces note order, status transitions, WIP limits, and unique note IDs.
+ *
+ * Notes are ordered by status: [NoteStatus.TODO], [NoteStatus.DOING], then [NoteStatus.DONE].
+ * Indexes passed to [moveNote] are zero-based within the target status.
+ */
 class Board(
     val id: BoardId,
     notes: List<Note> = emptyList(),
@@ -95,6 +102,7 @@ class Board(
         return BoardCommandResult.Success(Board(id = this.id, notes = updatedList, wipLimit = this.wipLimit))
     }
 
+    /** Moves or reorders a note when the transition and target index are valid. */
     fun moveNote(
         id: NoteId,
         targetStatus: NoteStatus,

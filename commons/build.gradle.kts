@@ -3,9 +3,16 @@
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.dokka)
     alias(libs.plugins.spotless)
     alias(libs.plugins.detekt)
     alias(libs.plugins.kotlinx.serialization)
+}
+
+dokka {
+    dokkaPublications.html {
+        moduleName.set("Sticky Notes domain")
+    }
 }
 
 spotless {
