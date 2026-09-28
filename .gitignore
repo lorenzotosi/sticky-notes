@@ -30,3 +30,5 @@ out/
 # Operating systems
 .DS_Store
 Thumbs.db
+.codex/skills/sticky-notes-docs/SKILL.md
+AGENTS.md

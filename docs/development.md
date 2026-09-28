@@ -40,7 +40,7 @@ The project unifies all module checks into a non-circular Gradle task graph.
 ### Quick Module Commands
 
 - **Commons (KMP):** `./gradlew :commons:check`
-- **Backend (Spring Boot / Java):** `./gradlew :backend:check`
+- **Backend (Java/JDK HTTP server):** `./gradlew :backend:check`
 - **Frontend (Vue / Vite):** `./gradlew :frontend:frontendCheck` (or `cd frontend && npm run lint && npm test`)
 
 ### Custom Gradle Commands
@@ -70,7 +70,7 @@ Gradle configuration cache is supported across the task graph. You can execute:
 
 Subsequent runs will reuse the cached task graph (`Configuration cache entry reused`).
 
-*Note: MongoDB and end-to-end integration test execution will be wired into `fullVerify` during later database implementation tasks, rather than skipped.*
+The current backend exposes only `GET /health`. MongoDB, REST API, and end-to-end tests are not part of the current build.
 
 ## Dependency Management and Locking
 

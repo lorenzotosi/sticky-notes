@@ -3,7 +3,7 @@
 
 # API Contracts, Precedence Rules, and Error Handling
 
-This document specifies the communication protocol between the Vue frontend and the Spring Boot backend.
+This document specifies the planned communication protocol between the Vue frontend and the Java backend. The note endpoints, persistence layer, and revision checks described here are not implemented yet; the backend currently exposes only `GET /health`.
 
 ---
 

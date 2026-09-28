@@ -13,7 +13,7 @@ A board can contain at most 200 notes. Each note ID must be unique within the bo
 
 The board stores notes in a fixed order. `TODO` notes come first, then `DOING`, then `DONE`. The `destinationIndex` field is zero-based within the target status.
 
-A note can move from `TODO` to `DOING`. A note can move from `DOING` to any status. A `DONE` note can only stay in `DONE` or return to `DOING`.
+A note can move from `TODO` to `DOING`, from `DOING` to `TODO` or `DONE`, and from `DONE` back to `DOING`. A note can also be reordered within its current column. Direct `TODO` to `DONE` and `DONE` to `TODO` transitions are rejected.
 
 A blocked note cannot change status. A note needs a complete checklist before it can move to `DONE`.
 

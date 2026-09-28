@@ -3,7 +3,7 @@
 
 # User Experience & Interface States Specification
 
-This document details the layout, user interactions, accessibility constraints, and state transitions for the Sticky Notes Kanban board.
+This document defines the required layout, user interactions, accessibility behavior, and state transitions for the planned Sticky Notes Kanban board. The Vue interface is currently a minimal in-memory note list. Diagrams and card layouts are illustrative; accessibility requirements are mandatory.
 
 ---
 

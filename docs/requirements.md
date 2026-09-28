@@ -6,7 +6,7 @@
 This document formalizes the functional requirements and business rules for the Sticky Notes Kanban application, translating project contracts (S01, S03–S05) into testable criteria.
 
 ## 1. System Scope & Boundaries
-- **Deployment & Access**: Single shared board instance hosted locally via Docker Compose; trusted single-team environment without authentication or multiple boards.
+- **Deployment & Access**: The application is intended to run as a single shared board via Docker Compose in a trusted, single-team environment without authentication or multiple boards. Docker deployment is not implemented yet.
 - **Out of Scope (Explicitly Deferred)**: User accounts/sessions, multi-tenancy, real-time WebSocket sync, deadlines/reminders, attachments, drag-and-drop, Kubernetes orchestration, and event sourcing.
 
 ---

@@ -3,15 +3,32 @@
 
 # Sticky Notes documentation
 
-- [Initial Audit](initial-audit.md)
-- [Requirements](requirements.md)
-- [Glossary](glossary.md)
-- [API Contracts](contracts.md)
-- [Domain rules](domain.md)
-- [Domain API reference](api/index.html)
-- [UI & Interaction Design](ux.md)
-- [Architecture](architecture.md)
-    - [ADR 001: Board Aggregate](adr/001-board-aggregate.md)
-    - [ADR 002: Local Scope](adr/002-local-scope.md)
-- [CI/CD](ci-cd.md)
+## Development and delivery
+
+- [Local development](development.md)
+- [Testing](testing.md)
 - [Deployment](deployment.md)
+
+## Specifications
+
+- [Requirements](requirements.md)
+- [UI and interaction design](ux.md)
+- [API contracts](contracts.md)
+- [OpenAPI definition](openapi.yaml)
+
+## Implementation
+
+- [Domain rules](domain.md)
+- [Glossary](glossary.md)
+- [Generated domain API reference](api/index.html)
+
+## Architecture decisions
+
+- [Architecture](architecture.md)
+- [ADR 001: Board aggregate](adr/001-board-aggregate.md)
+- [ADR 002: Local scope](adr/002-local-scope.md)
+
+## Process
+
+- [CI/CD](ci-cd.md)
+- [Repository governance](repository-governance.md)

@@ -9,7 +9,7 @@ The project guidelines require demonstrating robust software process engineering
 Attempting to implement a full enterprise software suite (user accounts, session authentication, multi-tenant databases, real-time WebSockets, cloud orchestration) risks introducing excessive incidental complexity.
 
 ## Decision
-We strictly bound the application scope to a **single shared Kanban board** hosted locally using Docker Compose without authentication:
+We strictly bound the application scope to a **single shared Kanban board** without authentication. The target runtime deployment uses Docker Compose locally:
 - **No User Accounts / Authentication**: The board operates in a trusted local network environment.
 - **Single Board (`main`)**: The database maintains one canonical board instance.
 - **No WebSockets**: Synchronization relies on client-initiated REST calls with optimistic concurrency control (CAS) handling race conditions between windows.
