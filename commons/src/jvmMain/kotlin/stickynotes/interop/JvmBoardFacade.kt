@@ -10,6 +10,7 @@ import stickynotes.domain.BoardEngine
 import stickynotes.domain.NoteColor
 import stickynotes.domain.NoteStatus
 
+/** Static entry points for Java consumers of the shared domain. */
 object JvmBoardFacade {
     @JvmStatic
     fun execute(

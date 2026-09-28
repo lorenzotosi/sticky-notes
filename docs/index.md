@@ -7,6 +7,8 @@
 - [Requirements](requirements.md)
 - [Glossary](glossary.md)
 - [API Contracts](contracts.md)
+- [Domain rules](domain.md)
+- [Domain API reference](api/index.html)
 - [UI & Interaction Design](ux.md)
 - [Architecture](architecture.md)
     - [ADR 001: Board Aggregate](adr/001-board-aggregate.md)

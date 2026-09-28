@@ -8,6 +8,7 @@ import kotlinx.serialization.Serializable
 import stickynotes.domain.NoteColor
 import stickynotes.domain.NoteStatus
 
+/** Commands accepted by the shared board engine. */
 @Serializable
 sealed interface BoardCommand {
     @Serializable
@@ -84,6 +85,7 @@ sealed interface BoardCommand {
     ) : BoardCommand
 }
 
+/** Portable command result used by Java and JavaScript consumers. */
 @Serializable
 sealed interface CommandResponse {
     @Serializable

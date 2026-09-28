@@ -16,7 +16,7 @@ The development-branch check is the fast quality gate: its purpose is to discove
 
 Test reports are retained after quality runs. Deliverables are uploaded only by successful full builds, so ordinary branch pushes do not create release artifacts.
 
-After a successful full build on `main`, semantic-release derives the next version from squash-merge titles and creates the GitHub release from those deliverables. Release executions are serialized to prevent concurrent version calculations. It uses the workflow `GITHUB_TOKEN`; no repository secret is required. The same push publishes the Markdown documentation through GitHub Pages.
+After a successful full build on `main`, semantic-release derives the next version from squash-merge titles and creates the GitHub release from those deliverables. Release executions are serialized to prevent concurrent version calculations. It uses the workflow `GITHUB_TOKEN`; no repository secret is required. The same push publishes the Markdown documentation and generated Dokka API reference through GitHub Pages.
 
 ## Version rules
 

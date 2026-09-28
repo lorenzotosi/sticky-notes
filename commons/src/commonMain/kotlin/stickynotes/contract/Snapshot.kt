@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 import stickynotes.domain.NoteColor
 import stickynotes.domain.NoteStatus
 
+/** Serialized checklist item used at the module boundary. */
 @Serializable
 data class ChecklistItemSnapshot(
     val id: String,
@@ -14,6 +15,7 @@ data class ChecklistItemSnapshot(
     val completed: Boolean,
 )
 
+/** Serialized note used at the module boundary. */
 @Serializable
 data class NoteSnapshot(
     val id: String,
@@ -24,6 +26,11 @@ data class NoteSnapshot(
     val checklist: List<ChecklistItemSnapshot> = emptyList(),
 )
 
+/**
+ * Portable board state.
+ *
+ * Schema version 1 is supported. [revision] must be zero or greater.
+ */
 @Serializable
 data class BoardSnapshot(
     val id: String = "main",

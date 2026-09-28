@@ -50,7 +50,11 @@ tasks.register<GradleBuild>("updateDependencyLocks") {
 tasks.register<Sync>("documentation") {
     group = "documentation"
     description = "Builds the versioned documentation artifact."
+    dependsOn(":commons:dokkaGeneratePublicationHtml")
     from("docs")
+    from(project(":commons").layout.buildDirectory.dir("dokka/html")) {
+        into("api")
+    }
     into(layout.buildDirectory.dir("docs"))
 }
 

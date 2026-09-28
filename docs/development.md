@@ -48,7 +48,7 @@ The project unifies all module checks into a non-circular Gradle task graph.
 | Command | Description |
 | --- | --- |
 | `./gradlew updateDependencyLocks` | Regenerates the dependency lockfiles for every Gradle subproject. Use it after changing a dependency or version in `gradle/libs.versions.toml`; the task enables Gradle's `--write-locks` mode automatically. It does not update `frontend/package-lock.json`. |
-| `./gradlew documentation` | Copies the Markdown documentation from `docs/` into `build/docs/` so it can be handled as a build artifact. |
+| `./gradlew documentation` | Generates the Dokka API reference for `commons` and copies it with the Markdown documentation into `build/docs/`. |
 | `./gradlew verifyLicense` | Checks that source and configuration files contain the required SPDX license header. |
 | `./gradlew fullTest` | Runs the Commons checks and all backend and frontend test suites without producing every final deliverable. |
 | `./gradlew check` | Runs repository-wide verification: formatting, Detekt, license validation, JVM and JavaScript tests, frontend linting, and frontend tests. |

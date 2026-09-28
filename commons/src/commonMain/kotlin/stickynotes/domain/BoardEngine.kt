@@ -9,7 +9,13 @@ import stickynotes.contract.CommandResponse
 import stickynotes.contract.toDomain
 import stickynotes.contract.toSnapshot
 
+/** Applies portable commands to validated board snapshots. */
 object BoardEngine {
+    /**
+     * Applies one [command] and returns a portable response.
+     *
+     * Invalid snapshots return `INVALID_SNAPSHOT`. A success preserves the input schema version and revision.
+     */
     fun execute(
         snapshot: BoardSnapshot,
         command: BoardCommand,
