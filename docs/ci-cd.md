@@ -3,6 +3,8 @@
 
 # CI/CD
 
+Delivery means build artifacts, GitHub Releases, and GitHub Pages; it does not deploy a running application.
+
 ## Workflow execution policy
 
 | Event | Gradle command | Purpose |
@@ -33,3 +35,9 @@ Pull request titles use `type(scope): description`, where the scope is optional.
 A breaking change can also be declared with a `BREAKING CHANGE:` footer. The `!` form is preferred for squash-merged pull requests because the release impact is visible in the title.
 
 Third-party actions are pinned to immutable commit SHAs, permissions are granted per workflow and every job has a bounded execution time.
+
+## GitHub Pages publication
+
+The documentation workflow runs `./gradlew documentation`. Gradle copies the versioned files from `docs/` into `build/docs/` and generates the Kotlin domain API reference with Dokka under `build/docs/api/`. GitHub's Jekyll action then converts the Markdown files into the `_site` artifact published by GitHub Pages.
+
+`docs/index.md` is the manually maintained navigation page. A document copied into the site but omitted from that index remains publishable by URL, but it is not visible in the main list.

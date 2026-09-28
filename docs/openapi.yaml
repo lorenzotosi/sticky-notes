@@ -4,7 +4,7 @@
 openapi: 3.0.3
 info:
   title: Sticky Notes Kanban API
-  description: REST API contract for the Sticky Notes collaborative Kanban board.
+  description: Planned REST API contract for the Sticky Notes collaborative Kanban board. These endpoints are not implemented yet.
   version: 1.0.0
   license:
     name: MIT

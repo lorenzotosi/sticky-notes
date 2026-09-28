@@ -3,7 +3,7 @@
 
 # Contributing & Development Workflow
 
-This document outlines the collaboration process, branching strategy, and code review rules for the project.
+This document defines the human collaboration process. Automated checks and release behavior are documented in [CI/CD](docs/ci-cd.md).
 
 ## 1. Roles and Responsibilities
 - **Person A**: Domain modeling, JVM interop, backend services, and persistence.

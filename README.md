@@ -26,9 +26,3 @@ npm run dev
 - `backend/`: minimal Java HTTP API.
 - `frontend/`: Vue application.
 - `docs/`: architecture, process, CI/CD and deployment notes.
-
-## Conventions
-
-Use Conventional Commit titles for pull requests, for example `feat: create note` or `fix: reject blank content`. GitHub validates both titles and commits. Squash merging preserves the title for semantic-release, which creates GitHub releases after merges to `main`.
-
-All comment-capable files carry SPDX headers. JSON package metadata declares the MIT license through its `license` field.

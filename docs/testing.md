@@ -3,7 +3,7 @@
 
 # Shared domain tests
 
-`commons/src/commonTest` contains domain scenarios shared by the JVM and ChromeHeadless targets. `browserDomainTest` is an alias for `jsBrowserTest`.
+`commons/src/commonTest` contains domain scenarios shared by the JVM and ChromeHeadless targets. `browserDomainTest` is an alias for `jsBrowserTest`. The repository does not yet contain REST, database, or end-to-end tests.
 
 Install JDK 21 and Google Chrome before running the browser tests. Point `CHROME_BIN` to the Chrome executable if Karma cannot find it:
 
@@ -25,7 +25,7 @@ To check that both targets detect a core regression, temporarily change an expec
 
 ## Domain Invariant Coverage Matrix
 
-The shared multiplatform suite (`commons/src/commonTest`) and frontend interop suite (`frontend/src/domain.test.js`) cover the full range of domain boundaries and edge cases:
+The shared multiplatform suite (`commons/src/commonTest`) and frontend interop suite (`frontend/src/domain.test.js`) cover the implemented shared-domain boundaries and edge cases:
 
 | Domain Rule & Boundary | Expected Behavior | Verification Target |
 | :--- | :--- | :--- |
@@ -65,3 +65,9 @@ To confirm that the test suite detects logical defects across the core model and
 3. **Premature State Mutation on Rejection**:
     - *Mutation*: Mutating the note's status before completing invariant checks.
     - *Detection*: Caught by `InvariantBoundaryTest` and `BlockerAndChecklistTest` verifying that the board snapshot remains strictly unchanged upon failure.
+
+## Other test scopes
+
+- `frontend/src/App.test.js` verifies the current minimal Vue note form and in-memory rendering.
+- `backend/src/test/java/stickynotes/DomainInteropTest.java` verifies Java access to the shared JVM facade.
+- `backend/src/test/java/stickynotes/MainTest.java` currently verifies only that the backend entry point exists.

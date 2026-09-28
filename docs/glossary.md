@@ -15,5 +15,5 @@ Consistent terminology applied across requirements, domain entities, API contrac
 | **WIP Limit** | Work-In-Progress cap: maximum allowed notes concurrently present in the `DOING` column.                       | `board.wipLimit: Int` |
 | **Blocker** | Operational impediment preventing state change on a note, accompanied by a non-empty reason.                  | `note.blockedReason: String?` |
 | **Checklist Item**| Subtask within a note holding a descriptive label and a completion flag.                                      | `stickynotes.domain.ChecklistItem` |
-| **Revision** | Non-negative monotonic integer counter on `Board` used for optimistic concurrency control (compare and swap). | `board.revision: Int` |
+| **Revision** | Non-negative counter present in the portable board snapshot. Persistent compare-and-swap enforcement is planned but not implemented. | `board.revision: Int` |
 | **Destination Index** | Zero-based target insertion index for a note within a column after removal from source.                       | `command.destinationIndex: Int` |

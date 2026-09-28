@@ -51,7 +51,9 @@ tasks.register<Sync>("documentation") {
     group = "documentation"
     description = "Builds the versioned documentation artifact."
     dependsOn(":commons:dokkaGeneratePublicationHtml")
-    from("docs")
+    from("docs") {
+        exclude(".DS_Store", "**/.DS_Store")
+    }
     from(project(":commons").layout.buildDirectory.dir("dokka/html")) {
         into("api")
     }
