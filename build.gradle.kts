@@ -125,3 +125,14 @@ tasks.register("fullBuild") {
         ":frontend:frontendBuild",
     )
 }
+
+tasks.register("formatCode") {
+    group = "build"
+    description = "Formats Kotlin, Java, Gradle, and frontend code."
+    dependsOn(
+        "spotlessApply",
+        ":commons:spotlessApply",
+        ":backend:spotlessApply",
+        ":frontend:frontendFormat",
+    )
+}

@@ -8,6 +8,7 @@
     "build": "vite build",
     "test": "vitest run",
     "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
     "lint:openapi": "redocly lint ../docs/openapi.yaml"
   },
   "dependencies": {
