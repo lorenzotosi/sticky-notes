@@ -35,11 +35,15 @@ class Board(
         require(notes.size <= MAX_BOARD_NOTES) {
             "Board cannot exceed $MAX_BOARD_NOTES notes."
         }
+        require(notes.count { it.status == NoteStatus.DOING } <= wipLimit) {
+            "WIP limit cannot be below the current DOING count."
+        }
+        require(notes == orderCanonical(notes)) { "Notes must use canonical status order." }
         val ids = mutableSetOf<NoteId>()
         for (note in notes) {
             require(ids.add(note.id)) { "Duplicate note ID: ${note.id.value}" }
         }
-        noteState = orderCanonical(notes)
+        noteState = notes.toList()
     }
 
     val notes: List<Note>

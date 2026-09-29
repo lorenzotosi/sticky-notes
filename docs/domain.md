@@ -53,7 +53,7 @@ Commands do not change an existing board. A successful command returns a new boa
 
 ## Snapshots and facades
 
-`BoardSnapshot` is the portable board format. Schema version 1 is the only supported version. Revisions cannot be negative.
+`BoardSnapshot` is the portable board format. Schema version 1 is the only supported version. Rehydration rejects negative revisions, duplicate IDs, non-canonical note order, WIP limits below current occupancy, and `DONE` notes that are blocked or have incomplete checklists. Invalid state is not repaired or replaced with an empty board.
 
 `BoardEngine.execute` validates a snapshot and applies one command. It preserves the snapshot schema version and revision.
 

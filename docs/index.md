@@ -27,6 +27,7 @@
 - [Architecture](architecture.md)
 - [ADR 001: Board aggregate](adr/001-board-aggregate.md)
 - [ADR 002: Local scope](adr/002-local-scope.md)
+- [ADR 003: JVM and JavaScript interoperability](adr/003-interop.md)
 
 ## Process
 

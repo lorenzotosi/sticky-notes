@@ -22,6 +22,12 @@ class Note(
         require(checklist.size <= MAX_CHECKLIST_ITEMS) {
             "Checklist cannot exceed $MAX_CHECKLIST_ITEMS items."
         }
+        require(status != NoteStatus.DONE || blockedReason == null) {
+            "A DONE note cannot be blocked."
+        }
+        require(status != NoteStatus.DONE || checklist.all { it.completed }) {
+            "A DONE note must have a complete checklist."
+        }
         val ids = mutableSetOf<ChecklistItemId>()
         for (item in checklist) {
             require(ids.add(item.id)) { "Duplicate checklist item ID: ${item.id.value}" }

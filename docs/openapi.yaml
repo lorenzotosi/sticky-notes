@@ -308,10 +308,12 @@ components:
 
     ChecklistItemSnapshot:
       type: object
+      additionalProperties: false
       required: [id, label, completed]
       properties:
         id:
           type: string
+          minLength: 1
         label:
           type: string
           minLength: 1
@@ -321,10 +323,12 @@ components:
 
     NoteSnapshot:
       type: object
+      additionalProperties: false
       required: [id, content, color, status, blockedReason, checklist]
       properties:
         id:
           type: string
+          minLength: 1
         content:
           type: string
           minLength: 1
@@ -336,6 +340,7 @@ components:
         blockedReason:
           type: string
           nullable: true
+          minLength: 1
           maxLength: 200
         checklist:
           type: array
@@ -345,13 +350,16 @@ components:
 
     BoardSnapshot:
       type: object
+      additionalProperties: false
       required: [id, schemaVersion, revision, wipLimit, notes]
       properties:
         id:
           type: string
+          minLength: 1
           example: main
         schemaVersion:
           type: integer
+          enum: [1]
           example: 1
         revision:
           type: integer
@@ -364,6 +372,7 @@ components:
           example: 3
         notes:
           type: array
+          description: Notes in canonical TODO, DOING, DONE status order; rehydration also validates unique IDs, WIP occupancy, blockers, and completed DONE checklists.
           maxItems: 200
           items:
             $ref: '#/components/schemas/NoteSnapshot'
