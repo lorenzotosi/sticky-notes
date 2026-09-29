@@ -27,8 +27,14 @@ class SnapshotTest {
                 BoardSnapshot(notes = listOf(note("duplicate"), note("duplicate"))),
                 BoardSnapshot(notes = listOf(note("done", NoteStatus.DONE, checklist = incomplete))),
                 BoardSnapshot(notes = listOf(note("done", NoteStatus.DONE, blockedReason = "blocked"))),
-                BoardSnapshot(wipLimit = 1, notes = listOf(note("one", NoteStatus.DOING),
-                    note("two", NoteStatus.DOING))),
+                BoardSnapshot(
+                    wipLimit = 1,
+                    notes =
+                        listOf(
+                            note("one", NoteStatus.DOING),
+                            note("two", NoteStatus.DOING),
+                        ),
+                ),
                 BoardSnapshot(revision = -1),
                 BoardSnapshot(notes = listOf(note("done", NoteStatus.DONE), note("todo"))),
             )
