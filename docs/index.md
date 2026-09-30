@@ -21,6 +21,7 @@
 - [Domain rules](domain.md)
 - [Glossary](glossary.md)
 - [Generated domain API reference](api/index.html)
+- [Shared-domain acceptance evidence](evidence/R1.md)
 
 ## Architecture decisions
 

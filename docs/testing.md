@@ -68,6 +68,6 @@ To confirm that the test suite detects logical defects across the core model and
 
 ## Other test scopes
 
-- `frontend/src/App.test.js` verifies the current minimal Vue note form and in-memory rendering.
+- `frontend/src/App.test.js` exercises the real generated Kotlin/JS package through the Vue note form: creation and rendering, blank-content rejection, and oversized-content rejection with board/draft preservation and recovery after a valid submission. The oversized test submits programmatically so HTML `maxlength` cannot mask a missing domain check.
 - `backend/src/test/java/stickynotes/DomainInteropTest.java` verifies Java access to the shared JVM facade.
 - `backend/src/test/java/stickynotes/MainTest.java` currently verifies only that the backend entry point exists.

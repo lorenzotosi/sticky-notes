@@ -19,7 +19,7 @@ graph TD
 ```
 
 - `commons` contains the Kotlin Multiplatform domain, commands, snapshots, serialization, and JVM/JavaScript facades.
-- `frontend` contains a minimal Vue interface. It currently keeps notes in browser memory; the Kotlin/JS package is exercised by interop tests but is not yet used by `App.vue`.
+- `frontend` contains a minimal Vue interface. `App.vue` imports the generated Kotlin/JS package and submits `CREATE_NOTE` commands through `evaluateBoardCommand`. It renders the returned board on success and preserves the draft and board on rejection. Notes remain in browser memory and are lost on reload; no backend request is made.
 - `backend` is a Java application using the JDK HTTP server. It exposes only `GET /health` and verifies JVM facade interoperability in tests.
 - No database, REST note API, server-side revision enforcement, container image, or Docker Compose configuration exists yet.
 
