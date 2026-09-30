@@ -64,18 +64,18 @@ describe('Domain JS Facade Interop', () => {
       wipLimit: 1,
       notes: [
         {
-          id: 'note-1',
+          id: 'note-2',
           content: 'Active',
           color: 'YELLOW',
-          status: 'DOING',
+          status: 'TODO',
           blockedReason: null,
           checklist: []
         },
         {
-          id: 'note-2',
+          id: 'note-1',
           content: 'Pending',
           color: 'YELLOW',
-          status: 'TODO',
+          status: 'DOING',
           blockedReason: null,
           checklist: []
         }

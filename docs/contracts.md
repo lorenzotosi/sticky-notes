@@ -47,6 +47,7 @@ This document specifies the planned communication protocol between the Vue front
 When processing any mutating command, the backend strictly applies validations in the following deterministic sequence:
 
 1. **Structural Validation**: JSON parsing, unknown field rejection, basic type and enum range checks $\rightarrow$ `400 BadRequest`.
+   Persisted snapshots are rehydrated only through the shared domain mapper. It rejects unsupported schema versions, negative revisions, duplicate IDs, non-canonical note order, `DONE` notes that are blocked or have incomplete checklists, and WIP limits below current occupancy. Invalid persisted state is reported; it is never replaced with an empty board or saved silently.
 2. **Persistence State Load**: Board is retrieved from MongoDB. If DB is down $\rightarrow$ `503 ServiceUnavailable`.
 3. **Concurrency Check**: If `expectedRevision != board.revision` $\rightarrow$ `409 REVISION_CONFLICT` (returns `currentRevision`).
 4. **Entity Presence**: Verify that target `NoteId` (and `ChecklistItemId`) exist $\rightarrow$ `404 NotFound`.

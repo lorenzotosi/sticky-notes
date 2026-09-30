@@ -16,7 +16,7 @@ class MovementTest {
     fun `moveNote rejects transition to DOING when wip limit is reached`() {
         val noteA = Note(NoteId("A"), "Task A", status = NoteStatus.DOING)
         val noteB = Note(NoteId("B"), "Task B", status = NoteStatus.TODO)
-        val board = Board(BoardId("main"), wipLimit = 1, notes = listOf(noteA, noteB))
+        val board = Board(BoardId("main"), wipLimit = 1, notes = listOf(noteB, noteA))
 
         val result = board.moveNote(NoteId("B"), NoteStatus.DOING, 1)
 

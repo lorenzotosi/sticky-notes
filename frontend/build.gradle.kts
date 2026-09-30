@@ -55,6 +55,18 @@ val frontendCheck =
         dependsOn(frontendLint, frontendTest)
     }
 
+val frontendFormat =
+    tasks.register<Exec>("frontendFormat") {
+        group = "build"
+        description = "Formats frontend code with ESLint auto-fix"
+        dependsOn(frontendInstall)
+        workingDir = projectDir
+        commandLine(npm.get(), "run", "lint:fix")
+        inputs.dir("src")
+        inputs.file("eslint.config.js")
+        inputs.file("package.json")
+    }
+
 tasks.register<Exec>("frontendBuild") {
     group = "build"
     description = "Compile production assets w Vite"
