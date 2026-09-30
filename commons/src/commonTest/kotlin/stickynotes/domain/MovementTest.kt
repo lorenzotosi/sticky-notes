@@ -14,7 +14,7 @@ import kotlin.test.assertIs
 class MovementTest {
     @Test
     fun `moveNote rejects transition to DOING when wip limit is reached`() {
-        val noteA = Note(NoteId("A"), "Task A", status = NoteStatus.DOING)
+        val noteA = Note(NoteId("A"), "Task A", status = NoteStatus.DOING, blockedReason = "Waiting")
         val noteB = Note(NoteId("B"), "Task B", status = NoteStatus.TODO)
         val board = Board(BoardId("main"), wipLimit = 1, notes = listOf(noteB, noteA))
 
@@ -96,16 +96,17 @@ class MovementTest {
         val a = Note(NoteId("A"), "Task A", status = NoteStatus.TODO)
         val b = Note(NoteId("B"), "Task B", status = NoteStatus.TODO)
         val c = Note(NoteId("C"), "Task C", status = NoteStatus.DOING)
-        val board = Board(BoardId("main"), wipLimit = 3, notes = listOf(a, b, c))
+        val d = Note(NoteId("D"), "Task D", status = NoteStatus.DOING)
+        val board = Board(BoardId("main"), wipLimit = 3, notes = listOf(a, b, c, d))
 
         assertIs<BoardCommandResult.Success>(board.moveNote(NoteId("A"), NoteStatus.DOING, 0))
-        assertIs<BoardCommandResult.Success>(board.moveNote(NoteId("A"), NoteStatus.DOING, 1))
+        assertIs<BoardCommandResult.Success>(board.moveNote(NoteId("A"), NoteStatus.DOING, 2))
 
         val negativeIndex = board.moveNote(NoteId("A"), NoteStatus.DOING, -1)
         assertIs<BoardCommandResult.Failure>(negativeIndex)
         assertEquals("INVALID_INDEX", negativeIndex.code)
 
-        val indexTooLarge = board.moveNote(NoteId("A"), NoteStatus.DOING, 2)
+        val indexTooLarge = board.moveNote(NoteId("A"), NoteStatus.DOING, 3)
         assertIs<BoardCommandResult.Failure>(indexTooLarge)
         assertEquals("INVALID_INDEX", indexTooLarge.code)
     }

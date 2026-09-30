@@ -79,10 +79,10 @@ abstract class GenerateNpmPackageJson : DefaultTask() {
               "type": "module",
               "main": "./sticky-notes-commons.mjs",
               "module": "./sticky-notes-commons.mjs",
-              "types": "./sticky-notes-commons.d.ts",
+              "types": "./sticky-notes-commons.d.mts",
               "exports": {
                 ".": {
-                  "types": "./sticky-notes-commons.d.ts",
+                  "types": "./sticky-notes-commons.d.mts",
                   "import": "./sticky-notes-commons.mjs",
                   "default": "./sticky-notes-commons.mjs"
                 }

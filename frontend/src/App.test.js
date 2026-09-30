@@ -31,4 +31,28 @@ describe('App.vue interaction', () => {
     const notes = wrapper.findAll('section[aria-label="Notes"] article')
     expect(notes).toHaveLength(0)
   })
+
+  it('preserves the board and draft on rejection, then clears the error on success', async () => {
+    const wrapper = mount(App)
+    const textarea = wrapper.find('#note')
+    const form = wrapper.find('form')
+
+    await textarea.setValue('First note')
+    await form.trigger('submit')
+
+    const draft = 'a'.repeat(501)
+    await textarea.setValue(draft)
+    await form.trigger('submit')
+
+    expect(wrapper.findAll('article').map(note => note.text())).toEqual(['First note'])
+    expect(wrapper.find('[role="alert"]').text()).not.toBe('')
+    expect(textarea.element.value).toBe(draft)
+
+    await textarea.setValue('Second note')
+    await form.trigger('submit')
+
+    expect(wrapper.findAll('article').map(note => note.text())).toEqual(['First note', 'Second note'])
+    expect(wrapper.find('[role="alert"]').text()).toBe('')
+    expect(textarea.element.value).toBe('')
+  })
 })

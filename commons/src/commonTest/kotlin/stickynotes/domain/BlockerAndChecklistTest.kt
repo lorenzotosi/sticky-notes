@@ -43,6 +43,11 @@ class BlockerAndChecklistTest {
         assertIs<BoardCommandResult.Success>(validRes)
         assertEquals("Valid reason", validRes.board.notes.first().blockedReason)
 
+        for (length in listOf(1, 200)) {
+            val boundary = assertIs<BoardCommandResult.Success>(board.blockNote(NoteId("N1"), "a".repeat(length)))
+            assertEquals(length, boundary.board.notes.first().blockedReason?.length)
+        }
+
         val unblockRes = validRes.board.unblockNote(NoteId("N1"))
         assertIs<BoardCommandResult.Success>(unblockRes)
         assertNull(unblockRes.board.notes.first().blockedReason)
@@ -101,6 +106,11 @@ class BlockerAndChecklistTest {
         val updateRes = board.updateChecklistItem(NoteId("N1"), ChecklistItemId("I1"), label = "Renamed")
         assertIs<BoardCommandResult.Failure>(updateRes)
         assertEquals("NOTE_DONE_READ_ONLY", updateRes.code)
+
+        val toggleRes = board.updateChecklistItem(NoteId("N1"), ChecklistItemId("I1"), completed = false)
+        assertIs<BoardCommandResult.Failure>(toggleRes)
+        assertEquals("NOTE_DONE_READ_ONLY", toggleRes.code)
+        assertEquals(true, board.notes.first().checklist.first().completed)
 
         val deleteRes = board.deleteChecklistItem(NoteId("N1"), ChecklistItemId("I1"))
         assertIs<BoardCommandResult.Failure>(deleteRes)
