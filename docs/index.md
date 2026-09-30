@@ -12,6 +12,7 @@
 ## Specifications
 
 - [Requirements](requirements.md)
+- [Verification and traceability matrix](verification.md)
 - [UI and interaction design](ux.md)
 - [API contracts](contracts.md)
 - [OpenAPI definition](openapi.yaml)
