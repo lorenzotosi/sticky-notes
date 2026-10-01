@@ -11,12 +11,12 @@ describe('App.vue interaction', () => {
     const textarea = wrapper.find('textarea#note')
     const form = wrapper.find('form')
 
-    await textarea.setValue('Promemoria esame SPE')
+    await textarea.setValue('Preparare il rilascio')
     await form.trigger('submit')
 
     const notes = wrapper.findAll('section[aria-label="Notes"] article')
     expect(notes).toHaveLength(1)
-    expect(notes[0].text()).toBe('Promemoria esame SPE')
+    expect(notes[0].text()).toBe('Preparare il rilascio')
     expect(textarea.element.value).toBe('')
   })
 

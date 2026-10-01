@@ -14,7 +14,7 @@ The project is organized around these functional gates. They define integration 
 | R2 | Persistent CRUD | Note creation, reading, editing, and deletion through UI/API/database; data survives reload and restart. |
 | R3 | Complete Kanban | WIP limits, blockers, checklists, ordering, concurrency, and accessible interactions. |
 | R4 | Reproducible delivery | Containers, end-to-end checks, versioned images, backup/restore, rollback, and clean installation. |
-| R5 | Handover | Traceable decisions and evidence, demonstration, oral preparation, final artifacts, and confirmed submission. |
+| R5 | Handover | Traceable decisions and evidence, demonstration, final artifacts, and verified access for recipients. |
 
 ## Development and delivery
 

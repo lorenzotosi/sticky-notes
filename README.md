@@ -3,7 +3,7 @@
 
 # Sticky Notes
 
-Minimal web application for creating sticky notes. The project is an exam case study for Software Process Engineering: Kotlin Multiplatform shares the domain between a Java/JVM backend and a Vue/JavaScript frontend.
+Minimal web application for creating sticky notes. Kotlin Multiplatform shares the domain between a Java/JVM backend and a Vue/JavaScript frontend.
 
 ## Start here
 
