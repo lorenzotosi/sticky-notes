@@ -3,9 +3,9 @@
 
 # Kanban Domain Requirements
 
-This document formalizes the functional requirements and business rules for the Sticky Notes Kanban application, translating project contracts (S01, S03–S05) into testable criteria.
+This document defines the functional requirements and business rules for the Sticky Notes Kanban application.
 
-The [verification and traceability matrix](verification.md) defines cases C01–C55 and links them to these requirements, technical specifications, and recorded evidence. A requirement can need checks at several layers; domain evidence alone does not prove API, persistence, or UI behavior.
+The [testing guide](testing.md) describes the implemented checks, and the [R1 acceptance evidence](evidence/R1.md) records the observed shared-domain and consumer results. A requirement can need checks at several layers; domain evidence alone does not prove API, persistence, or UI behavior.
 
 ## 1. System Scope & Boundaries
 - **Deployment & Access**: The application is intended to run as a single shared board via Docker Compose in a trusted, single-team environment without authentication or multiple boards. Docker deployment is not implemented yet.

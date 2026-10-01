@@ -14,7 +14,7 @@ Describe the gap or requirement addressed, and the resulting behavior.
 ## Verification & Proof
 - [ ] Automated tests executed and passing locally
 - [ ] Static analysis / linter clean (`npm run lint` / `./gradlew check`)
-- [ ] Verification scenario(s) covered: (e.g., C01, C02)
+- [ ] Covered scenarios, expected results, and exercised layers are described.
 - Provide commands executed, test outputs, or UI screenshots where applicable.
 
 ## Review Checklist

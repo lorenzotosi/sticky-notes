@@ -5,7 +5,7 @@
 
 `commons/src/commonTest` contains domain scenarios shared by the JVM and ChromeHeadless targets. `browserDomainTest` is an alias for `jsBrowserTest`. The repository does not yet contain REST, database, or end-to-end tests.
 
-The [verification and traceability matrix](verification.md) defines the required acceptance scenarios C01–C55. This guide explains how to execute the implemented tests; [R1 evidence](evidence/R1.md) records the observed domain and consumer results.
+This guide explains how to execute the implemented tests and which [domain rules](domain.md) they cover. [R1 evidence](evidence/R1.md) records the observed domain and consumer results.
 
 Install JDK 21 and Google Chrome before running the browser tests. Point `CHROME_BIN` to the Chrome executable if Karma cannot find it:
 
