@@ -24,25 +24,25 @@ import tools.jackson.databind.json.JsonMapper;
 @ActiveProfiles("test")
 class MainTest {
 
-    @Value("${local.server.port}")
-    private int port;
+  @Value("${local.server.port}")
+  private int port;
 
-    @Test
-    void livenessIsUpWithoutDatabase() throws Exception {
-        final var request =
-            HttpRequest.newBuilder()
-                .uri(URI.create("http://127.0.0.1:" + port + "/actuator/health/liveness"))
-                .timeout(Duration.ofSeconds(5))
-                .GET()
-                .build();
+  @Test
+  void livenessIsUpWithoutDatabase() throws Exception {
+    final var request =
+        HttpRequest.newBuilder()
+            .uri(URI.create("http://127.0.0.1:" + port + "/actuator/health/liveness"))
+            .timeout(Duration.ofSeconds(5))
+            .GET()
+            .build();
 
-        try (final var client = HttpClient.newHttpClient()) {
-            final var response = client.send(request, HttpResponse.BodyHandlers.ofString());
+    try (final var client = HttpClient.newHttpClient()) {
+      final var response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-            assertEquals(200, response.statusCode());
+      assertEquals(200, response.statusCode());
 
-            final var body = JsonMapper.builder().build().readTree(response.body());
-            assertEquals("UP", body.path("status").asString());
-        }
+      final var body = JsonMapper.builder().build().readTree(response.body());
+      assertEquals("UP", body.path("status").asString());
     }
+  }
 }
