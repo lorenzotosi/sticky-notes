@@ -3,26 +3,13 @@
 
 package stickynotes;
 
-import com.sun.net.httpserver.HttpServer;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-public final class Main {
-  private Main() {}
+@SpringBootApplication
+public class Main {
 
-  public static void main(final String[] args) throws IOException {
-    final var server = HttpServer.create(new InetSocketAddress(8080), 0);
-    server.createContext(
-        "/health",
-        exchange -> {
-          final var body = "{\"status\":\"ok\"}".getBytes(StandardCharsets.UTF_8);
-          exchange.getResponseHeaders().set("Content-Type", "application/json");
-          exchange.sendResponseHeaders(200, body.length);
-          exchange.getResponseBody().write(body);
-          exchange.close();
-        });
-    server.start();
-    System.out.println("Sticky Notes API listening on http://localhost:8080/health");
+  public static void main(final String[] args) {
+    SpringApplication.run(Main.class, args);
   }
 }
