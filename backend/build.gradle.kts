@@ -5,6 +5,7 @@ plugins {
     application
     java
     alias(libs.plugins.spotless)
+    alias(libs.plugins.spring.boot)
 }
 
 java {
@@ -24,6 +25,20 @@ spotless {
 dependencies {
     implementation(project(":commons"))
     testImplementation(platform(libs.junit.bom))
+    implementation(platform(libs.jackson.bom))
+    implementation(platform(libs.spring.boot.bom))
+    implementation(platform(libs.mongodb.driver.bom))
+    implementation(libs.spring.boot.webmvc)
+    implementation(libs.spring.boot.mongodb)
+    implementation(libs.spring.boot.actuator)
+    testImplementation(libs.spring.boot.test)
+    constraints { //specific versions to avoid vulnerability in spring bom
+        implementation(libs.logback.classic)
+        implementation(libs.logback.core)
+        implementation(libs.tomcat.core)
+        implementation(libs.tomcat.el)
+        implementation(libs.tomcat.websocket)
+    }
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
