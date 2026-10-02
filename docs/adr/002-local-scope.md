@@ -4,7 +4,7 @@
 # ADR 002: Local Deployment Boundary and Scope Exclusions
 
 ## Context
-The project guidelines require demonstrating robust software process engineering, automated builds, Kotlin Multiplatform sharing, verifiable testing, and containerized deployment.
+The application needs consistent domain rules across JVM and browser consumers, reproducible builds and tests, and a local containerized deployment.
 
 Attempting to implement a full enterprise software suite (user accounts, session authentication, multi-tenant databases, real-time WebSockets, cloud orchestration) risks introducing excessive incidental complexity.
 

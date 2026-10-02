@@ -9,6 +9,23 @@ import kotlin.test.assertIs
 
 class BoardTest {
     @Test
+    fun `creating a note appends to TODO before existing DOING and DONE notes`() {
+        val original =
+            Board(
+                BoardId("main"),
+                listOf(
+                    Note(NoteId("todo"), "Todo"),
+                    Note(NoteId("doing"), "Doing", status = NoteStatus.DOING),
+                    Note(NoteId("done"), "Done", status = NoteStatus.DONE),
+                ),
+            )
+
+        val result = assertIs<BoardCommandResult.Success>(original.createNote(NoteId("new"), "New"))
+        assertEquals(listOf("todo", "new", "doing", "done"), result.board.notes.map { it.id.value })
+        assertEquals(listOf("todo", "doing", "done"), original.notes.map { it.id.value })
+    }
+
+    @Test
     fun `createNote adds note at end with TODO status and default yellow color`() {
         val board = Board(BoardId("main"))
         val result = board.createNote(NoteId("note-1"), "First note")

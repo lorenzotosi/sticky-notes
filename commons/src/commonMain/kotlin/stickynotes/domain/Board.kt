@@ -66,7 +66,7 @@ class Board(
 
         val newNote = Note(id = id, content = content, color = color, status = NoteStatus.TODO)
         return BoardCommandResult.Success(
-            Board(id = this.id, notes = noteState + newNote, wipLimit = this.wipLimit),
+            Board(id = this.id, notes = orderCanonical(noteState + newNote), wipLimit = this.wipLimit),
         )
     }
 

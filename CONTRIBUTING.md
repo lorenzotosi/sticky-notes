@@ -15,7 +15,7 @@ This document defines the human collaboration process. Automated checks and rele
 ## 2. Branching & Lifecycle
 - **Protected Main**: Direct pushes to `main` are disabled. All changes must land via Pull Requests.
 - **Short-Lived Branches**: Branch names must follow the convention:
-  `codex/tNNN-short-description` (e.g., `codex/t002-define-two-person-pull-request-workflow`).
+  `tNNN-short-description`.
 - **One Task per PR**: Each technical task corresponds to exactly one pull request.
 - **Shared Files Manipulation**: Before modifying shared project configuration (such as root build scripts, lockfiles, or CI workflows), authors coordinate to prevent conflicts.
 

@@ -14,6 +14,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
+import kotlin.test.assertNotEquals
 
 class ContractSerializationTest {
     @Test
@@ -44,6 +45,8 @@ class ContractSerializationTest {
         val decoded = boardJson.decodeFromString(BoardSnapshot.serializer(), encoded)
 
         assertEquals(original, decoded)
+        val changed = original.copy(notes = original.notes.map { it.copy(content = "Changed") })
+        assertNotEquals(original, changed)
     }
 
     @Test
