@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani
 
 plugins {
-    //application
+    // application
     java
     alias(libs.plugins.spotless)
     alias(libs.plugins.spring.boot)
@@ -24,7 +24,7 @@ spotless {
 
 dependencies {
     implementation(project(":commons"))
-    testImplementation(platform(libs.junit.bom))
+    // testImplementation(platform(libs.junit.bom))
     implementation(platform(libs.jackson.bom))
     implementation(platform(libs.spring.boot.bom))
     implementation(platform(libs.mongodb.driver.bom))
@@ -39,7 +39,7 @@ dependencies {
         implementation(libs.tomcat.el)
         implementation(libs.tomcat.websocket)
     }
-    testImplementation(libs.junit.jupiter)
+    // testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
