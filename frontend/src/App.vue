@@ -2,69 +2,53 @@
 <!-- SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani -->
 
 <script setup>
-import { ref } from 'vue'
-import { evaluateBoardCommand } from 'sticky-notes-domain'
+import { onMounted } from 'vue'
+import { useBoard } from './composables/useBoard.js'
+import BoardView from './components/BoardView.vue'
 
-const text = ref('')
-const board = ref({
-  id: 'main',
-  schemaVersion: 1,
-  revision: 0,
-  wipLimit: 3,
-  notes: []
+const { board, loading, error, fetchBoard } = useBoard()
+
+onMounted(() => {
+  fetchBoard().catch(() => {})
 })
-const error = ref('')
-
-const addNote = () => {
-  const command = {
-    type: 'CREATE_NOTE',
-    newId: crypto.randomUUID(),
-    content: text.value,
-    color: 'YELLOW'
-  }
-
-  const result = JSON.parse(
-    evaluateBoardCommand(
-      JSON.stringify(board.value),
-      JSON.stringify(command)
-    )
-  )
-
-  if (result.type === 'SUCCESS') {
-    board.value = result.board
-    text.value = ''
-    error.value = ''
-  } else {
-    error.value = 'Non è possibile creare la nota.'
-  }
-}
 </script>
 
 <template>
-  <main>
-    <h1>Sticky Notes</h1>
-    <form @submit.prevent="addNote">
-      <label for="note">New note</label>
-      <textarea
-        id="note"
-        v-model="text"
-        maxlength="500"
-        required
-      />
-      <button>Create</button>
-    </form>
-
-    <p role="alert">
-      {{ error }}
-    </p>
-
-    <section aria-label="Notes">
-      <article
-        v-for="note in board.notes"
-        :key="note.id"
+  <main class="app-container">
+    <header class="app-header">
+      <h1>Sticky Notes Kanban</h1>
+      <div
+        aria-live="polite"
+        class="sr-only"
       >
-        {{ note.content }}
-      </article>
-    </section>
+        <span v-if="loading">Caricamento in corso</span>
+        <span v-else-if="error">{{ error.message }}</span>
+      </div>
+    </header>
+
+    <BoardView
+      :board="board"
+      :loading="loading"
+      :error="error"
+      @retry="fetchBoard"
+    />
   </main>
 </template>
+
+<style scoped>
+.app-container {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+}
+
+.app-header {
+  margin-bottom: 2rem;
+}
+
+.app-header h1 {
+  font-size: 1.875rem;
+  margin: 0;
+  font-weight: 700;
+}
+</style>

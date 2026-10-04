@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani
 
-import { ref } from 'vue'
-import { boardClient } from '../api/boardClient.js'
-import { evaluateBoardCommand, validateNoteContent } from 'sticky-notes-domain'
+import {ref} from 'vue'
+import {boardClient} from '../api/boardClient.js'
+import {evaluateBoardCommand, validateNoteContent} from 'sticky-notes-domain'
 
 export function useBoard(client = boardClient) {
   const board = ref(null)
@@ -38,6 +38,7 @@ export function useBoard(client = boardClient) {
     loading.value = true
     try {
       board.value = await client.getBoard()
+      clearError()
     } catch (err) {
       error.value = err
       throw err
@@ -86,15 +87,14 @@ export function useBoard(client = boardClient) {
     }
 
     saving.value = true
-    error.value = null
+    clearError()
 
     try {
       await action()
     } catch (err) {
       if (err.status === 409 && err.code === 'REVISION_CONFLICT') {
         try {
-          const freshBoard = await client.getBoard()
-          board.value = freshBoard
+          board.value = await client.getBoard()
         } catch {
         }
       }
