@@ -8,6 +8,10 @@ import BoardView from './components/BoardView.vue'
 
 const { board, loading, error, fetchBoard } = useBoard()
 
+function handleRetry() {
+  fetchBoard().catch(() => {})
+}
+
 onMounted(() => {
   fetchBoard().catch(() => {})
 })
@@ -30,7 +34,7 @@ onMounted(() => {
       :board="board"
       :loading="loading"
       :error="error"
-      @retry="fetchBoard"
+      @retry="handleRetry"
     />
   </main>
 </template>
