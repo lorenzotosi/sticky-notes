@@ -1,58 +1,84 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani
 
-import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { mount, flushPromises } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App.vue'
 
-describe('App.vue interaction', () => {
-  it('creates and renders a new note when valid text is submitted', async () => {
-    const wrapper = mount(App)
-    const textarea = wrapper.find('textarea#note')
-    const form = wrapper.find('form')
-
-    await textarea.setValue('Preparare il rilascio')
-    await form.trigger('submit')
-
-    const notes = wrapper.findAll('section[aria-label="Notes"] article')
-    expect(notes).toHaveLength(1)
-    expect(notes[0].text()).toBe('Preparare il rilascio')
-    expect(textarea.element.value).toBe('')
+describe('App.vue orchestration', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn())
   })
 
-  it('rejects empty or blank notes on submission', async () => {
-    const wrapper = mount(App)
-    const textarea = wrapper.find('textarea#note')
-    const form = wrapper.find('form')
-
-    await textarea.setValue('   ')
-    await form.trigger('submit')
-
-    const notes = wrapper.findAll('section[aria-label="Notes"] article')
-    expect(notes).toHaveLength(0)
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
-  it('preserves the board and draft on rejection, then clears the error on success', async () => {
+  it('fetches and renders kanban board with columns on mount', async () => {
+    const mockBoard = {
+      id: 'main',
+      schemaVersion: 1,
+      revision: 0,
+      wipLimit: 3,
+      notes: [
+        {
+          id: 'note-1',
+          content: 'Mounted Kanban Note',
+          color: 'YELLOW',
+          status: 'TODO',
+          blockedReason: null,
+          checklist: []
+        }
+      ]
+    }
+
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => mockBoard
+    })
+
     const wrapper = mount(App)
-    const textarea = wrapper.find('#note')
-    const form = wrapper.find('form')
+    await flushPromises()
 
-    await textarea.setValue('First note')
-    await form.trigger('submit')
+    expect(wrapper.find('h1').text()).toBe('Sticky Notes Kanban')
+    expect(wrapper.find('.board-column--todo').text()).toContain('Mounted Kanban Note')
+    expect(wrapper.find('.board-column--doing').exists()).toBe(true)
+    expect(wrapper.find('.board-column--done').exists()).toBe(true)
+  })
 
-    const draft = 'a'.repeat(501)
-    await textarea.setValue(draft)
-    await form.trigger('submit')
+  it('displays error state and retries fetching board', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => ({ code: 'DATABASE_UNAVAILABLE', message: 'Database connection failed' })
+    })
 
-    expect(wrapper.findAll('article').map(note => note.text())).toEqual(['First note'])
-    expect(wrapper.find('[role="alert"]').text()).not.toBe('')
-    expect(textarea.element.value).toBe(draft)
+    const wrapper = mount(App)
+    await flushPromises()
 
-    await textarea.setValue('Second note')
-    await form.trigger('submit')
+    expect(wrapper.text()).toContain('Database connection failed')
 
-    expect(wrapper.findAll('article').map(note => note.text())).toEqual(['First note', 'Second note'])
-    expect(wrapper.find('[role="alert"]').text()).toBe('')
-    expect(textarea.element.value).toBe('')
+    const mockBoard = {
+      id: 'main',
+      schemaVersion: 1,
+      revision: 1,
+      wipLimit: 3,
+      notes: []
+    }
+
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => mockBoard
+    })
+
+    const retryButton = wrapper.find('.board-view__retry-button')
+    await retryButton.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.findAll('.board-column')).toHaveLength(3)
+    expect(wrapper.text()).not.toContain('Database connection failed')
   })
 })
