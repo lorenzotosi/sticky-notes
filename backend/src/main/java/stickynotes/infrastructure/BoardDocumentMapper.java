@@ -9,6 +9,8 @@ import stickynotes.contract.BoardSnapshot;
 import stickynotes.contract.ChecklistItemSnapshot;
 import stickynotes.contract.NoteSnapshot;
 import stickynotes.contract.SerializationKt;
+import stickynotes.domain.NoteColor;
+import stickynotes.domain.NoteStatus;
 
 public final class BoardDocumentMapper {
 
@@ -47,5 +49,59 @@ public final class BoardDocumentMapper {
             snapshot.getRevision(),
             snapshot.getWipLimit(),
             notes);
+    }
+
+    public static BoardSnapshot toSnapshot(BoardDocument document) {
+        required(document, "board");
+
+        List<NoteSnapshot> notes = new ArrayList<>();
+
+        for (BoardDocument.NoteDocument note
+            : required(document.notes(), "notes")) {
+            required(note, "notes[]");
+
+            List<ChecklistItemSnapshot> checklist = new ArrayList<>();
+
+            for (BoardDocument.ChecklistItemDocument item
+                : required(note.checklist(), "note.checklist")) {
+                required(item, "checklist[]");
+
+                checklist.add(
+                    new ChecklistItemSnapshot(
+                        required(item.id(), "item.id"),
+                        required(item.label(), "item.label"),
+                        required(item.completed(), "item.completed")));
+            }
+
+            notes.add(
+                new NoteSnapshot(
+                    required(note.id(), "note.id"),
+                    required(note.content(), "note.content"),
+                    NoteColor.valueOf(required(note.color(), "note.color")),
+                    NoteStatus.valueOf(required(note.status(), "note.status")),
+                    note.blockedReason(),
+                    checklist));
+        }
+
+        BoardSnapshot snapshot =
+            new BoardSnapshot(
+                required(document.id(), "board.id"),
+                required(document.schemaVersion(), "board.schemaVersion"),
+                required(document.revision(), "board.revision"),
+                required(document.wipLimit(), "board.wipLimit"),
+                notes);
+
+        SerializationKt.toDomain(snapshot);
+
+        return snapshot;
+    }
+
+    private static <T> T required(T value, String field) {
+        if (value == null) {
+            throw new IllegalArgumentException(
+                "Missing persisted field: " + field);
+        }
+
+        return value;
     }
 }
