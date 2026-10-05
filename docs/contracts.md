@@ -3,7 +3,9 @@
 
 # API Contracts, Precedence Rules, and Error Handling
 
-This document specifies the planned communication protocol between the Vue frontend and the Java backend. The note endpoints, persistence layer, and revision checks described here are not implemented yet; the backend currently exposes only `GET /health`.
+This document specifies the planned communication protocol between the Vue frontend and the Java backend. The note endpoints, persistence layer, and revision checks described below are not implemented yet. The current Spring Boot backend exposes Actuator health endpoints.
+
+`GET /actuator/health/liveness` returns HTTP `200` with `{"status":"UP"}` when the application is running, including when MongoDB is unavailable. The aggregate endpoint is `GET /actuator/health`; `GET /actuator/health/readiness` currently reports application readiness without a MongoDB connectivity check. See [backend runtime configuration](development.md#backend-runtime) for startup and health-check instructions.
 
 ---
 

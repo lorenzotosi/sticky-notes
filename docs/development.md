@@ -40,7 +40,7 @@ The project unifies all module checks into a non-circular Gradle task graph.
 ### Quick Module Commands
 
 - **Commons (KMP):** `./gradlew :commons:check`
-- **Backend (Java/JDK HTTP server):** `./gradlew :backend:check`
+- **Backend (Java/Spring Boot):** `./gradlew :backend:check`
 - **Frontend (Vue / Vite):** `./gradlew :frontend:frontendCheck` (or `cd frontend && npm run lint && npm test`)
 
 ### Custom Gradle Commands
@@ -52,7 +52,7 @@ The project unifies all module checks into a non-circular Gradle task graph.
 | `./gradlew verifyLicense` | Checks that source and configuration files contain the required SPDX license header. |
 | `./gradlew fullTest` | Runs the Commons checks and all backend and frontend test suites without producing every final deliverable. |
 | `./gradlew check` | Runs repository-wide verification: formatting, Detekt, license validation, JVM and JavaScript tests, frontend linting, and frontend tests. |
-| `./gradlew fullBuild` | Runs `check`, then builds the Commons libraries, backend distributions, frontend production bundle, and documentation artifact. |
+| `./gradlew fullBuild` | Runs `check`, then builds the Commons libraries, backend executable JAR, frontend production bundle, and documentation artifact. |
 | `./gradlew :commons:browserDomainTest` | Runs the shared Commons domain tests in ChromeHeadless through the Kotlin/JS target. |
 | `./gradlew :frontend:frontendInstall` | Installs the exact npm dependencies recorded in `frontend/package-lock.json` by running `npm ci`. |
 | `./gradlew :frontend:frontendLint` | Installs the frontend dependencies when necessary and runs the ESLint checks. |
@@ -70,7 +70,40 @@ Gradle configuration cache is supported across the task graph. You can execute:
 
 Subsequent runs will reuse the cached task graph (`Configuration cache entry reused`).
 
-The current backend exposes only `GET /health`. MongoDB, REST API, and end-to-end tests are not part of the current build.
+## Backend runtime
+
+The backend uses Spring Boot with an embedded Tomcat server. Run it from the repository root with the `local` profile:
+
+```sh
+./gradlew :backend:bootRun --args='--spring.profiles.active=local'
+```
+
+The configuration is in `backend/src/main/resources/application.yml`. The `local` profile binds the server to `127.0.0.1`. The `test` profile uses an automatically assigned HTTP port and a separate MongoDB database name.
+
+| Environment variable | Purpose | Default |
+| --- | --- | --- |
+| `PORT` | HTTP port outside the `test` profile. | `8080` |
+| `MONGODB_URI` | MongoDB connection URI outside the `test` profile. | `mongodb://127.0.0.1:27017/sticky_notes` |
+| `TEST_MONGODB_URI` | MongoDB connection URI in the `test` profile. | `mongodb://127.0.0.1:27017/sticky_notes_test` |
+
+Supply connection credentials through the environment; do not commit them to configuration files. The MongoDB client is configured, while note repositories and HTTP note endpoints are not implemented yet.
+
+Check liveness after startup, using the configured port:
+
+```sh
+curl -i http://127.0.0.1:8080/actuator/health/liveness
+```
+
+The expected response is HTTP `200` with `{"status":"UP"}`, including when MongoDB is unavailable. `GET /actuator/health` aggregates health checks, including MongoDB connectivity, and may return `503` when the database is unavailable. `GET /actuator/health/readiness` currently reports application readiness without a MongoDB connectivity check.
+
+Build and run the executable JAR with JDK 21:
+
+```sh
+./gradlew :backend:bootJar
+java -jar backend/build/libs/backend.jar --spring.profiles.active=local
+```
+
+Stop an existing backend process with `Ctrl+C` before starting another on the same port. `fullBuild` also produces this JAR through `:backend:build`. See [testing](testing.md#backend-startup-and-liveness) for the automated startup check and [deployment](deployment.md) for release packaging.
 
 ## Dependency Management and Locking
 

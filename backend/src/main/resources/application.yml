@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani
+
+server:
+  port: ${PORT:8080}
+
+spring:
+  mongodb:
+    uri: ${MONGODB_URI:mongodb://127.0.0.1:27017/sticky_notes}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+
+server:
+  address: 127.0.0.1
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+  mongodb:
+    uri: ${TEST_MONGODB_URI:mongodb://127.0.0.1:27017/sticky_notes_test}
+
+server:
+  port: 0

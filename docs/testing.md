@@ -1,9 +1,9 @@
 <!-- SPDX-License-Identifier: MIT -->
 <!-- SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani -->
 
-# Shared domain tests
+# Testing
 
-`commons/src/commonTest` contains domain scenarios shared by the JVM and ChromeHeadless targets. `browserDomainTest` is an alias for `jsBrowserTest`. The repository does not yet contain REST, database, or end-to-end tests.
+`commons/src/commonTest` contains domain scenarios shared by the JVM and ChromeHeadless targets. `browserDomainTest` is an alias for `jsBrowserTest`. The backend also has an HTTP startup and liveness test. Note API, real database, and end-to-end tests are not implemented yet.
 
 This guide explains how to execute the implemented tests and which [domain rules](domain.md) they cover. [R1 evidence](evidence/R1.md) records the observed domain and consumer results.
 
@@ -68,8 +68,22 @@ To confirm that the test suite detects logical defects across the core model and
     - *Mutation*: Mutating the note's status before completing invariant checks.
     - *Detection*: Caught by `InvariantBoundaryTest` and `BlockerAndChecklistTest` verifying that the board snapshot remains strictly unchanged upon failure.
 
+## Backend startup and liveness
+
+Run the Spring Boot startup test with JDK 21 from the repository root:
+
+```sh
+./gradlew :backend:test --tests stickynotes.MainTest
+```
+
+`MainTest.livenessIsUpWithoutDatabase` uses `@SpringBootTest` with a random HTTP port and the `test` profile. It overrides the MongoDB URI with `mongodb://127.0.0.1:1/sticky_notes_test` and short connection timeouts so the database is unreachable independently of the development URI.
+
+The test sends a real HTTP request to `/actuator/health/liveness`, checks status `200`, parses the JSON body, and checks that `status` is `UP`. This verifies Spring Boot startup and liveness without a reachable database; it does not verify note persistence or database-aware readiness.
+
+Inspect `backend/build/reports/tests/test/index.html` or `backend/build/test-results/test/TEST-stickynotes.MainTest.xml`. A passing run must show the test executed with zero failures, errors, or skips. `:backend:check`, the repository-wide `check`, and `fullBuild` include the backend test suite. GitHub Actions retains the backend test reports.
+
 ## Other test scopes
 
 - `frontend/src/App.test.js` exercises the real generated Kotlin/JS package through the Vue note form: creation and rendering, blank-content rejection, and oversized-content rejection with board/draft preservation and recovery after a valid submission. The oversized test submits programmatically so HTML `maxlength` cannot mask a missing domain check.
 - `backend/src/test/java/stickynotes/DomainInteropTest.java` verifies Java access to the shared JVM facade.
-- `backend/src/test/java/stickynotes/MainTest.java` currently verifies only that the backend entry point exists.
+- `backend/src/test/java/stickynotes/MainTest.java` verifies Spring Boot startup and HTTP liveness, as described [above](#backend-startup-and-liveness).
