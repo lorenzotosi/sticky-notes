@@ -32,3 +32,5 @@ out/
 Thumbs.db
 AGENTS.md
 /.codex
+/.vscode
+/.metals

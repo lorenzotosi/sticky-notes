@@ -13,8 +13,9 @@ The application domain requires enforcing cross-card rules, such as:
 If individual notes were modeled as independent aggregate roots stored in a separate `notes` MongoDB collection, cross-card rules like WIP limits would require distributed locking, multi-document ACID transactions, or complex saga patterns across separate document writes to prevent race conditions.
 
 ## Decision
-We model `Board` as the single **Aggregate Root**. The implemented domain stores notes and checklist items inside the aggregate. The planned persistence adapter will store that aggregate as a **single document** (`_id: "main"`):
+We model `Board` as the single **Aggregate Root**. The domain stores notes and checklist items inside the aggregate. The persistence adapter stores that aggregate as a **single document** (`_id: "main"`):
 - All mutative operations pass through `Board` aggregate methods.
+- Startup creates an empty board using an insert-only upsert; an existing board is never overwritten or reset during initialization.
 - Concurrency is guarded using optimistic locking with an atomic single-document compare and swap update on the board's `revision` field.
 - The collection size is constrained to a maximum of 200 notes and 20 items per note, bounding the document size well below MongoDB's 16 MB BSON threshold.
 
