@@ -3,7 +3,7 @@
 
 # Testing
 
-`commons/src/commonTest` contains domain scenarios shared by the JVM and ChromeHeadless targets. `browserDomainTest` is an alias for `jsBrowserTest`. The backend also has an HTTP startup and liveness test. Note API, real database, and end-to-end tests are not implemented yet.
+`commons/src/commonTest` contains domain scenarios shared by the JVM and ChromeHeadless targets. `browserDomainTest` is an alias for `jsBrowserTest`. The backend also has persistence unit tests and an HTTP startup and liveness test.
 
 This guide explains how to execute the implemented tests and which [domain rules](domain.md) they cover. [R1 evidence](evidence/R1.md) records the observed domain and consumer results.
 
@@ -78,9 +78,33 @@ Run the Spring Boot startup test with JDK 21 from the repository root:
 
 `MainTest.livenessIsUpWithoutDatabase` uses `@SpringBootTest` with a random HTTP port and the `test` profile. It overrides the MongoDB URI with `mongodb://127.0.0.1:1/sticky_notes_test` and short connection timeouts so the database is unreachable independently of the development URI.
 
-The test sends a real HTTP request to `/actuator/health/liveness`, checks status `200`, parses the JSON body, and checks that `status` is `UP`. This verifies Spring Boot startup and liveness without a reachable database; it does not verify note persistence or database-aware readiness.
+The test runs the startup bootstrap against the unreachable database, sends a real HTTP request to `/actuator/health/liveness`, checks status `200`, parses the JSON body, and checks that `status` is `UP`. This verifies that a bootstrap connectivity failure allows Spring Boot startup and HTTP liveness; it does not verify note persistence or database-aware readiness.
 
 Inspect `backend/build/reports/tests/test/index.html` or `backend/build/test-results/test/TEST-stickynotes.MainTest.xml`. A passing run must show the test executed with zero failures, errors, or skips. `:backend:check`, the repository-wide `check`, and `fullBuild` include the backend test suite. GitHub Actions retains the backend test reports.
+
+## Backend persistence unit tests
+
+Run the mapper, repository, and bootstrap tests with JDK 21 from the repository root:
+
+```sh
+./gradlew :backend:test --tests 'stickynotes.infrastructure.*'
+```
+
+`BoardDocumentMapperTest` verifies complete snapshot round trips, including note and checklist order, and rejects missing fields, unknown colors, unsupported schemas, negative revisions, duplicate note IDs, invalid `DONE` states, non-canonical note order, and WIP limits below occupancy.
+
+`MongoBoardRepositoryTest` uses Mockito to simulate `MongoTemplate` without starting Spring or connecting to a database. It covers:
+
+- Loading an existing board, an absent board, invalid persisted state, and database failures. Invalid state is rejected without a repair write; a database failure is propagated rather than treated as an absent board.
+- Saving a complete snapshot with revision incremented once. The test captures the replacement query and checks both `_id="main"` and the expected revision, the complete replacement document, the `boards` collection, and disabled upsert.
+- An unmatched revision returning an empty result without a retry, and an unacknowledged write being rejected.
+- Wrong board IDs, mismatched or negative revisions, revision overflow, and invalid domain state being rejected before any database interaction.
+- A save failure being propagated without a retry.
+
+`BoardBootstrapTest` simulates MongoDB responses and captures the upsert query and update. It checks that initial creation and repeated startup use only the `_id="main"` filter and `$setOnInsert` fields, so the bootstrap never requests a replacement or unconditional field update. It also covers duplicate-key tolerance without retry, rejection of unacknowledged initialization, startup continuation on database resource failure, and propagation of other database errors.
+
+Inspect `backend/build/reports/tests/test/index.html` or the XML files under `backend/build/test-results/test/`. A passing run must show all three persistence test classes executed with zero failures, errors, or skips. `:backend:check` includes these tests and the backend formatting check.
+
+These unit tests verify the adapter's decisions and arguments to `MongoTemplate`. They do not exercise BSON conversion, atomic replacement in a real MongoDB server, or restart behavior. Within R2, database integration tests must verify those boundaries and board initialization; HTTP tests must verify the API responses specified in [contracts](contracts.md).
 
 ## Other test scopes
 

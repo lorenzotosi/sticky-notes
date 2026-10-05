@@ -86,7 +86,9 @@ The configuration is in `backend/src/main/resources/application.yml`. The `local
 | `MONGODB_URI` | MongoDB connection URI outside the `test` profile. | `mongodb://127.0.0.1:27017/sticky_notes` |
 | `TEST_MONGODB_URI` | MongoDB connection URI in the `test` profile. | `mongodb://127.0.0.1:27017/sticky_notes_test` |
 
-Supply connection credentials through the environment; do not commit them to configuration files. The MongoDB client is configured, while note repositories and HTTP note endpoints are not implemented yet.
+Supply connection credentials through the environment; do not commit them to configuration files. Spring Data configures the MongoDB client used by `MongoBoardRepository` to load validated board snapshots and perform conditional saves. See [architecture](architecture.md) for the persistence boundary and [persistence unit tests](testing.md#backend-persistence-unit-tests) for verification commands.
+
+At startup, `BoardBootstrap` attempts to create an empty `main` board in `boards`, with schema version `1`, revision `0`, and WIP limit `3`. Insert-only fields preserve an existing board across restarts. If MongoDB is unreachable, startup continues with a warning and liveness remains available; restart the backend after MongoDB recovers to retry initialization. There is no background bootstrap retry.
 
 Check liveness after startup, using the configured port:
 
