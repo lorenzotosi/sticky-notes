@@ -12,16 +12,20 @@ The implemented system consists of three Gradle modules:
 ```mermaid
 graph TD
     Frontend["frontend: Vue 3 / Vite"] --> JsFacade["Kotlin/JS facade"]
-    Backend["backend: Java JDK HTTP server"] --> JvmFacade["Kotlin/JVM facade"]
+    Backend["backend: Java / Spring Boot / Tomcat"] -->|Java interop test| JvmFacade["Kotlin/JVM facade"]
     JsFacade --> Domain["commons: shared domain and contracts"]
     JvmFacade --> Domain
-    Backend --> Health["GET /health"]
+    Backend --> Health["Actuator: health / liveness / readiness"]
+    Backend --> MongoClient["MongoDB client: configured connection"]
 ```
 
 - `commons` contains the Kotlin Multiplatform domain, commands, snapshots, serialization, and JVM/JavaScript facades.
 - `frontend` contains a minimal Vue interface. `App.vue` imports the generated Kotlin/JS package and submits `CREATE_NOTE` commands through `evaluateBoardCommand`. It renders the returned board on success and preserves the draft and board on rejection. Notes remain in browser memory and are lost on reload; no backend request is made.
-- `backend` is a Java application using the JDK HTTP server. It exposes only `GET /health` and verifies JVM facade interoperability in tests.
-- No database, REST note API, server-side revision enforcement, container image, or Docker Compose configuration exists yet.
+- `backend` is a Java/Spring Boot application using Spring Web MVC and embedded Tomcat. Actuator exposes health endpoints; `MainTest` starts the server and verifies HTTP liveness without a reachable database. `DomainInteropTest` verifies Java consumption of the JVM facade.
+- Spring Data MongoDB configures a client from an environment-backed connection URI. The `local` and `test` profiles define local binding and test defaults; see [local development](development.md#backend-runtime).
+- Note persistence, REST note endpoints, server-side revision enforcement, container images, and Docker Compose belong to the planned runtime architecture below.
+
+`GET /actuator/health/liveness` reports application liveness independently of MongoDB. The aggregate `GET /actuator/health` includes MongoDB connectivity; the current readiness probe reports application state without a database check.
 
 ## 2. Implemented domain aggregate
 

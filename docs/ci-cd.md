@@ -11,12 +11,14 @@ Delivery means build artifacts, GitHub Releases, and GitHub Pages; it does not d
 | --- | --- | --- |
 | Push to a development branch | `./gradlew check --no-daemon` | Gives immediate feedback before the pull request is merged. It verifies formatting, SPDX licenses, Detekt rules, JVM and JavaScript tests, frontend linting, and frontend tests. |
 | Pull request targeting `main` | `./gradlew check --no-daemon` | Repeats the verification on the proposed revision and also validates the commits. The pull request title is checked separately against Conventional Commits. |
-| Merge or other push to `main` | `./gradlew fullBuild --no-daemon` | Runs the complete `check` task and then builds every publishable deliverable: Commons libraries, backend distributions, frontend production bundle, and documentation artifact. |
+| Merge or other push to `main` | `./gradlew fullBuild --no-daemon` | Runs the complete `check` task and then builds every publishable deliverable: Commons libraries, backend executable JAR, frontend production bundle, and documentation artifact. |
 | Manual CI/CD execution | `./gradlew fullBuild --no-daemon` | Allows maintainers to verify and rebuild every deliverable on demand. |
 
 The development-branch check is the fast quality gate: its purpose is to discover broken code as soon as it is pushed. A merge into `main` appears to GitHub Actions as a push to `main`; this activates the stronger `fullBuild` gate. Because `fullBuild` already depends on `check`, it includes every branch-level control before creating the final artifacts.
 
 Test reports are retained after quality runs. Deliverables are uploaded only by successful full builds, so ordinary branch pushes do not create release artifacts.
+
+The `deliverables` artifact contains `backend/build/libs/backend.jar`, the Commons libraries from `commons/build/libs/`, and the frontend production bundle from `frontend/dist/`. The Spring Boot plugin makes `:backend:build` produce the executable JAR, so it is already part of `fullBuild`. The release workflow packages the downloaded files into `sticky-notes-deliverables.zip`; see [deployment](deployment.md#executable-backend) for the extracted JAR location and startup command.
 
 After a successful full build on `main`, semantic-release derives the next version from squash-merge titles and creates the GitHub release from those deliverables. Release executions are serialized to prevent concurrent version calculations. It uses the workflow `GITHUB_TOKEN`; no repository secret is required. The same push publishes the Markdown documentation and generated Dokka API reference through GitHub Pages.
 

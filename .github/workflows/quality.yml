@@ -57,7 +57,7 @@ jobs:
         with:
           name: deliverables
           path: |
-            backend/build/distributions/
+            backend/build/libs/backend.jar
             commons/build/libs/
             frontend/dist/
       - name: Upload test reports
