@@ -17,6 +17,11 @@ import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Component;
 import stickynotes.interop.JvmBoardFacade;
 
+/**
+ * Initializes the {@code main} board during Spring Boot startup without resetting existing data.
+ *
+ * <p>Initialization is separate from ordinary repository saves and uses an insert-only upsert.
+ */
 @Component
 public class BoardBootstrap implements ApplicationRunner {
 
@@ -24,10 +29,28 @@ public class BoardBootstrap implements ApplicationRunner {
 
     private final MongoTemplate mongoTemplate;
 
+    /**
+     * Creates the startup initializer using the application's MongoDB template.
+     *
+     * @param mongoTemplate the template used for the insert-only board upsert
+     */
     public BoardBootstrap(MongoTemplate mongoTemplate) {
         this.mongoTemplate = mongoTemplate;
     }
 
+    /**
+     * Ensures that the board exists using the defaults from {@link JvmBoardFacade#createEmptyBoard()}.
+     *
+     * <p>The query matches only {@code _id=main}; all initial fields use {@code $setOnInsert}, so an
+     * existing board retains its data and revision. Duplicate keys from concurrent startup are
+     * tolerated. Database resource failures are logged and allow startup to continue; restarting
+     * the backend after database recovery is required to retry initialization.
+     *
+     * @param args the application startup arguments; not used for board initialization
+     * @throws IllegalStateException if MongoDB does not acknowledge initialization
+     * @throws org.springframework.dao.DataAccessException for database errors other than duplicate
+     *     keys or resource failures
+     */
     @Override
     public void run(ApplicationArguments args) {
         BoardDocument initial = BoardDocumentMapper.toDocument(JvmBoardFacade.createEmptyBoard());

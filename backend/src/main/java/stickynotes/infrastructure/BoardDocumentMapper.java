@@ -12,10 +12,26 @@ import stickynotes.contract.SerializationKt;
 import stickynotes.domain.NoteColor;
 import stickynotes.domain.NoteStatus;
 
+/**
+ * Converts between shared board snapshots and MongoDB documents using shared domain validation.
+ *
+ * <p>Conversions preserve note and checklist order, schema version, revision, and all note fields.
+ * Invalid state is rejected rather than repaired or replaced with an empty board.
+ */
 public final class BoardDocumentMapper {
 
     private BoardDocumentMapper() {}
 
+    /**
+     * Validates a candidate snapshot and converts it to its persisted representation.
+     *
+     * <p>Domain validation runs before copying any fields. Enum values are stored by name and the
+     * snapshot revision is preserved; the repository owns revision increments.
+     *
+     * @param snapshot the complete board snapshot to persist
+     * @return the corresponding MongoDB document
+     * @throws IllegalArgumentException if the snapshot violates the shared snapshot or domain rules
+     */
     public static BoardDocument toDocument(BoardSnapshot snapshot) {
         SerializationKt.toDomain(snapshot);
 
@@ -42,6 +58,17 @@ public final class BoardDocumentMapper {
                 snapshot.getId(), snapshot.getSchemaVersion(), snapshot.getRevision(), snapshot.getWipLimit(), notes);
     }
 
+    /**
+     * Converts a persisted document to a snapshot and validates it through the shared domain.
+     *
+     * <p>Required fields and nested entries must be present, and color and status names must be
+     * supported. A {@code null} blocker reason is permitted for an unblocked note.
+     *
+     * @param document the complete persisted board document
+     * @return the validated snapshot with its original revision and collection order
+     * @throws IllegalArgumentException if the document is missing required data, contains an
+     *     unsupported enum value, or violates the shared snapshot or domain rules
+     */
     public static BoardSnapshot toSnapshot(BoardDocument document) {
         required(document, "board");
 

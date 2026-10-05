@@ -13,15 +13,28 @@ import org.springframework.stereotype.Repository;
 import stickynotes.application.BoardRepository;
 import stickynotes.contract.BoardSnapshot;
 
+/**
+ * MongoDB adapter for {@link BoardRepository}, storing the aggregate as one {@code boards} document.
+ *
+ * <p>Loads use {@link BoardDocumentMapper} for validated rehydration. Saves perform one replacement
+ * filtered by {@code _id=main} and the expected revision, with upsert disabled. Database access
+ * failures propagate to the caller.
+ */
 @Repository
 public class MongoBoardRepository implements BoardRepository {
 
     private final MongoTemplate mongoTemplate;
 
+    /**
+     * Creates a repository using the Spring-managed MongoDB connection and mapping configuration.
+     *
+     * @param mongoTemplate the template used to load and conditionally replace board documents
+     */
     public MongoBoardRepository(MongoTemplate mongoTemplate) {
         this.mongoTemplate = mongoTemplate;
     }
 
+    /** {@inheritDoc} */
     @Override
     public Optional<BoardSnapshot> load() {
         BoardDocument document = mongoTemplate.findById("main", BoardDocument.class);
@@ -35,6 +48,7 @@ public class MongoBoardRepository implements BoardRepository {
         return Optional.of(snapshot);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Optional<BoardSnapshot> save(BoardSnapshot updated, int expectedRevision) {
 
