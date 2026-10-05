@@ -10,11 +10,10 @@ public interface BoardRepository {
 
     /**
      * Loads a board
+     *
      * @return the board
      */
     Optional<BoardSnapshot> load();
-    
-    Optional<BoardSnapshot> save(
-        BoardSnapshot updated,
-        int expectedRevision);
+
+    Optional<BoardSnapshot> save(BoardSnapshot updated, int expectedRevision);
 }

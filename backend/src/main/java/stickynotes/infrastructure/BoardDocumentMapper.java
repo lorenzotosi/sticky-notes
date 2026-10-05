@@ -22,19 +22,14 @@ public final class BoardDocumentMapper {
         List<BoardDocument.NoteDocument> notes = new ArrayList<>();
 
         for (NoteSnapshot note : snapshot.getNotes()) {
-            List<BoardDocument.ChecklistItemDocument> checklist =
-                new ArrayList<>();
+            List<BoardDocument.ChecklistItemDocument> checklist = new ArrayList<>();
 
             for (ChecklistItemSnapshot item : note.getChecklist()) {
                 checklist.add(
-                    new BoardDocument.ChecklistItemDocument(
-                        item.getId(),
-                        item.getLabel(),
-                        item.getCompleted()));
+                        new BoardDocument.ChecklistItemDocument(item.getId(), item.getLabel(), item.getCompleted()));
             }
 
-            notes.add(
-                new BoardDocument.NoteDocument(
+            notes.add(new BoardDocument.NoteDocument(
                     note.getId(),
                     note.getContent(),
                     note.getColor().name(),
@@ -44,11 +39,7 @@ public final class BoardDocumentMapper {
         }
 
         return new BoardDocument(
-            snapshot.getId(),
-            snapshot.getSchemaVersion(),
-            snapshot.getRevision(),
-            snapshot.getWipLimit(),
-            notes);
+                snapshot.getId(), snapshot.getSchemaVersion(), snapshot.getRevision(), snapshot.getWipLimit(), notes);
     }
 
     public static BoardSnapshot toSnapshot(BoardDocument document) {
@@ -56,25 +47,21 @@ public final class BoardDocumentMapper {
 
         List<NoteSnapshot> notes = new ArrayList<>();
 
-        for (BoardDocument.NoteDocument note
-            : required(document.notes(), "notes")) {
+        for (BoardDocument.NoteDocument note : required(document.notes(), "notes")) {
             required(note, "notes[]");
 
             List<ChecklistItemSnapshot> checklist = new ArrayList<>();
 
-            for (BoardDocument.ChecklistItemDocument item
-                : required(note.checklist(), "note.checklist")) {
+            for (BoardDocument.ChecklistItemDocument item : required(note.checklist(), "note.checklist")) {
                 required(item, "checklist[]");
 
-                checklist.add(
-                    new ChecklistItemSnapshot(
+                checklist.add(new ChecklistItemSnapshot(
                         required(item.id(), "item.id"),
                         required(item.label(), "item.label"),
                         required(item.completed(), "item.completed")));
             }
 
-            notes.add(
-                new NoteSnapshot(
+            notes.add(new NoteSnapshot(
                     required(note.id(), "note.id"),
                     required(note.content(), "note.content"),
                     NoteColor.valueOf(required(note.color(), "note.color")),
@@ -83,8 +70,7 @@ public final class BoardDocumentMapper {
                     checklist));
         }
 
-        BoardSnapshot snapshot =
-            new BoardSnapshot(
+        BoardSnapshot snapshot = new BoardSnapshot(
                 required(document.id(), "board.id"),
                 required(document.schemaVersion(), "board.schemaVersion"),
                 required(document.revision(), "board.revision"),
@@ -98,8 +84,7 @@ public final class BoardDocumentMapper {
 
     private static <T> T required(T value, String field) {
         if (value == null) {
-            throw new IllegalArgumentException(
-                "Missing persisted field: " + field);
+            throw new IllegalArgumentException("Missing persisted field: " + field);
         }
 
         return value;
