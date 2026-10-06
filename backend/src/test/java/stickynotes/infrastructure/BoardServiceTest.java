@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
-
 import stickynotes.application.BoardRepository;
 import stickynotes.contract.BoardSnapshot;
 import stickynotes.domain.NoteColor;
@@ -35,6 +34,21 @@ class BoardServiceTest {
         assertSame(repository.board, saved);
     }
 
+    @Test
+    void rejectsInvalidContentWithoutSaving() {
+        FakeBoardRepository repository = new FakeBoardRepository();
+        BoardService service = new BoardServiceImpl(repository);
+
+        BoardServiceException error =
+                assertThrows(BoardServiceException.class, () -> service.createNote(0, "   ", NoteColor.YELLOW));
+
+        assertEquals("INVALID_CONTENT", error.getCode());
+        assertEquals("content", error.getField());
+        assertEquals(0, repository.saveCalls);
+        assertEquals(0, repository.board.getRevision());
+        assertTrue(repository.board.getNotes().isEmpty());
+    }
+
     private static final class FakeBoardRepository implements BoardRepository {
         private BoardSnapshot board = JvmBoardFacade.createEmptyBoard();
         private BoardSnapshot candidate;
@@ -57,8 +71,11 @@ class BoardServiceTest {
             }
 
             board = new BoardSnapshot(
-                    updated.getId(), updated.getSchemaVersion(), Math.addExact(expectedRevision, 1),
-                    updated.getWipLimit(), updated.getNotes());
+                    updated.getId(),
+                    updated.getSchemaVersion(),
+                    Math.addExact(expectedRevision, 1),
+                    updated.getWipLimit(),
+                    updated.getNotes());
             return Optional.of(board);
         }
     }

@@ -3,7 +3,7 @@
 
 # Testing
 
-`commons/src/commonTest` contains domain scenarios shared by the JVM and ChromeHeadless targets. `browserDomainTest` is an alias for `jsBrowserTest`. The backend also has persistence unit tests and an HTTP startup and liveness test.
+`commons/src/commonTest` contains domain scenarios shared by the JVM and ChromeHeadless targets. `browserDomainTest` is an alias for `jsBrowserTest`. The backend also has application service and persistence unit tests, and an HTTP startup and liveness test.
 
 This guide explains how to execute the implemented tests and which [domain rules](domain.md) they cover. [R1 evidence](evidence/R1.md) records the observed domain and consumer results.
 
@@ -81,6 +81,16 @@ Run the Spring Boot startup test with JDK 21 from the repository root:
 The test runs the startup bootstrap against the unreachable database, sends a real HTTP request to `/actuator/health/liveness`, checks status `200`, parses the JSON body, and checks that `status` is `UP`. This verifies that a bootstrap connectivity failure allows Spring Boot startup and HTTP liveness; it does not verify note persistence or database-aware readiness.
 
 Inspect `backend/build/reports/tests/test/index.html` or `backend/build/test-results/test/TEST-stickynotes.MainTest.xml`. A passing run must show the test executed with zero failures, errors, or skips. `:backend:check`, the repository-wide `check`, and `fullBuild` include the backend test suite. GitHub Actions retains the backend test reports.
+
+## Backend application service unit tests
+
+Run the note creation service tests from the repository root:
+
+```sh
+./gradlew :backend:test --tests stickynotes.infrastructure.BoardServiceTest
+```
+
+`BoardServiceTest` executes the real shared JVM facade with an in-memory fake `BoardRepository`. It verifies that successful creation generates a UUID, saves once with the original revision, and returns the saved snapshot with its incremented revision. Whitespace-only content produces `BoardServiceException` with `INVALID_CONTENT` and field `content`, with no save or board change. These tests cover service orchestration; they do not exercise MongoDB or HTTP error mapping.
 
 ## Backend persistence unit tests
 

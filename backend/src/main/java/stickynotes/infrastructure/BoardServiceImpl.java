@@ -45,9 +45,11 @@ public final class BoardServiceImpl implements BoardService {
             }
 
             return saved.get();
+        } else if (response instanceof CommandResponse.Failure failure) {
+            throw new BoardServiceException(failure.getCode(), failure.getField());
         }
 
-        throw new RuntimeException("Failed to create note");
+        throw new RuntimeException("Unknown response type");
     }
 
     private BoardSnapshot getBoard() {
