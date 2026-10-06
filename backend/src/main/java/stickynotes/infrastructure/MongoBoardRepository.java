@@ -5,6 +5,7 @@ package stickynotes.infrastructure;
 
 import com.mongodb.client.result.UpdateResult;
 import java.util.Optional;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.ReplaceOptions;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -37,7 +38,12 @@ public class MongoBoardRepository implements BoardRepository {
     /** {@inheritDoc} */
     @Override
     public Optional<BoardSnapshot> load() {
-        BoardDocument document = mongoTemplate.findById("main", BoardDocument.class);
+        BoardDocument document;
+        try {
+            document = mongoTemplate.findById("main", BoardDocument.class);
+        } catch (DataAccessException exception) {
+            throw new IllegalStateException("Unable to load board", exception);
+        }
 
         if (document == null) {
             return Optional.empty();
@@ -70,7 +76,12 @@ public class MongoBoardRepository implements BoardRepository {
         Query query =
                 Query.query(Criteria.where("_id").is("main").and("revision").is(expectedRevision));
 
-        UpdateResult result = mongoTemplate.replace(query, document, ReplaceOptions.none(), "boards");
+        UpdateResult result;
+        try {
+            result = mongoTemplate.replace(query, document, ReplaceOptions.none(), "boards");
+        } catch (DataAccessException exception) {
+            throw new IllegalStateException("Unable to save board", exception);
+        }
 
         if (!result.wasAcknowledged()) {
             throw new IllegalStateException("MongoDB did not acknowledge the board save");

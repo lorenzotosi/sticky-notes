@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani
 
-package stickynotes.infrastructure;
+package stickynotes.application;
 
 import stickynotes.contract.BoardSnapshot;
 import stickynotes.domain.NoteColor;

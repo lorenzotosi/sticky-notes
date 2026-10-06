@@ -22,6 +22,7 @@ public interface BoardRepository {
      *
      * @return the validated snapshot, or an empty result if the board does not exist
      * @throws IllegalArgumentException if the persisted state violates the snapshot or domain rules
+     * @throws IllegalStateException if storage access fails
      */
     Optional<BoardSnapshot> load();
 
@@ -38,7 +39,8 @@ public interface BoardRepository {
      *     or its stored revision does not match
      * @throws IllegalArgumentException if the board ID, candidate revision, or domain state is invalid
      * @throws ArithmeticException if incrementing the revision would overflow a Java {@code int}
-     * @throws IllegalStateException if the storage system does not acknowledge the write
+     * @throws IllegalStateException if storage access fails or the system does not acknowledge the
+     *     write
      */
     Optional<BoardSnapshot> save(BoardSnapshot updated, int expectedRevision);
 }

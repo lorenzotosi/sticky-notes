@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani
 
-package stickynotes.infrastructure;
+package stickynotes.application;
 
 import java.util.Optional;
 import java.util.UUID;
-import org.springframework.dao.DataAccessException;
-import stickynotes.application.BoardRepository;
+
 import stickynotes.contract.BoardCommand;
 import stickynotes.contract.BoardSnapshot;
 import stickynotes.contract.CommandResponse;
@@ -149,33 +148,38 @@ public final class BoardServiceImpl implements BoardService {
     }
 
     private BoardSnapshot getBoard() {
-        Optional<BoardSnapshot> board;
+        return loadBoard().orElseThrow(() -> new RuntimeException("Board not found"));
+    }
+
+    private Optional<BoardSnapshot> loadBoard() {
         try {
-            board = repository.load();
-        } catch (DataAccessException | IllegalStateException exception) {
+            return repository.load();
+        } catch (IllegalArgumentException exception) {
+            throw new BoardServiceException("INVALID_SNAPSHOT", null);
+        } catch (IllegalStateException exception) {
             throw new BoardServiceException("DATABASE_UNAVAILABLE", null);
-        }
-        if (board.isEmpty()) {
-            throw new RuntimeException("Board not found");
-        } else {
-            return board.get();
         }
     }
 
     private BoardSnapshot saveBoard(int boardRevision, CommandResponse response) {
         if (response instanceof CommandResponse.Success success) {
+            if (boardRevision == Integer.MAX_VALUE) {
+                throw new BoardServiceException("REVISION_OVERFLOW", null);
+            }
             BoardSnapshot updated = success.getBoard();
             Optional<BoardSnapshot> saved;
             try {
                 saved = repository.save(updated, boardRevision);
             } catch (ArithmeticException exception) {
                 throw new BoardServiceException("REVISION_OVERFLOW", null);
-            } catch (DataAccessException | IllegalStateException exception) {
+            } catch (IllegalStateException exception) {
                 throw new BoardServiceException("DATABASE_UNAVAILABLE", null);
             }
 
             if (saved.isEmpty()) {
-                throw new BoardServiceException("REVISION_CONFLICT", null);
+                Integer currentRevision =
+                        loadBoard().map(BoardSnapshot::getRevision).orElse(null);
+                throw new BoardServiceException("REVISION_CONFLICT", null, currentRevision);
             }
             return saved.get();
         } else if (response instanceof CommandResponse.Failure failure) {
@@ -189,7 +193,7 @@ public final class BoardServiceImpl implements BoardService {
         int boardRevision = board.getRevision();
 
         if (boardRevision != expectedRevision) {
-            throw new BoardServiceException("REVISION_CONFLICT", null);
+            throw new BoardServiceException("REVISION_CONFLICT", null, boardRevision);
         }
         return boardRevision;
     }
