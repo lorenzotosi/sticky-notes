@@ -36,15 +36,6 @@ public final class BoardServiceImpl implements BoardService {
         return saveBoard(boardRevision, response);
     }
 
-    private BoardSnapshot getBoard() {
-        Optional<BoardSnapshot> board = repository.load();
-        if (board.isEmpty()) {
-            throw new RuntimeException("Board not found");
-        } else {
-            return board.get();
-        }
-    }
-
     @Override
     public BoardSnapshot updateNote(int expectedRevision, String noteId, String content, NoteColor color) {
         BoardSnapshot board = getBoard();
@@ -55,6 +46,113 @@ public final class BoardServiceImpl implements BoardService {
         CommandResponse response = JvmBoardFacade.execute(board, updateCommand);
 
         return saveBoard(boardRevision, response);
+    }
+
+    @Override
+    public BoardSnapshot deleteNote(int expectedRevision, String noteId) {
+        BoardSnapshot board = getBoard();
+
+        int boardRevision = getBoardRevision(expectedRevision, board);
+
+        BoardCommand.DeleteNote deleteCommand = JvmBoardFacade.deleteNote(noteId);
+        CommandResponse response = JvmBoardFacade.execute(board, deleteCommand);
+
+        return saveBoard(boardRevision, response);
+    }
+
+    @Override
+    public BoardSnapshot moveNote(int expectedRevision, String noteId, NoteStatus targetStatus, int destinationIndex) {
+        BoardSnapshot board = getBoard();
+
+        int boardRevision = getBoardRevision(expectedRevision, board);
+
+        BoardCommand.MoveNote moveCommand = JvmBoardFacade.moveNote(noteId, targetStatus, destinationIndex);
+        CommandResponse response = JvmBoardFacade.execute(board, moveCommand);
+
+        return saveBoard(boardRevision, response);
+    }
+
+    @Override
+    public BoardSnapshot setWipLimit(int expectedRevision, int limit) {
+        BoardSnapshot board = getBoard();
+
+        int boardRevision = getBoardRevision(expectedRevision, board);
+
+        BoardCommand.SetWipLimit setWipLimitCommand = JvmBoardFacade.setWipLimit(limit);
+        CommandResponse response = JvmBoardFacade.execute(board, setWipLimitCommand);
+
+        return saveBoard(boardRevision, response);
+    }
+
+    @Override
+    public BoardSnapshot blockNote(int expectedRevision, String noteId, String reason) {
+        BoardSnapshot board = getBoard();
+
+        int boardRevision = getBoardRevision(expectedRevision, board);
+
+        BoardCommand.BlockNote blockNoteCommand = JvmBoardFacade.blockNote(noteId, reason);
+        CommandResponse response = JvmBoardFacade.execute(board, blockNoteCommand);
+
+        return saveBoard(boardRevision, response);
+    }
+
+    @Override
+    public BoardSnapshot unblockNote(int expectedRevision, String noteId) {
+        BoardSnapshot board = getBoard();
+
+        int boardRevision = getBoardRevision(expectedRevision, board);
+
+        BoardCommand.UnblockNote unblockNoteCommand = JvmBoardFacade.unblockNote(noteId);
+        CommandResponse response = JvmBoardFacade.execute(board, unblockNoteCommand);
+
+        return saveBoard(boardRevision, response);
+    }
+
+    @Override
+    public BoardSnapshot addItem(int expectedRevision, String noteId, String label) {
+        BoardSnapshot board = getBoard();
+
+        int boardRevision = getBoardRevision(expectedRevision, board);
+
+        BoardCommand.AddItem addItemCommand = JvmBoardFacade.addItem(noteId, label);
+        CommandResponse response = JvmBoardFacade.execute(board, addItemCommand);
+
+        return saveBoard(boardRevision, response);
+        throw new UnsupportedOperationException("Unimplemented method 'addItem'");
+    }
+
+    @Override
+    public BoardSnapshot updateItem(
+            int expectedRevision, String noteId, String itemId, String label, Boolean completed) {
+        BoardSnapshot board = getBoard();
+
+        int boardRevision = getBoardRevision(expectedRevision, board);
+
+        BoardCommand.UpdateItem updateItemCommand = JvmBoardFacade.updateItem(noteId, itemId, label, completed);
+        CommandResponse response = JvmBoardFacade.execute(board, updateItemCommand);
+
+        return saveBoard(boardRevision, response);
+    }
+
+    @Override
+    public BoardSnapshot deleteItem(int expectedRevision, String noteId, String itemId) {
+        BoardSnapshot board = getBoard();
+
+        int boardRevision = getBoardRevision(expectedRevision, board);
+
+        BoardCommand.DeleteItem deleteItemCommand = JvmBoardFacade.deleteItem(noteId, itemId);
+        CommandResponse response = JvmBoardFacade.execute(board, deleteItemCommand);
+
+        return saveBoard(boardRevision, response);
+    }
+
+    private BoardSnapshot getBoard() {
+        Optional<BoardSnapshot> board = repository.load();
+        if (board.isEmpty()) {
+            throw new RuntimeException("Board not found");
+        } else {
+            return board.get();
+        }
     }
 
     private BoardSnapshot saveBoard(int boardRevision, CommandResponse response) {
@@ -80,53 +178,5 @@ public final class BoardServiceImpl implements BoardService {
             throw new RuntimeException("Revision does not match expected revision");
         }
         return boardRevision;
-    }
-
-    @Override
-    public BoardSnapshot deleteNote(int expectedRevision, String noteId) {
-        throw new UnsupportedOperationException("Unimplemented method 'deleteNote'");
-    }
-
-    @Override
-    public BoardSnapshot moveNote(int expectedRevision, String noteId, NoteStatus targetStatus, int destinationIndex) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'moveNote'");
-    }
-
-    @Override
-    public BoardSnapshot setWipLimit(int expectedRevision, int limit) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setWipLimit'");
-    }
-
-    @Override
-    public BoardSnapshot blockNote(int expectedRevision, String noteId, String reason) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'blockNote'");
-    }
-
-    @Override
-    public BoardSnapshot unblockNote(int expectedRevision, String noteId) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'unblockNote'");
-    }
-
-    @Override
-    public BoardSnapshot addItem(int expectedRevision, String noteId, String label) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'addItem'");
-    }
-
-    @Override
-    public BoardSnapshot updateItem(
-            int expectedRevision, String noteId, String itemId, String label, Boolean completed) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'updateItem'");
-    }
-
-    @Override
-    public BoardSnapshot deleteItem(int expectedRevision, String noteId, String itemId) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'deleteItem'");
     }
 }
