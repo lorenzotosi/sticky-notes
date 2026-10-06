@@ -3,12 +3,39 @@
 
 package stickynotes.domain
 
+import stickynotes.contract.toSnapshot
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 
 class BlockerAndChecklistTest {
+    @Test
+    fun `missing item on DONE takes precedence over readonly when updating`() {
+        val board = Board(BoardId("main"), notes = listOf(Note(NoteId("done"), "Done", status = NoteStatus.DONE)))
+        val before = board.toSnapshot()
+
+        val result = board.updateChecklistItem(NoteId("done"), ChecklistItemId("absent"), label = "Changed")
+
+        assertIs<BoardCommandResult.Failure>(result)
+        assertEquals("ITEM_NOT_FOUND", result.code)
+        assertEquals("itemId", result.field)
+        assertEquals(before, board.toSnapshot())
+    }
+
+    @Test
+    fun `missing item on DONE takes precedence over readonly when deleting`() {
+        val board = Board(BoardId("main"), notes = listOf(Note(NoteId("done"), "Done", status = NoteStatus.DONE)))
+        val before = board.toSnapshot()
+
+        val result = board.deleteChecklistItem(NoteId("done"), ChecklistItemId("absent"))
+
+        assertIs<BoardCommandResult.Failure>(result)
+        assertEquals("ITEM_NOT_FOUND", result.code)
+        assertEquals("itemId", result.field)
+        assertEquals(before, board.toSnapshot())
+    }
+
     @Test
     fun `blocked DOING note cannot move to other status but can reorder in same column`() {
         val note = Note(NoteId("N1"), "Task", status = NoteStatus.DOING, blockedReason = "Waiting for review")
