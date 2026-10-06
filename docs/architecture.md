@@ -71,6 +71,8 @@ All state changes pass through the aggregate. This keeps WIP limits, ordering, b
 
 R2 connects the existing shared domain and persistence adapter through REST controllers and an application service:
 
+`BoardService` declares methods for note creation, editing, deletion, movement, WIP changes, blockers, and checklist operations. Every mutation accepts `expectedRevision` and returns the saved `BoardSnapshot`. For `updateNote` and `updateItem`, nullable parameters represent values left unchanged; checklist completion uses Java `Boolean` so an omitted value remains distinct from `false`. The interface declares these operations, while `BoardServiceImpl` currently implements only note creation.
+
 ```mermaid
 graph TD
     Vue["Vue interface"] -->|HTTP JSON| Controller["Java REST API"]

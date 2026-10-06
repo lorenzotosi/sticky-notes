@@ -5,6 +5,7 @@ package stickynotes.infrastructure;
 
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.dao.DataAccessException;
 import stickynotes.application.BoardRepository;
 import stickynotes.contract.BoardCommand;
 import stickynotes.contract.BoardSnapshot;
@@ -29,7 +30,7 @@ public final class BoardServiceImpl implements BoardService {
 
         String id = UUID.randomUUID().toString();
 
-        BoardCommand.CreateNote createCommand = JvmBoardFacade.createNote(id, content);
+        BoardCommand.CreateNote createCommand = JvmBoardFacade.createNote(id, content, color);
 
         CommandResponse response = JvmBoardFacade.execute(board, createCommand);
 
@@ -148,7 +149,12 @@ public final class BoardServiceImpl implements BoardService {
     }
 
     private BoardSnapshot getBoard() {
-        Optional<BoardSnapshot> board = repository.load();
+        Optional<BoardSnapshot> board;
+        try {
+            board = repository.load();
+        } catch (DataAccessException | IllegalStateException exception) {
+            throw new BoardServiceException("DATABASE_UNAVAILABLE", null);
+        }
         if (board.isEmpty()) {
             throw new RuntimeException("Board not found");
         } else {
@@ -159,10 +165,17 @@ public final class BoardServiceImpl implements BoardService {
     private BoardSnapshot saveBoard(int boardRevision, CommandResponse response) {
         if (response instanceof CommandResponse.Success success) {
             BoardSnapshot updated = success.getBoard();
-            Optional<BoardSnapshot> saved = repository.save(updated, boardRevision);
+            Optional<BoardSnapshot> saved;
+            try {
+                saved = repository.save(updated, boardRevision);
+            } catch (ArithmeticException exception) {
+                throw new BoardServiceException("REVISION_OVERFLOW", null);
+            } catch (DataAccessException | IllegalStateException exception) {
+                throw new BoardServiceException("DATABASE_UNAVAILABLE", null);
+            }
 
             if (saved.isEmpty()) {
-                throw new RuntimeException("Failed to save board");
+                throw new BoardServiceException("REVISION_CONFLICT", null);
             }
             return saved.get();
         } else if (response instanceof CommandResponse.Failure failure) {
@@ -176,7 +189,7 @@ public final class BoardServiceImpl implements BoardService {
         int boardRevision = board.getRevision();
 
         if (boardRevision != expectedRevision) {
-            throw new RuntimeException("Revision does not match expected revision");
+            throw new BoardServiceException("REVISION_CONFLICT", null);
         }
         return boardRevision;
     }

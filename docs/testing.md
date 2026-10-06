@@ -84,13 +84,15 @@ Inspect `backend/build/reports/tests/test/index.html` or `backend/build/test-res
 
 ## Backend application service unit tests
 
-Run the note creation service tests from the repository root:
+Run the application service tests from the repository root:
 
 ```sh
 ./gradlew :backend:test --tests stickynotes.infrastructure.BoardServiceTest
 ```
 
-`BoardServiceTest` executes the real shared JVM facade with an in-memory fake `BoardRepository`. It verifies that successful creation generates a UUID, saves once with the original revision, and returns the saved snapshot with its incremented revision. Whitespace-only content produces `BoardServiceException` with `INVALID_CONTENT` and field `content`, with no save or board change. These tests cover service orchestration; they do not exercise MongoDB or HTTP error mapping.
+`BoardServiceTest` calls every Java entry point exposed by `JvmBoardFacade` and executes every `BoardService` mutation against an in-memory fake `BoardRepository`. The successful scenario covers note, movement, WIP, blocker, and checklist operations, including generated UUIDs, one conditional save per command, and revision increments. Domain rejection is checked without a save.
+
+The suite also verifies the application errors required for stale revisions, unmatched conditional saves, revision overflow, and database failures. The repository detects persistence failures and overflow; `BoardServiceImpl` translates them to stable `BoardServiceException` codes without exposing infrastructure details. The tests cover service orchestration; they do not exercise MongoDB or HTTP error mapping.
 
 ## Backend persistence unit tests
 
