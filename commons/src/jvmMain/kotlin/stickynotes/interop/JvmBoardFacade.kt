@@ -61,4 +61,12 @@ object JvmBoardFacade {
         newId: String,
         label: String,
     ): BoardCommand.AddItem = BoardCommand.AddItem(noteId = noteId, label = label, newId = newId)
+
+    @JvmStatic
+    @JvmOverloads
+    fun updateNote(
+        noteId: String,
+        content: String? = null,
+        color: NoteColor? = null,
+    ): BoardCommand.UpdateNote = BoardCommand.UpdateNote(noteId = noteId, content = content, color = color)
 }
