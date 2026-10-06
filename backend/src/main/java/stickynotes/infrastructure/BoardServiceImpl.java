@@ -44,7 +44,7 @@ public final class BoardServiceImpl implements BoardService {
                 throw new RuntimeException("Failed to save board");
             }
 
-            return updated;
+            return saved.get();
         }
 
         throw new RuntimeException("Failed to create note");
