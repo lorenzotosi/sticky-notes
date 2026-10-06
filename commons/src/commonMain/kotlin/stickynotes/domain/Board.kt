@@ -191,11 +191,11 @@ private fun validateMove(
         targetStatus == NoteStatus.DONE && !note.isChecklistComplete -> {
             BoardCommandResult.Failure("CHECKLIST_INCOMPLETE")
         }
-        destinationIndex !in 0..destinationSize -> {
-            BoardCommandResult.Failure("INVALID_INDEX", "destinationIndex")
-        }
         isEnteringDoing && doingCount >= wipLimit -> {
             BoardCommandResult.Failure("WIP_LIMIT_REACHED")
+        }
+        destinationIndex !in 0..destinationSize -> {
+            BoardCommandResult.Failure("INVALID_INDEX", "destinationIndex")
         }
         else -> null
     }

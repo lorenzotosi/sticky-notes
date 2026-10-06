@@ -3,7 +3,7 @@
 
 # Testing
 
-`commons/src/commonTest` contains domain scenarios shared by the JVM and ChromeHeadless targets. `browserDomainTest` is an alias for `jsBrowserTest`. The backend also has persistence unit tests and an HTTP startup and liveness test.
+`commons/src/commonTest` contains domain scenarios shared by the JVM and ChromeHeadless targets. `browserDomainTest` is an alias for `jsBrowserTest`. The backend also has application service and persistence unit tests, and an HTTP startup and liveness test.
 
 This guide explains how to execute the implemented tests and which [domain rules](domain.md) they cover. [R1 evidence](evidence/R1.md) records the observed domain and consumer results.
 
@@ -81,6 +81,20 @@ Run the Spring Boot startup test with JDK 21 from the repository root:
 The test runs the startup bootstrap against the unreachable database, sends a real HTTP request to `/actuator/health/liveness`, checks status `200`, parses the JSON body, and checks that `status` is `UP`. This verifies that a bootstrap connectivity failure allows Spring Boot startup and HTTP liveness; it does not verify note persistence or database-aware readiness.
 
 Inspect `backend/build/reports/tests/test/index.html` or `backend/build/test-results/test/TEST-stickynotes.MainTest.xml`. A passing run must show the test executed with zero failures, errors, or skips. `:backend:check`, the repository-wide `check`, and `fullBuild` include the backend test suite. GitHub Actions retains the backend test reports.
+
+## Backend application service unit tests
+
+Run the application service tests from the repository root:
+
+```sh
+./gradlew :backend:test --tests stickynotes.application.BoardServiceTest
+```
+
+`BoardServiceTest` calls every Java entry point exposed by `JvmBoardFacade` and executes every `BoardService` mutation against an in-memory fake `BoardRepository`. The successful scenarios cover note, movement, WIP, blocker, and checklist operations, including generated UUIDs, partial note and checklist updates, preservation of untouched entities, one conditional save per command, and revision increments. Domain rejection is checked without a save.
+
+Parameterized scenarios exercise every mutation with a stale revision, a competing write during conditional save, revision overflow, and corrupt persisted state. They verify conflict metadata, a single read on stale requests, one additional read after a failed CAS, no save retry or overwrite of the competing snapshot, and zero save calls on overflow or invalid state. Boundary coverage includes the last revision that can be incremented, a board disappearing during CAS, and database or snapshot validation failures during the conflict reload. The service translates these failures to stable `BoardServiceException` codes without exposing infrastructure details.
+
+Service and shared-domain regressions verify that a missing checklist item on a `DONE` note produces `ITEM_NOT_FOUND` before the read-only check, and that a full WIP column produces `WIP_LIMIT_REACHED` before an out-of-range destination index. Both preserve the original board. `BlockerAndChecklistTest` and `MovementTest` execute the shared regressions on JVM and ChromeHeadless. The service tests do not exercise MongoDB or HTTP error mapping.
 
 ## Backend persistence unit tests
 

@@ -7,11 +7,26 @@ import stickynotes.contract.BoardCommand
 import stickynotes.contract.BoardSnapshot
 import stickynotes.contract.CommandResponse
 import stickynotes.contract.NoteSnapshot
+import stickynotes.contract.toSnapshot
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class MovementTest {
+    @Test
+    fun `full WIP takes precedence over destination index without changing the board`() {
+        val todo = Note(NoteId("todo"), "Todo")
+        val doing = Note(NoteId("doing"), "Doing", status = NoteStatus.DOING, blockedReason = "Waiting")
+        val board = Board(BoardId("main"), wipLimit = 1, notes = listOf(todo, doing))
+        val before = board.toSnapshot(wipLimit = board.wipLimit)
+
+        val result = board.moveNote(NoteId("todo"), NoteStatus.DOING, 2)
+
+        assertIs<BoardCommandResult.Failure>(result)
+        assertEquals("WIP_LIMIT_REACHED", result.code)
+        assertEquals(before, board.toSnapshot(wipLimit = board.wipLimit))
+    }
+
     @Test
     fun `moveNote rejects transition to DOING when wip limit is reached`() {
         val noteA = Note(NoteId("A"), "Task A", status = NoteStatus.DOING, blockedReason = "Waiting")

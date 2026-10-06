@@ -35,8 +35,8 @@ fun Board.updateChecklistItem(
     val itemIndex = note?.checklist?.indexOfFirst { it.id == itemId } ?: -1
     return when {
         note == null -> BoardCommandResult.Failure("NOTE_NOT_FOUND", "id")
-        note.status == NoteStatus.DONE -> BoardCommandResult.Failure("NOTE_DONE_READ_ONLY")
         itemIndex == -1 -> BoardCommandResult.Failure("ITEM_NOT_FOUND", "itemId")
+        note.status == NoteStatus.DONE -> BoardCommandResult.Failure("NOTE_DONE_READ_ONLY")
         else -> applyItemUpdate(note, itemIndex, label, completed)
     }
 }
@@ -48,8 +48,8 @@ fun Board.deleteChecklistItem(
     val note = notes.find { it.id == noteId }
     return when {
         note == null -> BoardCommandResult.Failure("NOTE_NOT_FOUND", "id")
-        note.status == NoteStatus.DONE -> BoardCommandResult.Failure("NOTE_DONE_READ_ONLY")
         note.checklist.none { it.id == itemId } -> BoardCommandResult.Failure("ITEM_NOT_FOUND", "itemId")
+        note.status == NoteStatus.DONE -> BoardCommandResult.Failure("NOTE_DONE_READ_ONLY")
         else -> {
             val nextList = note.checklist.filterNot { it.id == itemId }
             BoardCommandResult.Success(replaceNote(note.copy(checklist = nextList)))

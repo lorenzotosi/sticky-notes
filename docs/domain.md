@@ -29,6 +29,8 @@ A checklist label cannot be empty and has a limit of 120 units. Each note can co
 
 Commands do not change an existing board. A successful command returns a new board. A failed command returns an error code and can name the invalid field.
 
+When updating or deleting a checklist item, note and item presence are checked before `DONE` immutability, so an absent item returns `ITEM_NOT_FOUND`. For movement, blocker, transition, and checklist checks precede WIP; WIP precedes destination index bounds. Reordering within the current column does not check WIP capacity.
+
 | Code | Meaning |
 | --- | --- |
 | `BOARD_FULL` | The board already has 200 notes. |

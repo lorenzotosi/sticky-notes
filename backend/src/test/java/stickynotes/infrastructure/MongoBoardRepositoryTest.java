@@ -69,11 +69,12 @@ class MongoBoardRepositoryTest {
     }
 
     @Test
-    void propagatesLoadFailure() {
+    void wrapsLoadFailureAtTheRepositoryBoundary() {
         DataAccessResourceFailureException failure = new DataAccessResourceFailureException("Database unavailable");
         when(mongoTemplate.findById("main", BoardDocument.class)).thenThrow(failure);
 
-        assertSame(failure, assertThrows(DataAccessResourceFailureException.class, repository::load));
+        IllegalStateException error = assertThrows(IllegalStateException.class, repository::load);
+        assertSame(failure, error.getCause());
 
         verify(mongoTemplate).findById("main", BoardDocument.class);
         verifyNoMoreInteractions(mongoTemplate);
@@ -162,13 +163,13 @@ class MongoBoardRepositoryTest {
     }
 
     @Test
-    void propagatesSaveFailureWithoutRetry() {
+    void wrapsSaveFailureAtTheRepositoryBoundaryWithoutRetry() {
         DataAccessResourceFailureException failure = new DataAccessResourceFailureException("Database unavailable");
         when(mongoTemplate.replace(any(Query.class), any(BoardDocument.class), any(ReplaceOptions.class), eq("boards")))
                 .thenThrow(failure);
 
-        assertSame(
-                failure, assertThrows(DataAccessResourceFailureException.class, () -> repository.save(snapshot(7), 7)));
+        IllegalStateException error = assertThrows(IllegalStateException.class, () -> repository.save(snapshot(7), 7));
+        assertSame(failure, error.getCause());
 
         verify(mongoTemplate)
                 .replace(any(Query.class), any(BoardDocument.class), any(ReplaceOptions.class), eq("boards"));

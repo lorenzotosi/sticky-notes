@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani
 
+@file:Suppress("TooManyFunctions")
+
 package stickynotes.interop
 
 import stickynotes.contract.BoardCommand
@@ -61,4 +63,44 @@ object JvmBoardFacade {
         newId: String,
         label: String,
     ): BoardCommand.AddItem = BoardCommand.AddItem(noteId = noteId, label = label, newId = newId)
+
+    @JvmStatic
+    @JvmOverloads
+    fun updateNote(
+        noteId: String,
+        content: String? = null,
+        color: NoteColor? = null,
+    ): BoardCommand.UpdateNote = BoardCommand.UpdateNote(noteId = noteId, content = content, color = color)
+
+    @JvmStatic
+    fun deleteNote(noteId: String): BoardCommand.DeleteNote = BoardCommand.DeleteNote(noteId = noteId)
+
+    @JvmStatic
+    fun blockNote(
+        noteId: String,
+        reason: String,
+    ): BoardCommand.BlockNote = BoardCommand.BlockNote(noteId = noteId, reason = reason)
+
+    @JvmStatic
+    fun unblockNote(noteId: String): BoardCommand.UnblockNote = BoardCommand.UnblockNote(noteId = noteId)
+
+    @JvmStatic
+    fun updateItem(
+        noteId: String,
+        itemId: String,
+        label: String? = null,
+        completed: Boolean? = null,
+    ): BoardCommand.UpdateItem =
+        BoardCommand.UpdateItem(
+            noteId = noteId,
+            itemId = itemId,
+            label = label,
+            completed = completed,
+        )
+
+    @JvmStatic
+    fun deleteItem(
+        noteId: String,
+        itemId: String,
+    ): BoardCommand.DeleteItem = BoardCommand.DeleteItem(noteId = noteId, itemId = itemId)
 }
