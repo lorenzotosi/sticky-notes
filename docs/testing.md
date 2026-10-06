@@ -87,12 +87,14 @@ Inspect `backend/build/reports/tests/test/index.html` or `backend/build/test-res
 Run the application service tests from the repository root:
 
 ```sh
-./gradlew :backend:test --tests stickynotes.infrastructure.BoardServiceTest
+./gradlew :backend:test --tests stickynotes.application.BoardServiceTest
 ```
 
-`BoardServiceTest` calls every Java entry point exposed by `JvmBoardFacade` and executes every `BoardService` mutation against an in-memory fake `BoardRepository`. The successful scenario covers note, movement, WIP, blocker, and checklist operations, including generated UUIDs, one conditional save per command, and revision increments. Domain rejection is checked without a save.
+`BoardServiceTest` calls every Java entry point exposed by `JvmBoardFacade` and executes every `BoardService` mutation against an in-memory fake `BoardRepository`. The successful scenarios cover note, movement, WIP, blocker, and checklist operations, including generated UUIDs, partial note and checklist updates, preservation of untouched entities, one conditional save per command, and revision increments. Domain rejection is checked without a save.
 
-The suite also verifies the application errors required for stale revisions, unmatched conditional saves, revision overflow, and database failures. The repository detects persistence failures and overflow; `BoardServiceImpl` translates them to stable `BoardServiceException` codes without exposing infrastructure details. The tests cover service orchestration; they do not exercise MongoDB or HTTP error mapping.
+Parameterized scenarios exercise every mutation with a stale revision, a competing write during conditional save, revision overflow, and corrupt persisted state. They verify conflict metadata, a single read on stale requests, one additional read after a failed CAS, no save retry or overwrite of the competing snapshot, and zero save calls on overflow or invalid state. Boundary coverage includes the last revision that can be incremented, a board disappearing during CAS, and database or snapshot validation failures during the conflict reload. The service translates these failures to stable `BoardServiceException` codes without exposing infrastructure details.
+
+Service and shared-domain regressions verify that a missing checklist item on a `DONE` note produces `ITEM_NOT_FOUND` before the read-only check, and that a full WIP column produces `WIP_LIMIT_REACHED` before an out-of-range destination index. Both preserve the original board. `BlockerAndChecklistTest` and `MovementTest` execute the shared regressions on JVM and ChromeHeadless. The service tests do not exercise MongoDB or HTTP error mapping.
 
 ## Backend persistence unit tests
 
