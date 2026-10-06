@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani
 
+@file:Suppress("TooManyFunctions")
+
 package stickynotes.interop
 
 import stickynotes.contract.BoardCommand
@@ -88,7 +90,13 @@ object JvmBoardFacade {
         itemId: String,
         label: String? = null,
         completed: Boolean? = null,
-    ): BoardCommand.UpdateItem = BoardCommand.UpdateItem(noteId = noteId, itemId = itemId, label = label, completed = completed)
+    ): BoardCommand.UpdateItem =
+        BoardCommand.UpdateItem(
+            noteId = noteId,
+            itemId = itemId,
+            label = label,
+            completed = completed,
+        )
 
     @JvmStatic
     fun deleteItem(

@@ -114,11 +114,12 @@ public final class BoardServiceImpl implements BoardService {
 
         int boardRevision = getBoardRevision(expectedRevision, board);
 
-        BoardCommand.AddItem addItemCommand = JvmBoardFacade.addItem(noteId, label);
+        String itemId = UUID.randomUUID().toString();
+
+        BoardCommand.AddItem addItemCommand = JvmBoardFacade.addItem(noteId, itemId, label);
         CommandResponse response = JvmBoardFacade.execute(board, addItemCommand);
 
         return saveBoard(boardRevision, response);
-        throw new UnsupportedOperationException("Unimplemented method 'addItem'");
     }
 
     @Override
