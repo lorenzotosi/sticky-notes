@@ -5,7 +5,6 @@ package stickynotes.application;
 
 import java.util.Optional;
 import java.util.UUID;
-
 import stickynotes.contract.BoardCommand;
 import stickynotes.contract.BoardSnapshot;
 import stickynotes.contract.CommandResponse;
