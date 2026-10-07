@@ -23,6 +23,8 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    env:
+      TEST_MONGODB_URI: "mongodb://127.0.0.1:27018/?serverSelectionTimeoutMS=5000&connectTimeoutMS=5000&socketTimeoutMS=5000"
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -45,6 +47,8 @@ jobs:
       - name: Validate commits
         if: github.event_name == 'pull_request'
         run: npx --yes --package @commitlint/cli --package @commitlint/config-conventional commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+      - name: Start MongoDB for integration tests
+        run: docker compose -f compose.test.yaml up -d --wait --wait-timeout 120 mongo-test
       - name: Run checks
         if: ${{ !inputs.full_build }}
         run: ./gradlew check --no-daemon
@@ -71,3 +75,6 @@ jobs:
             commons/build/reports/tests/
             commons/build/test-results/
           if-no-files-found: warn
+      - name: Stop test services
+        if: always()
+        run: docker compose -f compose.test.yaml down

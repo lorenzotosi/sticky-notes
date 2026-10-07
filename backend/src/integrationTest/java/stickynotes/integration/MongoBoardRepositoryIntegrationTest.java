@@ -39,9 +39,6 @@ import stickynotes.interop.JvmBoardFacade;
 
 class MongoBoardRepositoryIntegrationTest {
 
-    private final String TEST_MONGODB_URI =
-            "mongodb://127.0.0.1:27018/?serverSelectionTimeoutMS=5000&connectTimeoutMS=5000&socketTimeoutMS=5000";
-
     private String database;
     private MongoClient client;
     private MongoTemplate template;
@@ -187,7 +184,15 @@ class MongoBoardRepositoryIntegrationTest {
     }
 
     private String mongoUri() {
-        return TEST_MONGODB_URI;
+        String uri = System.getenv("TEST_MONGODB_URI");
+
+        if (uri == null || uri.isBlank()) {
+            /*throw new IllegalStateException(
+                    "Set TEST_MONGODB_URI before running integration tests");*/
+            return "mongodb://127.0.0.1:27018";
+        }
+
+        return uri;
     }
 
     private ConfigurableApplicationContext startBackend() {
