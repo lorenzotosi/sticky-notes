@@ -104,6 +104,13 @@ tasks.register("fullTest") {
     dependsOn(":commons:check", ":backend:test", ":frontend:frontendTest")
 }
 
+val prepareCommit =
+    tasks.register("prepareCommit") {
+        group = "verification"
+        description = "Formats code and verifies SPDX license headers across all projects."
+        dependsOn("formatCode", "verifyLicense")
+    }
+
 tasks.named("check") {
     dependsOn(
         "spotlessCheck",
