@@ -63,7 +63,7 @@ The project unifies all module checks into a non-circular Gradle task graph.
 | `./gradlew :frontend:frontendCheck` | Runs both `frontendLint` and `frontendTest`. |
 | `./gradlew :frontend:frontendBuild` | Runs the frontend checks and creates the production Vite bundle in `frontend/dist/`. |
 
-Before running `:backend:integrationTest`, `:backend:check`, `fullTest`, `check`, or `fullBuild` locally, run `./gradlew testMongoUp` or supply an isolated MongoDB server through `TEST_MONGODB_URI`. Tests do not start or stop Docker automatically. The same preparation supports IDE test runs; see [MongoDB integration tests](testing.md#backend-mongodb-integration-tests-r2). On Windows PowerShell, use `.\gradlew.bat testMongoUp` and `.\gradlew.bat testMongoDown`.
+The `:backend:integrationTest` task starts MongoDB through `testMongoUp` and always finalizes with `testMongoDown`; `:backend:check`, `fullTest`, `check`, and `fullBuild` inherit that lifecycle. Docker must be installed and running, but the test container does not need to be started manually. IDE runs delegated to Gradle inherit the same lifecycle. When using the IDE's direct JUnit runner, run `./gradlew testMongoUp` before the test and `./gradlew testMongoDown` afterward. See [MongoDB integration tests](testing.md#backend-mongodb-integration-tests-r2). On Windows PowerShell, use `.\gradlew.bat testMongoUp` and `.\gradlew.bat testMongoDown`.
 
 ### Gradle Configuration Cache
 

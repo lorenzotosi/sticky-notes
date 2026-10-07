@@ -81,6 +81,8 @@ val integrationTest =
         description = "Runs persistence tests against MongoDB."
         testClassesDirs = integrationTestSourceSet.output.classesDirs
         classpath = integrationTestSourceSet.runtimeClasspath
+        dependsOn(":testMongoUp")
+        finalizedBy(":testMongoDown")
         useJUnitPlatform()
         shouldRunAfter(tasks.test)
     }

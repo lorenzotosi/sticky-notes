@@ -125,15 +125,14 @@ These unit tests verify the adapter's decisions and arguments to `MongoTemplate`
 With JDK 21 and a running Docker engine with Compose and Linux containers, run from the repository root:
 
 ```sh
-./gradlew testMongoUp
 ./gradlew :backend:integrationTest --rerun-tasks
 ```
 
-`testMongoUp` uses `compose.test.yaml` to pull the pinned MongoDB image when missing, create the test network and container, and wait up to 120 seconds for MongoDB's health check. It starts only `mongo-test`, not the containerized test runner. Repeating the command reuses the existing container when its configuration is unchanged. Docker must already be installed and running; no custom Dockerfile is needed for the MongoDB image.
+The integration task depends on `testMongoUp` and finalizes with `testMongoDown`, including when a test fails. `testMongoUp` uses `compose.test.yaml` to pull the pinned MongoDB image when missing, create the test network and container, and wait up to 120 seconds for MongoDB's health check. It starts only `mongo-test`, not the containerized test runner. Docker must already be installed and running; no custom Dockerfile is needed for the MongoDB image.
 
 The Compose project is `sticky-notes-tests`. MongoDB is exposed only on `127.0.0.1:27018`, which must be free. Its data directories use temporary memory-backed storage, not development data volumes; stopping or removing the container discards that data.
 
-After `testMongoUp`, run `MongoBoardRepositoryIntegrationTest` directly from the IDE with JDK 21. Its default URI is `mongodb://127.0.0.1:27018` when `TEST_MONGODB_URI` is unset or blank. To use another isolated test server, set that environment variable in the IDE run configuration or Gradle process. Each test creates a unique `sticky_notes_it_…` database and drops only that database after the test. Never supply a development or production database server.
+IDE runs delegated to Gradle inherit the automatic MongoDB lifecycle. With the IDE's direct JUnit runner, first execute `./gradlew testMongoUp`, then run `MongoBoardRepositoryIntegrationTest` with JDK 21 and execute `./gradlew testMongoDown` afterward. Its default URI is `mongodb://127.0.0.1:27018` when `TEST_MONGODB_URI` is unset or blank. To use another isolated test server, set that environment variable in the IDE run configuration or Gradle process. Each test creates a unique `sticky_notes_it_…` database and drops only that database after the test. Never supply a development or production database server.
 
 The five tests in `backend/src/integrationTest/java/stickynotes/integration/MongoBoardRepositoryIntegrationTest.java` verify:
 
@@ -145,7 +144,7 @@ The five tests in `backend/src/integrationTest/java/stickynotes/integration/Mong
 
 These tests exercise the persistence adapter and bootstrap against a real MongoDB server. They do not send HTTP requests or restart MongoDB itself. Inspect `backend/build/reports/tests/integrationTest/index.html` or `backend/build/test-results/integrationTest/TEST-stickynotes.integration.MongoBoardRepositoryIntegrationTest.xml`: a passing run must show five tests with zero failures, errors, or skips. Unavailable MongoDB fails the suite rather than skipping it.
 
-The suite is included in `:backend:check`, `fullTest`, `check`, and `fullBuild`. Local runs require the preparation above; [GitHub Actions](ci-cd.md#workflow-execution-policy) starts and cleans up MongoDB in the quality job.
+The suite is included in `:backend:check`, `fullTest`, `check`, and `fullBuild`. These Gradle entry points start and clean up MongoDB through the integration task lifecycle. [GitHub Actions](ci-cd.md#workflow-execution-policy) uses the same Gradle graph and retains an unconditional Compose cleanup step as a safeguard.
 
 To run the suite itself inside Docker instead of using the host JVM or IDE, use the existing `tests` service. On a POSIX shell, map the host user so generated files remain writable:
 
@@ -154,7 +153,7 @@ TEST_UID="$(id -u)" TEST_GID="$(id -g)" \
   docker compose -f compose.test.yaml up --exit-code-from tests tests
 ```
 
-After either workflow, remove the isolated test environment when it is no longer needed:
+After a direct IDE or containerized test run, remove the isolated test environment when it is no longer needed. Gradle integration runs already perform this cleanup through their finalizer:
 
 ```sh
 ./gradlew testMongoDown

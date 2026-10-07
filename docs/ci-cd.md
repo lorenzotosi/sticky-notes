@@ -18,7 +18,7 @@ The development-branch check is the fast quality gate: its purpose is to discove
 
 Test reports are retained after quality runs. Deliverables are uploaded only by successful full builds, so ordinary branch pushes do not create release artifacts.
 
-Before Gradle verification, the quality job starts `mongo-test` from `compose.test.yaml` and waits for its health check. It sets `TEST_MONGODB_URI` to the runner's local port `27018` for the backend integration suite, which is included in both `check` and `fullBuild`. Backend integration reports are uploaded with the other test reports, including after failures, and Docker Compose cleanup runs even when verification fails.
+The backend integration task starts `mongo-test` through the Gradle `testMongoUp` dependency, waits for its health check, and finalizes with `testMongoDown`. The quality job sets `TEST_MONGODB_URI` to the runner's local port `27018`; the suite is included in both `check` and `fullBuild`. Backend integration reports are uploaded with the other test reports, including after failures. An unconditional Docker Compose cleanup step remains as a safeguard if Gradle is interrupted before its finalizer runs.
 
 The `deliverables` artifact contains `backend/build/libs/backend.jar`, the Commons libraries from `commons/build/libs/`, and the frontend production bundle from `frontend/dist/`. The Spring Boot plugin makes `:backend:build` produce the executable JAR, so it is already part of `fullBuild`. The release workflow packages the downloaded files into `sticky-notes-deliverables.zip`; see [deployment](deployment.md#executable-backend) for the extracted JAR location and startup command.
 
