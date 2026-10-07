@@ -100,6 +100,31 @@ val verifyLicense =
         }
     }
 
+tasks.register<Exec>("testMongoUp") {
+    group = "verification"
+    description = "Creates and starts MongoDB for integration tests, waiting until it is healthy."
+    workingDir = projectDir
+    commandLine(
+        "docker",
+        "compose",
+        "-f",
+        "compose.test.yaml",
+        "up",
+        "--detach",
+        "--wait",
+        "--wait-timeout",
+        "120",
+        "mongo-test",
+    )
+}
+
+tasks.register<Exec>("testMongoDown") {
+    group = "verification"
+    description = "Stops and removes the isolated Docker Compose test environment."
+    workingDir = projectDir
+    commandLine("docker", "compose", "-f", "compose.test.yaml", "down")
+}
+
 tasks.register("fullTest") {
     group = "verification"
     description = "Runs tests across commons, backend, and frontend."
