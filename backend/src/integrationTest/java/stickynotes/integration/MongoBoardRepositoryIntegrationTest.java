@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executors;
+import org.bson.Document;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,9 @@ import stickynotes.interop.JvmBoardFacade;
 
 class MongoBoardRepositoryIntegrationTest {
 
+    private static final String DEFAULT_URI =
+            "mongodb://127.0.0.1:27018/?serverSelectionTimeoutMS=1000&connectTimeoutMS=1000&socketTimeoutMS=1000";
+
     private String database;
     private MongoClient client;
     private MongoTemplate template;
@@ -47,7 +51,21 @@ class MongoBoardRepositoryIntegrationTest {
     @BeforeEach
     void setUp() {
         database = "sticky_notes_it_" + UUID.randomUUID();
-        client = MongoClients.create(mongoUri());
+
+        try {
+            client = MongoClients.create(mongoUri());
+            client.getDatabase("admin").runCommand(new Document("ping", 1));
+        } catch (RuntimeException e) {
+            if (client != null) {
+                client.close();
+                client = null;
+            }
+
+            throw new IllegalStateException(
+                    "MongoDB is not reachable. Run ./gradlew testMongoUp or set TEST_MONGODB_URI to a reachable test database.",
+                    e);
+        }
+
         template = new MongoTemplate(client, database);
         repository = new MongoBoardRepository(template);
     }
@@ -186,13 +204,7 @@ class MongoBoardRepositoryIntegrationTest {
     private String mongoUri() {
         String uri = System.getenv("TEST_MONGODB_URI");
 
-        if (uri == null || uri.isBlank()) {
-            /*throw new IllegalStateException(
-            "Set TEST_MONGODB_URI before running integration tests");*/
-            return "mongodb://127.0.0.1:27018";
-        }
-
-        return uri;
+        return uri == null || uri.isBlank() ? DEFAULT_URI : uri;
     }
 
     private ConfigurableApplicationContext startBackend() {
