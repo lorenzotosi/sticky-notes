@@ -188,7 +188,7 @@ class MongoBoardRepositoryIntegrationTest {
 
         if (uri == null || uri.isBlank()) {
             /*throw new IllegalStateException(
-                    "Set TEST_MONGODB_URI before running integration tests");*/
+            "Set TEST_MONGODB_URI before running integration tests");*/
             return "mongodb://127.0.0.1:27018";
         }
 
