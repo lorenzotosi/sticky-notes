@@ -22,16 +22,33 @@ spotless {
     }
 }
 
+val integrationTestSourceSet =
+    sourceSets.create("integrationTest") {
+        compileClasspath += sourceSets.main.get().output
+        runtimeClasspath += sourceSets.main.get().output
+    }
+
+configurations[integrationTestSourceSet.implementationConfigurationName]
+    .extendsFrom(configurations.testImplementation.get())
+
+configurations[integrationTestSourceSet.runtimeOnlyConfigurationName]
+    .extendsFrom(configurations.testRuntimeOnly.get())
+
 dependencies {
+    // common
     implementation(project(":commons"))
-    // testImplementation(platform(libs.junit.bom))
+    // jackson
     implementation(platform(libs.jackson.bom))
+    // spring boot
     implementation(platform(libs.spring.boot.bom))
-    implementation(platform(libs.mongodb.driver.bom))
     implementation(libs.spring.boot.webmvc)
     implementation(libs.spring.boot.mongodb)
     implementation(libs.spring.boot.actuator)
+    // mongodb driver
+    implementation(platform(libs.mongodb.driver.bom))
+    // tests
     testImplementation(libs.spring.boot.test)
+
     constraints { // specific versions to avoid vulnerability in spring bom
         implementation(libs.logback.classic)
         implementation(libs.logback.core)
@@ -58,6 +75,16 @@ tasks.test {
     useJUnitPlatform()
 }
 
+val integrationTest =
+    tasks.register<Test>("integrationTest") {
+        group = "verification"
+        description = "Runs persistence tests against MongoDB."
+        testClassesDirs = integrationTestSourceSet.output.classesDirs
+        classpath = integrationTestSourceSet.runtimeClasspath
+        useJUnitPlatform()
+        shouldRunAfter(tasks.test)
+    }
+
 tasks.named("check") {
-    dependsOn("spotlessCheck")
+    dependsOn("spotlessCheck", integrationTest)
 }

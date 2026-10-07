@@ -27,6 +27,8 @@ subprojects {
             "jvmRuntimeClasspath",
             "jvmTestCompileClasspath",
             "jvmTestRuntimeClasspath",
+            "integrationTestCompileClasspath",
+            "integrationTestRuntimeClasspath",
         )
 
     configurations.configureEach {
@@ -101,7 +103,7 @@ val verifyLicense =
 tasks.register("fullTest") {
     group = "verification"
     description = "Runs tests across commons, backend, and frontend."
-    dependsOn(":commons:check", ":backend:test", ":frontend:frontendTest")
+    dependsOn(":commons:check", ":backend:test", ":backend:integrationTest", ":frontend:frontendTest")
 }
 
 val prepareCommit =
