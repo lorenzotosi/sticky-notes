@@ -39,3 +39,7 @@ services:
       - --rerun-tasks
       - --project-cache-dir
       - /tmp/project-cache
+      - -x
+      - :testMongoUp
+      - -x
+      - :testMongoDown

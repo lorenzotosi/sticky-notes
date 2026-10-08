@@ -153,6 +153,8 @@ TEST_UID="$(id -u)" TEST_GID="$(id -g)" \
   docker compose -f compose.test.yaml up --exit-code-from tests tests
 ```
 
+In this workflow, Compose starts MongoDB and waits for its health check before starting the test runner. The runner's Gradle command excludes `:testMongoUp` and `:testMongoDown` with `-x`: container lifecycle belongs to the host's Compose process, not to the JDK container. No Docker CLI or host Docker socket is needed inside the runner. The command returns the test container's exit code; remove both services afterward with the cleanup command below.
+
 After a direct IDE or containerized test run, remove the isolated test environment when it is no longer needed. Gradle integration runs already perform this cleanup through their finalizer:
 
 ```sh
