@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani
+
+name: sticky-notes-tests
+
+services:
+  mongo-test:
+    image: mongo@sha256:f071cbf97a6e52fb7f07ce9ca5d862ad79876bf0eba9ba97758337d740449638
+    ports:
+      - "127.0.0.1:27018:27017"
+    tmpfs:
+      - /data/db
+      - /data/configdb
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.adminCommand({ ping: 1 }).ok ? 0 : 1)"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  tests:
+    image: eclipse-temurin:21-jdk@sha256:3e3c176ffed168beb42c607be9bc1639b466cf00261a0fb04425562c9d0c5c2b
+    user: "${TEST_UID:-1000}:${TEST_GID:-1000}"
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+    environment:
+      GRADLE_USER_HOME: /tmp/gradle
+      JAVA_TOOL_OPTIONS: -Duser.home=/tmp
+      TEST_MONGODB_URI: mongodb://mongo-test:27017/?serverSelectionTimeoutMS=5000&connectTimeoutMS=5000&socketTimeoutMS=5000
+    depends_on:
+      mongo-test:
+        condition: service_healthy
+    command:
+      - ./gradlew
+      - :backend:integrationTest
+      - --tests
+      - stickynotes.integration.MongoBoardRepositoryIntegrationTest
+      - --no-daemon
+      - --rerun-tasks
+      - --project-cache-dir
+      - /tmp/project-cache
+      - -x
+      - :testMongoUp
+      - -x
+      - :testMongoDown

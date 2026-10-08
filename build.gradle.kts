@@ -27,6 +27,8 @@ subprojects {
             "jvmRuntimeClasspath",
             "jvmTestCompileClasspath",
             "jvmTestRuntimeClasspath",
+            "integrationTestCompileClasspath",
+            "integrationTestRuntimeClasspath",
         )
 
     configurations.configureEach {
@@ -98,11 +100,43 @@ val verifyLicense =
         }
     }
 
+tasks.register<Exec>("testMongoUp") {
+    group = "verification"
+    description = "Creates and starts MongoDB for integration tests, waiting until it is healthy."
+    workingDir = projectDir
+    commandLine(
+        "docker",
+        "compose",
+        "-f",
+        "compose.test.yaml",
+        "up",
+        "--detach",
+        "--wait",
+        "--wait-timeout",
+        "120",
+        "mongo-test",
+    )
+}
+
+tasks.register<Exec>("testMongoDown") {
+    group = "verification"
+    description = "Stops and removes the isolated Docker Compose test environment."
+    workingDir = projectDir
+    commandLine("docker", "compose", "-f", "compose.test.yaml", "down")
+}
+
 tasks.register("fullTest") {
     group = "verification"
     description = "Runs tests across commons, backend, and frontend."
-    dependsOn(":commons:check", ":backend:test", ":frontend:frontendTest")
+    dependsOn(":commons:check", ":backend:test", ":backend:integrationTest", ":frontend:frontendTest")
 }
+
+val prepareCommit =
+    tasks.register("prepareCommit") {
+        group = "verification"
+        description = "Formats code and verifies SPDX license headers across all projects."
+        dependsOn("formatCode", "verifyLicense")
+    }
 
 tasks.named("check") {
     dependsOn(

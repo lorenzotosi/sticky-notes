@@ -3,7 +3,7 @@
 
 # Testing
 
-`commons/src/commonTest` contains domain scenarios shared by the JVM and ChromeHeadless targets. `browserDomainTest` is an alias for `jsBrowserTest`. The backend also has application service and persistence unit tests, and an HTTP startup and liveness test.
+`commons/src/commonTest` contains domain scenarios shared by the JVM and ChromeHeadless targets. `browserDomainTest` is an alias for `jsBrowserTest`. The backend also has application service and persistence unit tests, real MongoDB integration tests, and an HTTP startup and liveness test.
 
 This guide explains how to execute the implemented tests and which [domain rules](domain.md) they cover. [R1 evidence](evidence/R1.md) records the observed domain and consumer results.
 
@@ -118,7 +118,50 @@ Run the mapper, repository, and bootstrap tests with JDK 21 from the repository 
 
 Inspect `backend/build/reports/tests/test/index.html` or the XML files under `backend/build/test-results/test/`. A passing run must show all three persistence test classes executed with zero failures, errors, or skips. `:backend:check` includes these tests and the backend formatting check.
 
-These unit tests verify the adapter's decisions and arguments to `MongoTemplate`. They do not exercise BSON conversion, atomic replacement in a real MongoDB server, or restart behavior. Within R2, database integration tests must verify those boundaries and board initialization; HTTP tests must verify the API responses specified in [contracts](contracts.md).
+These unit tests verify the adapter's decisions and arguments to `MongoTemplate`. They do not exercise BSON conversion, atomic replacement in a real MongoDB server, or restart behavior; the integration suite below exercises those boundaries. Within R2, HTTP tests must verify the API responses specified in [contracts](contracts.md).
+
+## Backend MongoDB integration tests (R2)
+
+With JDK 21 and a running Docker engine with Compose and Linux containers, run from the repository root:
+
+```sh
+./gradlew :backend:integrationTest --rerun-tasks
+```
+
+The integration task depends on `testMongoUp` and finalizes with `testMongoDown`, including when a test fails. `testMongoUp` uses `compose.test.yaml` to pull the pinned MongoDB image when missing, create the test network and container, and wait up to 120 seconds for MongoDB's health check. It starts only `mongo-test`, not the containerized test runner. Docker must already be installed and running; no custom Dockerfile is needed for the MongoDB image.
+
+The Compose project is `sticky-notes-tests`. MongoDB is exposed only on `127.0.0.1:27018`, which must be free. Its data directories use temporary memory-backed storage, not development data volumes; stopping or removing the container discards that data.
+
+IDE runs delegated to Gradle inherit the automatic MongoDB lifecycle. With the IDE's direct JUnit runner, first execute `./gradlew testMongoUp`, then run `MongoBoardRepositoryIntegrationTest` with JDK 21 and execute `./gradlew testMongoDown` afterward. Its default URI is `mongodb://127.0.0.1:27018` when `TEST_MONGODB_URI` is unset or blank. To use another isolated test server, set that environment variable in the IDE run configuration or Gradle process. Each test creates a unique `sticky_notes_it_…` database and drops only that database after the test. Never supply a development or production database server.
+
+The five tests in `backend/src/integrationTest/java/stickynotes/integration/MongoBoardRepositoryIntegrationTest.java` verify:
+
+- Repeated bootstrap creates exactly one empty board without overwriting it.
+- A complete snapshot, including ordering, colors, blockers, and checklists, survives closing and restarting the Spring application context against the same database.
+- A correct revision saves once, while a stale revision preserves the winning snapshot.
+- Revision overflow leaves the persisted snapshot unchanged.
+- Two independent MongoDB connections synchronized with a barrier compete for the last WIP slot; exactly one CAS succeeds and the revision increases once.
+
+These tests exercise the persistence adapter and bootstrap against a real MongoDB server. They do not send HTTP requests or restart MongoDB itself. Inspect `backend/build/reports/tests/integrationTest/index.html` or `backend/build/test-results/integrationTest/TEST-stickynotes.integration.MongoBoardRepositoryIntegrationTest.xml`: a passing run must show five tests with zero failures, errors, or skips. Unavailable MongoDB fails the suite rather than skipping it.
+
+The suite is included in `:backend:check`, `fullTest`, `check`, and `fullBuild`. These Gradle entry points start and clean up MongoDB through the integration task lifecycle. [GitHub Actions](ci-cd.md#workflow-execution-policy) uses the same Gradle graph and retains an unconditional Compose cleanup step as a safeguard.
+
+To run the suite itself inside Docker instead of using the host JVM or IDE, use the existing `tests` service. On a POSIX shell, map the host user so generated files remain writable:
+
+```sh
+TEST_UID="$(id -u)" TEST_GID="$(id -g)" \
+  docker compose -f compose.test.yaml up --exit-code-from tests tests
+```
+
+In this workflow, Compose starts MongoDB and waits for its health check before starting the test runner. The runner's Gradle command excludes `:testMongoUp` and `:testMongoDown` with `-x`: container lifecycle belongs to the host's Compose process, not to the JDK container. No Docker CLI or host Docker socket is needed inside the runner. The command returns the test container's exit code; remove both services afterward with the cleanup command below.
+
+After a direct IDE or containerized test run, remove the isolated test environment when it is no longer needed. Gradle integration runs already perform this cleanup through their finalizer:
+
+```sh
+./gradlew testMongoDown
+```
+
+On Windows PowerShell, use `.\gradlew.bat` instead of `./gradlew` for the Gradle commands.
 
 ## Other test scopes
 

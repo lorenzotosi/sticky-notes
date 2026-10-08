@@ -8,6 +8,7 @@
 - **JDK 21** for Java and Kotlin multiplatform modules.
 - **Gradle 9.7.1** managed via the official `./gradlew` wrapper.
 - **Node.js 24.21.0**, pinned in `.nvmrc`, compatible with semantic-release and Vite.
+- **Docker with Compose**, running Linux containers, for the backend MongoDB integration tests.
 
 The repository uses the official Gradle wrapper. Binary distribution integrity is verified via `distributionSha256Sum` declared in `gradle/wrapper/gradle-wrapper.properties`.
 
@@ -50,6 +51,8 @@ The project unifies all module checks into a non-circular Gradle task graph.
 | `./gradlew updateDependencyLocks` | Regenerates the dependency lockfiles for every Gradle subproject. Use it after changing a dependency or version in `gradle/libs.versions.toml`; the task enables Gradle's `--write-locks` mode automatically. It does not update `frontend/package-lock.json`. |
 | `./gradlew documentation` | Generates the Dokka API reference for `commons` and copies it with the Markdown documentation into `build/docs/`. |
 | `./gradlew verifyLicense` | Checks that source and configuration files contain the required SPDX license header. |
+| `./gradlew testMongoUp` | Pulls the pinned MongoDB image when missing, creates or starts the test container, and waits up to 120 seconds for it to be healthy. Requires a running Docker engine and free local port `27018`. |
+| `./gradlew testMongoDown` | Stops and removes the Docker Compose test environment. Its temporary MongoDB data is discarded. |
 | `./gradlew fullTest` | Runs the Commons checks and all backend and frontend test suites without producing every final deliverable. |
 | `./gradlew check` | Runs repository-wide verification: formatting, Detekt, license validation, JVM and JavaScript tests, frontend linting, and frontend tests. |
 | `./gradlew fullBuild` | Runs `check`, then builds the Commons libraries, backend executable JAR, frontend production bundle, and documentation artifact. |
@@ -59,6 +62,8 @@ The project unifies all module checks into a non-circular Gradle task graph.
 | `./gradlew :frontend:frontendTest` | Installs the frontend dependencies when necessary and runs the Vitest unit tests. |
 | `./gradlew :frontend:frontendCheck` | Runs both `frontendLint` and `frontendTest`. |
 | `./gradlew :frontend:frontendBuild` | Runs the frontend checks and creates the production Vite bundle in `frontend/dist/`. |
+
+The `:backend:integrationTest` task starts MongoDB through `testMongoUp` and always finalizes with `testMongoDown`; `:backend:check`, `fullTest`, `check`, and `fullBuild` inherit that lifecycle. Docker must be installed and running, but the test container does not need to be started manually. IDE runs delegated to Gradle inherit the same lifecycle. When using the IDE's direct JUnit runner, run `./gradlew testMongoUp` before the test and `./gradlew testMongoDown` afterward. See [MongoDB integration tests](testing.md#backend-mongodb-integration-tests-r2). On Windows PowerShell, use `.\gradlew.bat testMongoUp` and `.\gradlew.bat testMongoDown`.
 
 ### Gradle Configuration Cache
 
