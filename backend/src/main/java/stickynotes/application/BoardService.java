@@ -12,6 +12,8 @@ import stickynotes.domain.NoteStatus;
  */
 public interface BoardService {
 
+    BoardSnapshot getBoard();
+
     public BoardSnapshot createNote(int expectedRevision, String content, NoteColor color);
 
     /** Updates content and/or color; a null argument leaves that value unchanged. */

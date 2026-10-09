@@ -5,6 +5,7 @@ package stickynotes.application;
 
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.stereotype.Service;
 import stickynotes.contract.BoardCommand;
 import stickynotes.contract.BoardSnapshot;
 import stickynotes.contract.CommandResponse;
@@ -12,6 +13,7 @@ import stickynotes.domain.NoteColor;
 import stickynotes.domain.NoteStatus;
 import stickynotes.interop.JvmBoardFacade;
 
+@Service
 public final class BoardServiceImpl implements BoardService {
 
     private final BoardRepository repository;
@@ -146,7 +148,8 @@ public final class BoardServiceImpl implements BoardService {
         return saveBoard(boardRevision, response);
     }
 
-    private BoardSnapshot getBoard() {
+    @Override
+    public BoardSnapshot getBoard() {
         return loadBoard().orElseThrow(() -> new RuntimeException("Board not found"));
     }
 
