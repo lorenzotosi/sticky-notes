@@ -17,10 +17,14 @@ const props = defineProps({
   error: {
     type: Object,
     default: null
+  },
+  disabled: {
+    type: Boolean,
+    default: false
   }
 })
 
-const emit = defineEmits(['retry'])
+const emit = defineEmits(['retry', 'edit-note', 'delete-note'])
 
 const columns = [
   { status: 'TODO', title: 'Da fare' },
@@ -119,6 +123,9 @@ const doingCount = computed(() => notesByStatus.value.DOING.length)
             v-for="note in notesByStatus[col.status]"
             :key="note.id"
             :note="note"
+            :disabled="disabled"
+            @edit="emit('edit-note', note)"
+            @delete="emit('delete-note', note.id)"
           />
         </div>
       </section>

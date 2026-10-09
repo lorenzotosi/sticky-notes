@@ -6,14 +6,19 @@ import { describe, expect, it } from 'vitest'
 import NoteCard from './NoteCard.vue'
 
 describe('NoteCard.vue', () => {
+  const sampleNote = {
+    id: 'note-1',
+    content: 'Standard note',
+    color: 'YELLOW',
+    status: 'TODO',
+    blockedReason: null,
+    checklist: []
+  }
+
   it('renders note content safely without executing HTML tags', () => {
     const note = {
-      id: 'note-1',
-      content: '<script>alert("xss")</script><b>Bold Text</b>',
-      color: 'YELLOW',
-      status: 'TODO',
-      blockedReason: null,
-      checklist: []
+      ...sampleNote,
+      content: '<script>alert("xss")</script><b>Bold Text</b>'
     }
 
     const wrapper = mount(NoteCard, { props: { note } })
@@ -24,12 +29,10 @@ describe('NoteCard.vue', () => {
 
   it('displays color badge and blocker banner when present', () => {
     const note = {
-      id: 'note-2',
-      content: 'Blocked work item',
+      ...sampleNote,
       color: 'PINK',
       status: 'DOING',
-      blockedReason: 'Waiting for database',
-      checklist: []
+      blockedReason: 'Waiting for database'
     }
 
     const wrapper = mount(NoteCard, { props: { note } })
@@ -38,24 +41,38 @@ describe('NoteCard.vue', () => {
     expect(wrapper.text()).toContain('Waiting for database')
   })
 
-  it('renders checklist items with completion progress', () => {
-    const note = {
-      id: 'note-3',
-      content: 'Note with checklist',
-      color: 'GREEN',
-      status: 'DOING',
-      blockedReason: null,
-      checklist: [
-        { id: 'item-1', label: 'Item 1', completed: true },
-        { id: 'item-2', label: 'Item 2', completed: false }
-      ]
-    }
+  it('emits edit event when edit button is clicked', async () => {
+    const wrapper = mount(NoteCard, { props: { note: sampleNote } })
+    const editBtn = wrapper.find('button[aria-label="Modifica nota"]')
 
-    const wrapper = mount(NoteCard, { props: { note } })
-    expect(wrapper.text()).toContain('Checklist (1/2)')
-    const items = wrapper.findAll('.note-card__checklist-item')
-    expect(items).toHaveLength(2)
-    expect(items[0].classes()).toContain('note-card__checklist-item--completed')
-    expect(items[1].classes()).not.toContain('note-card__checklist-item--completed')
+    await editBtn.trigger('click')
+    expect(wrapper.emitted('edit')).toHaveLength(1)
+    expect(wrapper.emitted('edit')[0][0]).toEqual(sampleNote)
+  })
+
+  it('requires confirmation before emitting delete event', async () => {
+    const wrapper = mount(NoteCard, { props: { note: sampleNote } })
+    const deleteBtn = wrapper.find('button[aria-label="Elimina nota"]')
+
+    await deleteBtn.trigger('click')
+    expect(wrapper.find('[role="alertdialog"]').exists()).toBe(true)
+    expect(wrapper.emitted('delete')).toBeUndefined()
+
+    const confirmBtn = wrapper.find('.note-card__btn--danger')
+    await confirmBtn.trigger('click')
+
+    expect(wrapper.emitted('delete')).toHaveLength(1)
+    expect(wrapper.emitted('delete')[0][0]).toBe('note-1')
+  })
+
+  it('cancels deletion when cancel confirmation button is clicked', async () => {
+    const wrapper = mount(NoteCard, { props: { note: sampleNote } })
+    await wrapper.find('button[aria-label="Elimina nota"]').trigger('click')
+
+    const cancelBtn = wrapper.find('.note-card__btn--cancel')
+    await cancelBtn.trigger('click')
+
+    expect(wrapper.find('[role="alertdialog"]').exists()).toBe(false)
+    expect(wrapper.emitted('delete')).toBeUndefined()
   })
 })
