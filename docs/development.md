@@ -112,6 +112,57 @@ java -jar backend/build/libs/backend.jar --spring.profiles.active=local
 
 Stop an existing backend process with `Ctrl+C` before starting another on the same port. `fullBuild` also produces this JAR through `:backend:build`. See [testing](testing.md#backend-startup-and-liveness) for the automated startup check and [deployment](deployment.md) for release packaging.
 
+
+## Frontend development and local stack
+
+The frontend is a Vue 3 SPA built with Vite. It interacts with the backend REST API via the Vite development proxy.
+
+### Running the Frontend Locally
+
+From the repository root, start the Vite development server:
+
+```sh
+cd frontend
+npm run dev
+```
+
+The application is available at http://localhost:5173.
+In frontend/vite.config.js, requests matching /api are automatically proxied to the Spring Boot server running at http://localhost:8080:
+
+```js
+server: {
+  proxy: {
+    '/api': {
+      target: 'http://localhost:8080',
+      changeOrigin: true
+    }
+  }
+}
+```
+
+### Full-Stack End-to-End Execution
+To run and test the complete persistent vertical slice locally:
+
+1. Start MongoDB:
+```sh
+./gradlew testMongoUp
+# or run Docker directly:
+docker run -d --name mongo-local -p 27017:27017 mongo:latest
+```
+2. Start Backend API:
+```sh
+./gradlew :backend:bootJar
+java -jar backend/build/libs/backend.jar --spring.profiles.active=local
+```
+3. Start Frontend Dev Server:
+```sh
+cd frontend
+npm run dev
+```
+
+Open http://localhost:5173 in a browser. Board state, note creations, edits, and deletions persist across page reloads and backend restarts directly into MongoDB.
+
+
 ## Dependency Management and Locking
 
 Shared dependencies and versions are declared in `gradle/libs.versions.toml`. Gradle lockfiles are generated for compile, runtime, and test classpaths:
