@@ -15,7 +15,8 @@ const {
   fetchBoard,
   createNote,
   updateNote,
-  deleteNote
+  deleteNote,
+  moveNote
 } = useBoard()
 
 const isEditorOpen = ref(false)
@@ -41,6 +42,13 @@ function closeEditor() {
   editingNote.value = null
   if (createButtonRef.value) {
     createButtonRef.value.focus()
+  }
+}
+
+async function handleMoveNote({ noteId, targetStatus, destinationIndex }) {
+  try {
+    await moveNote(noteId, targetStatus, destinationIndex)
+  } catch {
   }
 }
 
@@ -119,6 +127,7 @@ onMounted(() => {
       @retry="handleRetry"
       @edit-note="openEditEditor"
       @delete-note="handleDeleteNote"
+      @move-note="handleMoveNote"
     />
   </main>
 </template>

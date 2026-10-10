@@ -75,4 +75,47 @@ describe('NoteCard.vue', () => {
     expect(wrapper.find('[role="alertdialog"]').exists()).toBe(false)
     expect(wrapper.emitted('delete')).toBeUndefined()
   })
+
+  it('emits move-status event on button click for TODO note', async () => {
+    const wrapper = mount(NoteCard, { props: { note: sampleNote } })
+    const moveBtn = wrapper.find('button[aria-label="Sposta in lavorazione"]')
+    expect(moveBtn.exists()).toBe(true)
+
+    await moveBtn.trigger('click')
+    expect(wrapper.emitted('move-status')).toHaveLength(1)
+    expect(wrapper.emitted('move-status')[0][0]).toEqual({
+      noteId: 'note-1',
+      targetStatus: 'DOING'
+    })
+  })
+
+  it('disables move button if note is blocked', () => {
+    const note = { ...sampleNote, blockedReason: 'Blocked reason' }
+    const wrapper = mount(NoteCard, { props: { note } })
+    const moveBtn = wrapper.find('button[aria-label="Sposta in lavorazione"]')
+    expect(moveBtn.attributes('disabled')).toBeDefined()
+  })
+
+  it('emits reorder events and disables boundary buttons', async () => {
+    const wrapper = mount(NoteCard, {
+      props: {
+        note: sampleNote,
+        isFirst: true,
+        isLast: false
+      }
+    })
+
+    const upBtn = wrapper.find('button[aria-label="Sposta su"]')
+    const downBtn = wrapper.find('button[aria-label="Sposta giù"]')
+
+    expect(upBtn.attributes('disabled')).toBeDefined()
+    expect(downBtn.attributes('disabled')).toBeUndefined()
+
+    await downBtn.trigger('click')
+    expect(wrapper.emitted('reorder')).toHaveLength(1)
+    expect(wrapper.emitted('reorder')[0][0]).toEqual({
+      noteId: 'note-1',
+      direction: 'DOWN'
+    })
+  })
 })

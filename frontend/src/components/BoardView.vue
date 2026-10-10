@@ -24,7 +24,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['retry', 'edit-note', 'delete-note'])
+const emit = defineEmits(['retry', 'edit-note', 'delete-note', 'move-note'])
 
 const columns = [
   { status: 'TODO', title: 'Da fare' },
@@ -50,6 +50,17 @@ const notesByStatus = computed(() => {
 })
 
 const doingCount = computed(() => notesByStatus.value.DOING.length)
+
+function handleMoveStatus({ noteId, targetStatus }) {
+  const targetColNotes = notesByStatus.value[targetStatus] || []
+  const destinationIndex = targetColNotes.length
+  emit('move-note', { noteId, targetStatus, destinationIndex })
+}
+
+function handleReorder(status, index, { noteId, direction }) {
+  const destinationIndex = direction === 'UP' ? index - 1 : index + 1
+  emit('move-note', { noteId, targetStatus: status, destinationIndex })
+}
 </script>
 
 <template>
@@ -120,12 +131,16 @@ const doingCount = computed(() => notesByStatus.value.DOING.length)
           class="board-column__notes"
         >
           <NoteCard
-            v-for="note in notesByStatus[col.status]"
+            v-for="(note, index) in notesByStatus[col.status]"
             :key="note.id"
             :note="note"
             :disabled="disabled"
+            :is-first="index === 0"
+            :is-last="index === notesByStatus[col.status].length - 1"
             @edit="emit('edit-note', note)"
             @delete="emit('delete-note', note.id)"
+            @move-status="handleMoveStatus"
+            @reorder="(e) => handleReorder(col.status, index, e)"
           />
         </div>
       </section>

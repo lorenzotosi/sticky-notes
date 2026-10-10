@@ -145,4 +145,45 @@ describe('App.vue CRUD orchestration', () => {
 
     expect(wrapper.text()).not.toContain('Note to be removed')
   })
+
+  it('moves note to DOING when requested by board view', async () => {
+    const initialBoard = {
+      id: 'main',
+      schemaVersion: 1,
+      revision: 1,
+      wipLimit: 3,
+      notes: [
+        { id: 'note-1', content: 'Task', color: 'YELLOW', status: 'TODO', blockedReason: null, checklist: [] }
+      ]
+    }
+    const movedBoard = {
+      id: 'main',
+      schemaVersion: 1,
+      revision: 2,
+      wipLimit: 3,
+      notes: [
+        { id: 'note-1', content: 'Task', color: 'YELLOW', status: 'DOING', blockedReason: null, checklist: [] }
+      ]
+    }
+
+    fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => initialBoard
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => movedBoard
+      })
+
+    const wrapper = mount(App)
+    await flushPromises()
+
+    await wrapper.find('button[aria-label="Sposta in lavorazione"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('.board-column--doing').text()).toContain('Task')
+  })
 })
