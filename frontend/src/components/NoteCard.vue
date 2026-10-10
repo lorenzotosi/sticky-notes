@@ -12,10 +12,18 @@ const props = defineProps({
   disabled: {
     type: Boolean,
     default: false
+  },
+  isFirst: {
+    type: Boolean,
+    default: false
+  },
+  isLast: {
+    type: Boolean,
+    default: false
   }
 })
 
-const emit = defineEmits(['edit', 'delete'])
+const emit = defineEmits(['edit', 'delete', 'move-status', 'reorder'])
 
 const isConfirmingDelete = ref(false)
 
@@ -47,6 +55,14 @@ function cancelDelete() {
 function confirmDelete() {
   isConfirmingDelete.value = false
   emit('delete', props.note.id)
+}
+
+function moveTo(targetStatus) {
+  emit('move-status', { noteId: props.note.id, targetStatus })
+}
+
+function reorder(direction) {
+  emit('reorder', { noteId: props.note.id, direction })
 }
 </script>
 
@@ -141,26 +157,96 @@ function confirmDelete() {
 
     <footer
       v-else
-      class="note-card__actions"
+      class="note-card__footer"
     >
-      <button
-        type="button"
-        class="note-card__action-btn"
-        :disabled="disabled"
-        aria-label="Modifica nota"
-        @click="emit('edit', note)"
-      >
-        Modifica
-      </button>
-      <button
-        type="button"
-        class="note-card__action-btn note-card__action-btn--delete"
-        :disabled="disabled"
-        aria-label="Elimina nota"
-        @click="requestDelete"
-      >
-        Elimina
-      </button>
+      <div class="note-card__movement-actions">
+        <template v-if="note.status === 'TODO'">
+          <button
+            type="button"
+            class="note-card__action-btn"
+            :disabled="disabled || Boolean(note.blockedReason)"
+            aria-label="Sposta in lavorazione"
+            @click="moveTo('DOING')"
+          >
+            Sposta in lavorazione
+          </button>
+        </template>
+
+        <template v-else-if="note.status === 'DOING'">
+          <button
+            type="button"
+            class="note-card__action-btn"
+            :disabled="disabled || Boolean(note.blockedReason)"
+            aria-label="Rimetti da fare"
+            @click="moveTo('TODO')"
+          >
+            Rimetti da fare
+          </button>
+          <button
+            type="button"
+            class="note-card__action-btn"
+            :disabled="disabled || Boolean(note.blockedReason)"
+            aria-label="Completa"
+            @click="moveTo('DONE')"
+          >
+            Completa
+          </button>
+        </template>
+
+        <template v-else-if="note.status === 'DONE'">
+          <button
+            type="button"
+            class="note-card__action-btn"
+            :disabled="disabled"
+            aria-label="Riapri"
+            @click="moveTo('DOING')"
+          >
+            Riapri
+          </button>
+        </template>
+
+        <div class="note-card__reorder-group">
+          <button
+            type="button"
+            class="note-card__action-btn note-card__action-btn--icon"
+            :disabled="disabled || isFirst"
+            aria-label="Sposta su"
+            @click="reorder('UP')"
+          >
+            ▲
+          </button>
+          <button
+            type="button"
+            class="note-card__action-btn note-card__action-btn--icon"
+            :disabled="disabled || isLast"
+            aria-label="Sposta giù"
+            @click="reorder('DOWN')"
+          >
+            ▼
+          </button>
+        </div>
+      </div>
+
+      <div class="note-card__actions">
+        <button
+          type="button"
+          class="note-card__action-btn"
+          :disabled="disabled"
+          aria-label="Modifica nota"
+          @click="emit('edit', note)"
+        >
+          Modifica
+        </button>
+        <button
+          type="button"
+          class="note-card__action-btn note-card__action-btn--delete"
+          :disabled="disabled"
+          aria-label="Elimina nota"
+          @click="requestDelete"
+        >
+          Elimina
+        </button>
+      </div>
     </footer>
   </article>
 </template>
@@ -265,13 +351,32 @@ function confirmDelete() {
   opacity: 0.65;
 }
 
-.note-card__actions {
+.note-card__footer {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
   gap: 0.5rem;
   margin-top: 0.25rem;
   border-top: 1px solid rgba(0, 0, 0, 0.08);
   padding-top: 0.5rem;
+}
+
+.note-card__movement-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  align-items: center;
+}
+
+.note-card__reorder-group {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.note-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }
 
 .note-card__action-btn {
@@ -282,6 +387,15 @@ function confirmDelete() {
   background-color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   font-weight: 600;
+}
+
+.note-card__action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.note-card__action-btn--icon {
+  padding: 0.25rem 0.375rem;
 }
 
 .note-card__action-btn--delete {

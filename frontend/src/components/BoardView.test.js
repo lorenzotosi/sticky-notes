@@ -58,4 +58,36 @@ describe('BoardView.vue', () => {
     expect(doingSection.text()).toContain('(2 / 2)')
     expect(doingSection.text()).toContain('Limite WIP raggiunto')
   })
+
+  it('emits move-note with correct destinationIndex on status move and reorder', async () => {
+    const board = {
+      id: 'main',
+      schemaVersion: 1,
+      revision: 2,
+      wipLimit: 3,
+      notes: [
+        { id: '1', content: 'Todo 1', color: 'YELLOW', status: 'TODO', blockedReason: null, checklist: [] },
+        { id: '2', content: 'Todo 2', color: 'YELLOW', status: 'TODO', blockedReason: null, checklist: [] }
+      ]
+    }
+
+    const wrapper = mount(BoardView, { props: { board } })
+    const firstCard = wrapper.findAllComponents({ name: 'NoteCard' })[0]
+
+    await firstCard.find('button[aria-label="Sposta in lavorazione"]').trigger('click')
+    expect(wrapper.emitted('move-note')).toHaveLength(1)
+    expect(wrapper.emitted('move-note')[0][0]).toEqual({
+      noteId: '1',
+      targetStatus: 'DOING',
+      destinationIndex: 0
+    })
+
+    await firstCard.find('button[aria-label="Sposta giù"]').trigger('click')
+    expect(wrapper.emitted('move-note')).toHaveLength(2)
+    expect(wrapper.emitted('move-note')[1][0]).toEqual({
+      noteId: '1',
+      targetStatus: 'TODO',
+      destinationIndex: 1
+    })
+  })
 })
