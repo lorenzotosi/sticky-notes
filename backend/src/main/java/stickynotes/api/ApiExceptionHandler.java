@@ -77,6 +77,15 @@ public class ApiExceptionHandler {
             case "NOTE_NOT_FOUND" -> "Target note not found.";
             case "REVISION_CONFLICT" -> "Revision conflict detected.";
             case "DATABASE_UNAVAILABLE" -> "Database service is temporarily unavailable.";
+            case "INVALID_STATUS" -> "Invalid note status.";
+            case "INVALID_INDEX" -> "Target destination index is out of bounds.";
+            case "INVALID_WIP_LIMIT" -> "WIP limit must be between 1 and 20.";
+            case "INVALID_BLOCK_REASON" -> "Block reason must be between 1 and 200 characters.";
+            case "WIP_LIMIT_REACHED" -> "Cannot move note to DOING: column capacity reached.";
+            case "WIP_BELOW_OCCUPANCY" -> "Cannot lower WIP limit below current occupancy.";
+            case "INVALID_TRANSITION" -> "Illegal note status transition.";
+            case "NOTE_BLOCKED" -> "Blocked notes cannot be moved to another column.";
+            case "NOTE_DONE_READ_ONLY" -> "Completed notes cannot be blocked or moved.";
             default -> code;
         };
     }
