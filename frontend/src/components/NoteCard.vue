@@ -23,7 +23,14 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['edit', 'delete', 'move-status', 'reorder'])
+const emit = defineEmits([
+  'edit',
+  'delete',
+  'move-status',
+  'reorder',
+  'block',
+  'unblock'
+])
 
 const isConfirmingDelete = ref(false)
 
@@ -96,7 +103,10 @@ function reorder(direction) {
       class="note-card__block-alert"
       role="alert"
     >
-      <strong>Motivo blocco:</strong> {{ note.blockedReason }}
+      <strong>Motivo blocco:</strong>
+      <p class="note-card__block-reason">
+        {{ note.blockedReason }}
+      </p>
     </div>
 
     <div
@@ -227,6 +237,41 @@ function reorder(direction) {
         </div>
       </div>
 
+      <div class="note-card__block-actions">
+        <template v-if="note.status !== 'DONE'">
+          <button
+            v-if="!note.blockedReason"
+            type="button"
+            class="note-card__action-btn note-card__action-btn--block"
+            :disabled="disabled"
+            aria-label="Blocca nota"
+            @click="emit('block', note)"
+          >
+            Blocca
+          </button>
+          <template v-else>
+            <button
+              type="button"
+              class="note-card__action-btn"
+              :disabled="disabled"
+              aria-label="Modifica motivo blocco"
+              @click="emit('block', note)"
+            >
+              Modifica blocco
+            </button>
+            <button
+              type="button"
+              class="note-card__action-btn note-card__action-btn--unblock"
+              :disabled="disabled"
+              aria-label="Sblocca nota"
+              @click="emit('unblock', note.id)"
+            >
+              Sblocca
+            </button>
+          </template>
+        </template>
+      </div>
+
       <div class="note-card__actions">
         <button
           type="button"
@@ -319,6 +364,11 @@ function reorder(direction) {
   color: #881337;
 }
 
+.note-card__block-reason {
+  margin: 0.25rem 0 0 0;
+  white-space: pre-wrap;
+}
+
 .note-card__checklist {
   border-top: 1px solid rgba(0, 0, 0, 0.1);
   padding-top: 0.5rem;
@@ -360,7 +410,8 @@ function reorder(direction) {
   padding-top: 0.5rem;
 }
 
-.note-card__movement-actions {
+.note-card__movement-actions,
+.note-card__block-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.375rem;
@@ -396,6 +447,14 @@ function reorder(direction) {
 
 .note-card__action-btn--icon {
   padding: 0.25rem 0.375rem;
+}
+
+.note-card__action-btn--block {
+  color: #9f1239;
+}
+
+.note-card__action-btn--unblock {
+  color: #047857;
 }
 
 .note-card__action-btn--delete {
