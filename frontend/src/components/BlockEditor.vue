@@ -106,7 +106,7 @@ function handleSubmit() {
     <div class="block-editor__actions">
       <button
         type="button"
-        class="block-editor__btn block-editor__btn--cancel"
+        class="btn btn--cancel"
         :disabled="saving"
         @click="emit('cancel')"
       >
@@ -114,7 +114,7 @@ function handleSubmit() {
       </button>
       <button
         type="submit"
-        class="block-editor__btn block-editor__btn--save"
+        class="btn btn--danger"
         :disabled="saving"
       >
         {{ saving ? 'Salvataggio...' : 'Conferma blocco' }}
@@ -179,29 +179,5 @@ function handleSubmit() {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
-}
-
-.block-editor__btn {
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  border: 1px solid var(--border-color);
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.875rem;
-}
-
-.block-editor__btn--cancel {
-  background-color: #ffffff;
-}
-
-.block-editor__btn--save {
-  background-color: #be123c;
-  color: #ffffff;
-  border-color: #be123c;
-}
-
-.block-editor__btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 </style>

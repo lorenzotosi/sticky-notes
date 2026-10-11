@@ -138,7 +138,7 @@ onMounted(() => {
         <button
           ref="createButtonRef"
           type="button"
-          class="app-header__create-btn"
+          class="btn btn--primary"
           :disabled="loading || saving || !board"
           @click="openCreateEditor"
         >
@@ -242,22 +242,6 @@ onMounted(() => {
   font-size: 1.875rem;
   margin: 0;
   font-weight: 700;
-}
-
-.app-header__create-btn {
-  background-color: #2563eb;
-  color: #ffffff;
-  border: 1px solid #2563eb;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 0.875rem;
-  cursor: pointer;
-}
-
-.app-header__create-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .app-modal {

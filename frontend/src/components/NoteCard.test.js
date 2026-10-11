@@ -58,7 +58,7 @@ describe('NoteCard.vue', () => {
     expect(wrapper.find('[role="alertdialog"]').exists()).toBe(true)
     expect(wrapper.emitted('delete')).toBeUndefined()
 
-    const confirmBtn = wrapper.find('.note-card__btn--danger')
+    const confirmBtn = wrapper.find('.btn--danger')
     await confirmBtn.trigger('click')
 
     expect(wrapper.emitted('delete')).toHaveLength(1)
@@ -69,7 +69,7 @@ describe('NoteCard.vue', () => {
     const wrapper = mount(NoteCard, { props: { note: sampleNote } })
     await wrapper.find('button[aria-label="Elimina nota"]').trigger('click')
 
-    const cancelBtn = wrapper.find('.note-card__btn--cancel')
+    const cancelBtn = wrapper.find('.btn--cancel')
     await cancelBtn.trigger('click')
 
     expect(wrapper.find('[role="alertdialog"]').exists()).toBe(false)

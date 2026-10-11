@@ -123,7 +123,7 @@ function handleReorder(status, index, { noteId, direction }) {
             <button
               v-if="col.status === 'DOING'"
               type="button"
-              class="board-column__wip-btn"
+              class="btn btn--sm btn--secondary"
               :disabled="disabled"
               aria-label="Modifica limite WIP"
               @click="emit('edit-wip-limit')"
@@ -234,21 +234,6 @@ function handleReorder(status, index, { noteId, direction }) {
 .board-column__count {
   font-size: 0.875rem;
   color: #4b5563;
-}
-
-.board-column__wip-btn {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
-  border-radius: 4px;
-  border: 1px solid var(--border-color);
-  background-color: #ffffff;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.board-column__wip-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .board-column__wip-alert {

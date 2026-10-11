@@ -99,7 +99,7 @@ function handleSubmit() {
     <div class="wip-limit-editor__actions">
       <button
         type="button"
-        class="wip-limit-editor__btn wip-limit-editor__btn--cancel"
+        class="btn btn--cancel"
         :disabled="saving"
         @click="emit('cancel')"
       >
@@ -107,7 +107,7 @@ function handleSubmit() {
       </button>
       <button
         type="submit"
-        class="wip-limit-editor__btn wip-limit-editor__btn--save"
+        class="btn btn--primary"
         :disabled="saving"
       >
         {{ saving ? 'Salvataggio...' : 'Conferma limite' }}
@@ -174,29 +174,5 @@ function handleSubmit() {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
-}
-
-.wip-limit-editor__btn {
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  border: 1px solid var(--border-color);
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.875rem;
-}
-
-.wip-limit-editor__btn--cancel {
-  background-color: #ffffff;
-}
-
-.wip-limit-editor__btn--save {
-  background-color: #1e293b;
-  color: #ffffff;
-  border-color: #1e293b;
-}
-
-.wip-limit-editor__btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 </style>
