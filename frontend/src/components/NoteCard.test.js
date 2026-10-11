@@ -58,7 +58,7 @@ describe('NoteCard.vue', () => {
     expect(wrapper.find('[role="alertdialog"]').exists()).toBe(true)
     expect(wrapper.emitted('delete')).toBeUndefined()
 
-    const confirmBtn = wrapper.find('.note-card__btn--danger')
+    const confirmBtn = wrapper.find('.btn--danger')
     await confirmBtn.trigger('click')
 
     expect(wrapper.emitted('delete')).toHaveLength(1)
@@ -69,7 +69,7 @@ describe('NoteCard.vue', () => {
     const wrapper = mount(NoteCard, { props: { note: sampleNote } })
     await wrapper.find('button[aria-label="Elimina nota"]').trigger('click')
 
-    const cancelBtn = wrapper.find('.note-card__btn--cancel')
+    const cancelBtn = wrapper.find('.btn--cancel')
     await cancelBtn.trigger('click')
 
     expect(wrapper.find('[role="alertdialog"]').exists()).toBe(false)
@@ -118,4 +118,39 @@ describe('NoteCard.vue', () => {
       direction: 'DOWN'
     })
   })
+
+  it('emits block event when clicking block button', async () => {
+    const wrapper = mount(NoteCard, { props: { note: sampleNote } })
+    const blockBtn = wrapper.find('button[aria-label="Blocca nota"]')
+    expect(blockBtn.exists()).toBe(true)
+
+    await blockBtn.trigger('click')
+    expect(wrapper.emitted('block')).toHaveLength(1)
+    expect(wrapper.emitted('block')[0][0]).toEqual(sampleNote)
+  })
+
+  it('emits unblock event when clicking unblock button on blocked note', async () => {
+    const blockedNote = {
+      ...sampleNote,
+      blockedReason: 'In attesa API'
+    }
+    const wrapper = mount(NoteCard, { props: { note: blockedNote } })
+    const unblockBtn = wrapper.find('button[aria-label="Sblocca nota"]')
+    expect(unblockBtn.exists()).toBe(true)
+
+    await unblockBtn.trigger('click')
+    expect(wrapper.emitted('unblock')).toHaveLength(1)
+    expect(wrapper.emitted('unblock')[0][0]).toBe('note-1')
+  })
+
+  it('does not display block buttons for DONE notes', () => {
+    const doneNote = {
+      ...sampleNote,
+      status: 'DONE'
+    }
+    const wrapper = mount(NoteCard, { props: { note: doneNote } })
+    expect(wrapper.find('button[aria-label="Blocca nota"]').exists()).toBe(false)
+    expect(wrapper.find('button[aria-label="Modifica motivo blocco"]').exists()).toBe(false)
+  })
+
 })

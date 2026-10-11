@@ -23,7 +23,14 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['edit', 'delete', 'move-status', 'reorder'])
+const emit = defineEmits([
+  'edit',
+  'delete',
+  'move-status',
+  'reorder',
+  'block',
+  'unblock'
+])
 
 const isConfirmingDelete = ref(false)
 
@@ -96,7 +103,10 @@ function reorder(direction) {
       class="note-card__block-alert"
       role="alert"
     >
-      <strong>Motivo blocco:</strong> {{ note.blockedReason }}
+      <strong>Motivo blocco:</strong>
+      <p class="note-card__block-reason">
+        {{ note.blockedReason }}
+      </p>
     </div>
 
     <div
@@ -138,7 +148,7 @@ function reorder(direction) {
       <div class="note-card__delete-buttons">
         <button
           type="button"
-          class="note-card__btn note-card__btn--cancel"
+          class="btn btn--sm btn--cancel"
           :disabled="disabled"
           @click="cancelDelete"
         >
@@ -146,7 +156,7 @@ function reorder(direction) {
         </button>
         <button
           type="button"
-          class="note-card__btn note-card__btn--danger"
+          class="btn btn--sm btn--danger"
           :disabled="disabled"
           @click="confirmDelete"
         >
@@ -163,7 +173,7 @@ function reorder(direction) {
         <template v-if="note.status === 'TODO'">
           <button
             type="button"
-            class="note-card__action-btn"
+            class="btn btn--sm btn--secondary"
             :disabled="disabled || Boolean(note.blockedReason)"
             aria-label="Sposta in lavorazione"
             @click="moveTo('DOING')"
@@ -175,7 +185,7 @@ function reorder(direction) {
         <template v-else-if="note.status === 'DOING'">
           <button
             type="button"
-            class="note-card__action-btn"
+            class="btn btn--sm btn--secondary"
             :disabled="disabled || Boolean(note.blockedReason)"
             aria-label="Rimetti da fare"
             @click="moveTo('TODO')"
@@ -184,7 +194,7 @@ function reorder(direction) {
           </button>
           <button
             type="button"
-            class="note-card__action-btn"
+            class="btn btn--sm btn--success"
             :disabled="disabled || Boolean(note.blockedReason)"
             aria-label="Completa"
             @click="moveTo('DONE')"
@@ -196,7 +206,7 @@ function reorder(direction) {
         <template v-else-if="note.status === 'DONE'">
           <button
             type="button"
-            class="note-card__action-btn"
+            class="btn btn--sm btn--secondary"
             :disabled="disabled"
             aria-label="Riapri"
             @click="moveTo('DOING')"
@@ -208,7 +218,7 @@ function reorder(direction) {
         <div class="note-card__reorder-group">
           <button
             type="button"
-            class="note-card__action-btn note-card__action-btn--icon"
+            class="btn btn--sm btn--icon btn--secondary"
             :disabled="disabled || isFirst"
             aria-label="Sposta su"
             @click="reorder('UP')"
@@ -217,7 +227,7 @@ function reorder(direction) {
           </button>
           <button
             type="button"
-            class="note-card__action-btn note-card__action-btn--icon"
+            class="btn btn--sm btn--icon btn--secondary"
             :disabled="disabled || isLast"
             aria-label="Sposta giù"
             @click="reorder('DOWN')"
@@ -227,10 +237,45 @@ function reorder(direction) {
         </div>
       </div>
 
+      <div class="note-card__block-actions">
+        <template v-if="note.status !== 'DONE'">
+          <button
+            v-if="!note.blockedReason"
+            type="button"
+            class="btn btn--sm btn--warning"
+            :disabled="disabled"
+            aria-label="Blocca nota"
+            @click="emit('block', note)"
+          >
+            Blocca
+          </button>
+          <template v-else>
+            <button
+              type="button"
+              class="btn btn--sm btn--warning"
+              :disabled="disabled"
+              aria-label="Modifica motivo blocco"
+              @click="emit('block', note)"
+            >
+              Modifica blocco
+            </button>
+            <button
+              type="button"
+              class="btn btn--sm btn--success"
+              :disabled="disabled"
+              aria-label="Sblocca nota"
+              @click="emit('unblock', note.id)"
+            >
+              Sblocca
+            </button>
+          </template>
+        </template>
+      </div>
+
       <div class="note-card__actions">
         <button
           type="button"
-          class="note-card__action-btn"
+          class="btn btn--sm btn--secondary"
           :disabled="disabled"
           aria-label="Modifica nota"
           @click="emit('edit', note)"
@@ -239,7 +284,7 @@ function reorder(direction) {
         </button>
         <button
           type="button"
-          class="note-card__action-btn note-card__action-btn--delete"
+          class="btn btn--sm btn--danger-ghost"
           :disabled="disabled"
           aria-label="Elimina nota"
           @click="requestDelete"
@@ -319,6 +364,11 @@ function reorder(direction) {
   color: #881337;
 }
 
+.note-card__block-reason {
+  margin: 0.25rem 0 0 0;
+  white-space: pre-wrap;
+}
+
 .note-card__checklist {
   border-top: 1px solid rgba(0, 0, 0, 0.1);
   padding-top: 0.5rem;
@@ -360,7 +410,8 @@ function reorder(direction) {
   padding-top: 0.5rem;
 }
 
-.note-card__movement-actions {
+.note-card__movement-actions,
+.note-card__block-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.375rem;
@@ -377,29 +428,6 @@ function reorder(direction) {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
-}
-
-.note-card__action-btn {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
-  border-radius: 4px;
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  background-color: rgba(255, 255, 255, 0.7);
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.note-card__action-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.note-card__action-btn--icon {
-  padding: 0.25rem 0.375rem;
-}
-
-.note-card__action-btn--delete {
-  color: #991b1b;
 }
 
 .note-card__delete-confirm {
@@ -421,24 +449,5 @@ function reorder(direction) {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
-}
-
-.note-card__btn {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.note-card__btn--cancel {
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
-}
-
-.note-card__btn--danger {
-  background-color: #be123c;
-  color: #ffffff;
-  border: 1px solid #be123c;
 }
 </style>

@@ -85,7 +85,7 @@ describe('App.vue CRUD orchestration', () => {
     const wrapper = mount(App)
     await flushPromises()
 
-    await wrapper.find('.app-header__create-btn').trigger('click')
+    await wrapper.find('.btn').trigger('click')
     expect(wrapper.find('.note-editor').exists()).toBe(true)
 
     await wrapper.find('.note-editor__textarea').setValue('Brand new note')
@@ -140,7 +140,7 @@ describe('App.vue CRUD orchestration', () => {
     expect(wrapper.text()).toContain('Note to be removed')
 
     await wrapper.find('button[aria-label="Elimina nota"]').trigger('click')
-    await wrapper.find('.note-card__btn--danger').trigger('click')
+    await wrapper.find('.btn--danger').trigger('click')
     await flushPromises()
 
     expect(wrapper.text()).not.toContain('Note to be removed')

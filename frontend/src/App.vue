@@ -2,10 +2,12 @@
 <!-- SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani -->
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useBoard } from './composables/useBoard.js'
 import BoardView from './components/BoardView.vue'
 import NoteEditor from './components/NoteEditor.vue'
+import WipLimitEditor from './components/WipLimitEditor.vue'
+import BlockEditor from './components/BlockEditor.vue'
 
 const {
   board,
@@ -16,12 +18,23 @@ const {
   createNote,
   updateNote,
   deleteNote,
-  moveNote
+  moveNote,
+  setWipLimit,
+  blockNote,
+  unblockNote
 } = useBoard()
 
 const isEditorOpen = ref(false)
 const editingNote = ref(null)
 const createButtonRef = ref(null)
+
+const isWipEditorOpen = ref(false)
+const isBlockEditorOpen = ref(false)
+const blockingNote = ref(null)
+
+const currentDoingCount = computed(() => {
+  return (board.value?.notes || []).filter(n => n.status === 'DOING').length
+})
 
 function handleRetry() {
   fetchBoard().catch(() => {})
@@ -43,6 +56,24 @@ function closeEditor() {
   if (createButtonRef.value) {
     createButtonRef.value.focus()
   }
+}
+
+function openWipEditor() {
+  isWipEditorOpen.value = true
+}
+
+function closeWipEditor() {
+  isWipEditorOpen.value = false
+}
+
+function openBlockEditor(note) {
+  blockingNote.value = note
+  isBlockEditorOpen.value = true
+}
+
+function closeBlockEditor() {
+  isBlockEditorOpen.value = false
+  blockingNote.value = null
 }
 
 async function handleMoveNote({ noteId, targetStatus, destinationIndex }) {
@@ -71,6 +102,29 @@ async function handleDeleteNote(noteId) {
   }
 }
 
+async function handleSaveWipLimit(newLimit) {
+  try {
+    await setWipLimit(newLimit)
+    closeWipEditor()
+  } catch {
+  }
+}
+
+async function handleSaveBlock({ noteId, reason }) {
+  try {
+    await blockNote(noteId, reason)
+    closeBlockEditor()
+  } catch {
+  }
+}
+
+async function handleUnblockNote(noteId) {
+  try {
+    await unblockNote(noteId)
+  } catch {
+  }
+}
+
 onMounted(() => {
   fetchBoard().catch(() => {})
 })
@@ -84,7 +138,7 @@ onMounted(() => {
         <button
           ref="createButtonRef"
           type="button"
-          class="app-header__create-btn"
+          class="btn btn--primary"
           :disabled="loading || saving || !board"
           @click="openCreateEditor"
         >
@@ -104,9 +158,9 @@ onMounted(() => {
 
     <div
       v-if="isEditorOpen"
-      class="app-editor-modal"
+      class="app-modal"
     >
-      <div class="app-editor-modal__content">
+      <div class="app-modal__content">
         <NoteEditor
           :initial-content="editingNote ? editingNote.content : ''"
           :initial-color="editingNote ? editingNote.color : 'YELLOW'"
@@ -115,6 +169,38 @@ onMounted(() => {
           :error-message="error ? error.message : ''"
           @save="handleSaveNote"
           @cancel="closeEditor"
+        />
+      </div>
+    </div>
+
+    <div
+      v-if="isWipEditorOpen && board"
+      class="app-modal"
+    >
+      <div class="app-modal__content">
+        <WipLimitEditor
+          :current-limit="board.wipLimit"
+          :current-doing-count="currentDoingCount"
+          :saving="saving"
+          :error-message="error ? error.message : ''"
+          @save="handleSaveWipLimit"
+          @cancel="closeWipEditor"
+        />
+      </div>
+    </div>
+
+    <div
+      v-if="isBlockEditorOpen && blockingNote"
+      class="app-modal"
+    >
+      <div class="app-modal__content">
+        <BlockEditor
+          :note-id="blockingNote.id"
+          :initial-reason="blockingNote.blockedReason || ''"
+          :saving="saving"
+          :error-message="error ? error.message : ''"
+          @save="handleSaveBlock"
+          @cancel="closeBlockEditor"
         />
       </div>
     </div>
@@ -128,6 +214,9 @@ onMounted(() => {
       @edit-note="openEditEditor"
       @delete-note="handleDeleteNote"
       @move-note="handleMoveNote"
+      @edit-wip-limit="openWipEditor"
+      @block-note="openBlockEditor"
+      @unblock-note="handleUnblockNote"
     />
   </main>
 </template>
@@ -155,27 +244,11 @@ onMounted(() => {
   font-weight: 700;
 }
 
-.app-header__create-btn {
-  background-color: #2563eb;
-  color: #ffffff;
-  border: 1px solid #2563eb;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 0.875rem;
-  cursor: pointer;
-}
-
-.app-header__create-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.app-editor-modal {
+.app-modal {
   margin-bottom: 2rem;
 }
 
-.app-editor-modal__content {
+.app-modal__content {
   max-width: 36rem;
   margin: 0 auto;
 }

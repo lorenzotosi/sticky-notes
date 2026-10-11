@@ -24,7 +24,15 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['retry', 'edit-note', 'delete-note', 'move-note'])
+const emit = defineEmits([
+  'retry',
+  'edit-note',
+  'delete-note',
+  'move-note',
+  'edit-wip-limit',
+  'block-note',
+  'unblock-note'
+])
 
 const columns = [
   { status: 'TODO', title: 'Da fare' },
@@ -99,17 +107,31 @@ function handleReorder(status, index, { noteId, direction }) {
         :aria-labelledby="`col-heading-${col.status}`"
       >
         <header class="board-column__header">
-          <h2 :id="`col-heading-${col.status}`">
-            {{ col.title }}
-            <span class="board-column__count">
-              <template v-if="col.status === 'DOING'">
-                ({{ doingCount }} / {{ board.wipLimit }})
-              </template>
-              <template v-else>
-                ({{ notesByStatus[col.status].length }})
-              </template>
-            </span>
-          </h2>
+          <div class="board-column__header-main">
+            <h2 :id="`col-heading-${col.status}`">
+              {{ col.title }}
+              <span class="board-column__count">
+                <template v-if="col.status === 'DOING'">
+                  ({{ doingCount }} / {{ board.wipLimit }})
+                </template>
+                <template v-else>
+                  ({{ notesByStatus[col.status].length }})
+                </template>
+              </span>
+            </h2>
+
+            <button
+              v-if="col.status === 'DOING'"
+              type="button"
+              class="btn btn--sm btn--secondary"
+              :disabled="disabled"
+              aria-label="Modifica limite WIP"
+              @click="emit('edit-wip-limit')"
+            >
+              Modifica limite
+            </button>
+          </div>
+
           <div
             v-if="col.status === 'DOING' && doingCount >= board.wipLimit"
             class="board-column__wip-alert"
@@ -141,6 +163,8 @@ function handleReorder(status, index, { noteId, direction }) {
             @delete="emit('delete-note', note.id)"
             @move-status="handleMoveStatus"
             @reorder="(e) => handleReorder(col.status, index, e)"
+            @block="(n) => emit('block-note', n)"
+            @unblock="(id) => emit('unblock-note', id)"
           />
         </div>
       </section>
@@ -192,12 +216,19 @@ function handleReorder(status, index, { noteId, direction }) {
   gap: 1rem;
 }
 
+.board-column__header-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .board-column__header h2 {
   font-size: 1.125rem;
   margin: 0;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 0.5rem;
 }
 
 .board-column__count {
