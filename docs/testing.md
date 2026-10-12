@@ -5,7 +5,16 @@
 
 `commons/src/commonTest` contains domain scenarios shared by the JVM and ChromeHeadless targets. `browserDomainTest` is an alias for `jsBrowserTest`. The backend also has application service and persistence unit tests, real MongoDB integration tests, and an HTTP startup and liveness test.
 
-This guide explains how to execute the implemented tests and which [domain rules](domain.md) they cover. [R1 evidence](evidence/R1.md) records the observed domain and consumer results.
+This guide explains how to execute the implemented tests and which [domain rules](domain.md) they cover. [R1 evidence](evidence/R1.md) records the observed domain and consumer results; [R3 checklist evidence](evidence/R3.md) records the checklist HTTP and MongoDB results.
+
+## Test design
+
+Prefer a few readable tests that each catch a distinct, plausible regression. Before adding a case, check whether an existing test already protects that behavior.
+
+- Keep domain rule combinations in the shared domain suite and orchestration checks in `BoardServiceTest`. HTTP tests focus on routing, JSON types, omitted fields, response shape, and error metadata. MongoDB integration tests focus on stored state and restart behavior, with representative rejected commands.
+- Use representative invalid inputs and meaningful boundaries. Preserve distinctions such as omitted fields, explicit null, `false`, decimals, and integer overflow; do not enumerate equivalent values or multiply every case across every endpoint and layer.
+- Keep setup, action, and assertions easy to follow. Use small fixtures and local helpers when they remove repetition; avoid generic test infrastructure for a handful of cases.
+- Add another case when it covers an uncovered failure or a known regression, rather than to increase the test count or mirror implementation details.
 
 Install JDK 21 and Google Chrome before running the browser tests. Point `CHROME_BIN` to the Chrome executable if Karma cannot find it:
 
@@ -96,41 +105,19 @@ Parameterized scenarios exercise every mutation with a stale revision, a competi
 
 Service and shared-domain regressions verify that a missing checklist item on a `DONE` note produces `ITEM_NOT_FOUND` before the read-only check, and that a full WIP column produces `WIP_LIMIT_REACHED` before an out-of-range destination index. Both preserve the original board. `BlockerAndChecklistTest` and `MovementTest` execute the shared regressions on JVM and ChromeHeadless. The service tests do not exercise MongoDB or HTTP error mapping.
 
-## Checklist controller unit tests (R3)
+## Checklist HTTP tests (R3)
 
-Run the checklist controller and existing application service tests from the repository root:
-
-```sh
-./gradlew :backend:test --tests stickynotes.api.ChecklistControllerTest --tests stickynotes.application.BoardServiceTest
-```
-
-`ChecklistControllerTest` checks that creation returns the appended item's ID from the target note when another note follows it, that partial updates preserve omitted fields and an explicit `false`, and that deletion returns the saved board. It also verifies that missing or negative revisions, a missing creation label, and a PATCH without mutable fields are rejected without calling the service.
-
-These tests call the Java controller methods with a mocked `BoardService`. They do not exercise Spring request routing, JSON decoding, HTTP error responses, or MongoDB. Within R3, checklist and guarded completion acceptance requires HTTP integration tests against the real service and database.
-
-## Checklist request HTTP tests (R3)
-
-Run the request validation tests from the repository root:
+Run the checklist HTTP tests from the repository root:
 
 ```sh
-./gradlew :backend:test --tests stickynotes.api.ChecklistRequestHttpTest
+./gradlew :backend:test --tests stickynotes.api.ChecklistHttpTest
 ```
 
-`ChecklistRequestHttpTest` starts the Spring HTTP server on a random port and sends requests using the JDK HTTP client. It replaces `BoardService` with a Mockito bean and configures an unreachable test MongoDB URI, so no database is needed. It verifies HTTP `400` and zero service calls for wrong scalar types, numeric strings, decimal revisions, integer overflow, explicit null values, unknown fields, non-object bodies, malformed JSON, missing or negative revisions, and a PATCH without mutable fields. DELETE revision conversion failures are also checked through HTTP.
+`ChecklistHttpTest` starts the Spring HTTP server on a random port and sends requests using the JDK HTTP client. It replaces `BoardService` with a Mockito bean and configures an unreachable test MongoDB URI, so no database is needed.
 
-Successful cases verify that label-only, completion-only, and combined PATCH requests reach the service with the correct values, including explicit `false` and null Java arguments for omitted fields. POST and DELETE routing and the creation response are checked as well. These tests exercise JSON decoding, request routing, controller checks, and error responses; they do not prove persistence or the domain's guarded completion behavior.
+Representative rejected payloads cover wrong JSON types, numeric strings, decimal revisions, integer overflow, explicit null values, unknown fields, non-object bodies, malformed JSON, missing or negative revisions, and a PATCH without mutable fields. These cases verify HTTP `400` and zero service calls. Successful partial and combined updates verify the values passed to the service, including explicit `false` and null Java arguments for omitted fields.
 
-## Checklist error HTTP tests (R3)
-
-Run the error response tests from the repository root:
-
-```sh
-./gradlew :backend:test --tests stickynotes.api.ChecklistErrorHttpTest
-```
-
-`ChecklistErrorHttpTest` starts the Spring HTTP server with the real `BoardServiceImpl` and shared JVM domain. It replaces `BoardRepository` with a Mockito bean and uses an unreachable test MongoDB URI. Requests exercise invalid labels, missing notes and items, every checklist mutation on a `DONE` note, the 20-item limit, incomplete completion, and reopening at full WIP capacity. The tests check HTTP status, stable code, message, optional error field, and absence of a save on rejection.
-
-Stale-revision requests target absent entities to verify that revision conflicts take precedence over entity lookup. Missing-item requests also use a `DONE` note to verify that item presence takes precedence over checklist immutability. A simulated failed conditional save checks that `currentRevision` comes from the conflict reload and that the service makes one save attempt. Repository exceptions verify neutral `503` and `500` responses. These tests exercise HTTP, application orchestration, and domain rejection, but do not prove MongoDB conditional writes or persisted state.
+Simulated infrastructure failures verify neutral `503` and `500` messages and omission of unavailable error metadata. Domain combinations and conditional-save behavior remain in the shared domain and application service suites. These HTTP tests do not prove persistence; the [MongoDB HTTP suite](#checklist-http-and-mongodb-integration-tests-r3) exercises the real service and database.
 
 ## Backend persistence unit tests
 
@@ -198,6 +185,30 @@ After a direct IDE or containerized test run, remove the isolated test environme
 ```
 
 On Windows PowerShell, use `.\gradlew.bat` instead of `./gradlew` for the Gradle commands.
+
+## Checklist HTTP and MongoDB integration tests (R3)
+
+With JDK 21 and a running Docker engine, run the complete backend integration suite:
+
+```sh
+./gradlew :backend:integrationTest --rerun-tasks
+```
+
+To run only the checklist HTTP suite:
+
+```sh
+./gradlew :backend:integrationTest --tests stickynotes.integration.ChecklistHttpIntegrationTest --rerun-tasks
+```
+
+`ChecklistHttpIntegrationTest` uses the same isolated MongoDB container and Gradle lifecycle as the [persistence suite](#backend-mongodb-integration-tests-r2). It starts the real Spring HTTP server on a random loopback port and creates a unique `sticky_notes_http_it_…` database for the class. Each test seeds a valid board in that database; class cleanup closes the HTTP client and backend, then drops only that database. MongoDB unavailability fails the suite.
+
+One sequence creates the twentieth item on the target note when another note follows it, rejects an additional item, renames and toggles the created item, restarts the backend, and deletes it. It checks the generated UUID, label normalization, revision increments, and preservation of unrelated data. Successful HTTP snapshots are compared with a MongoDB repository read and a fresh GET. The backend restart also preserves the raw MongoDB document. A separate empty-board regression checks complete snapshot fields, including constructor defaults.
+
+`completionAndReopeningRespectChecklistAndWip` exercises a continuous HTTP journey from `TODO` to `DOING`, rejects incomplete completion, completes the item, and moves the note to `DONE`. It rejects addition, renaming, toggling, and deletion while in `DONE`. Another note occupies the only WIP slot; reopening is rejected until that note moves back to `TODO`. Reopening then preserves the completed checklist, and an explicit `false` update succeeds in `DOING`. A separate case completes a note with an empty checklist.
+
+Representative rejected labels, a missing item, and a stale revision check HTTP status, codes, and metadata through the real service. Each rejection compares the complete raw MongoDB document and a fresh GET with their pre-request values. Other malformed-input and domain combinations stay in the focused HTTP, service, and shared-domain suites.
+
+Inspect `backend/build/reports/tests/integrationTest/index.html` and `backend/build/test-results/integrationTest/TEST-stickynotes.integration.ChecklistHttpIntegrationTest.xml`. The Compose `tests` service runs every class in the integration source set; its command does not filter out the checklist suite. These tests cover HTTP, application orchestration, the shared JVM domain, and real MongoDB. They do not exercise the Vue interface or restart MongoDB. Recorded results and reproduction details are in [R3 checklist evidence](evidence/R3.md).
 
 ## Other test scopes
 
