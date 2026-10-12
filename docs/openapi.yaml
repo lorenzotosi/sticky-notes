@@ -237,8 +237,10 @@ paths:
         - name: itemId
           in: path
           required: true
+          description: Must contain at least one non-whitespace character.
           schema:
             type: string
+            minLength: 1
       requestBody:
         required: true
         content:
@@ -266,8 +268,10 @@ paths:
         - name: itemId
           in: path
           required: true
+          description: Must contain at least one non-whitespace character.
           schema:
             type: string
+            minLength: 1
         - name: expectedRevision
           in: query
           required: true

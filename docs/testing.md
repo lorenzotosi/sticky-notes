@@ -117,6 +117,8 @@ Run the checklist HTTP tests from the repository root:
 
 Representative rejected payloads cover wrong JSON types, numeric strings, decimal revisions, integer overflow, explicit null values, unknown fields, non-object bodies, malformed JSON, missing or negative revisions, and a PATCH without mutable fields. These cases verify HTTP `400` and zero service calls. Successful partial and combined updates verify the values passed to the service, including explicit `false` and null Java arguments for omitted fields.
 
+The blank-item-ID regression sends URL-encoded ordinary and non-breaking spaces through PATCH and DELETE. It checks `400 INVALID_REQUEST`, the `itemId` error field, and zero service calls.
+
 Simulated infrastructure failures verify neutral `503` and `500` messages and omission of unavailable error metadata. Domain combinations and conditional-save behavior remain in the shared domain and application service suites. These HTTP tests do not prove persistence; the [MongoDB HTTP suite](#checklist-http-and-mongodb-integration-tests-r3) exercises the real service and database.
 
 ## Backend persistence unit tests

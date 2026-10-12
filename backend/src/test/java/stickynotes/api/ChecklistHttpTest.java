@@ -111,6 +111,22 @@ class ChecklistHttpTest {
                 Arguments.of("DELETE", CHECKLIST + "/item-1?expectedRevision=5.5", null));
     }
 
+    @ParameterizedTest
+    @MethodSource("blankItemIds")
+    void rejectsBlankItemIdBeforeCallingTheService(String method, String encodedId) throws Exception {
+        boolean deletion = "DELETE".equals(method);
+        String path = CHECKLIST + "/" + encodedId + (deletion ? "?expectedRevision=5" : "");
+        String body = deletion ? null : "{\"completed\":false,\"expectedRevision\":5}";
+
+        var error = assertRejection(send(method, path, body), "INVALID_REQUEST");
+
+        assertEquals("itemId", error.path("field").stringValue());
+    }
+
+    static Stream<Arguments> blankItemIds() {
+        return Stream.of(Arguments.of("PATCH", "%20"), Arguments.of("DELETE", "%C2%A0"));
+    }
+
     @Test
     void rejectsMissingCreationLabelBeforeCallingTheService() throws Exception {
         var error = assertRejection(send("POST", CHECKLIST, "{\"expectedRevision\":5}"), "INVALID_LABEL");

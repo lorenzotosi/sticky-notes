@@ -58,6 +58,7 @@ public class ChecklistController {
         if (request.label() == null && request.completed() == null) {
             throw new BoardServiceException("INVALID_REQUEST", null);
         }
+        requireItemId(itemId);
 
         BoardSnapshot updated =
                 boardService.updateItem(expectedRevision, noteId, itemId, request.label(), request.completed());
@@ -69,8 +70,17 @@ public class ChecklistController {
             @PathVariable("id") String noteId,
             @PathVariable("itemId") String itemId,
             @RequestParam(name = "expectedRevision", required = false) Integer expectedRevision) {
-        BoardSnapshot updated = boardService.deleteItem(requireRevision(expectedRevision), noteId, itemId);
+        int revision = requireRevision(expectedRevision);
+        requireItemId(itemId);
+        BoardSnapshot updated = boardService.deleteItem(revision, noteId, itemId);
         return ResponseEntity.ok(updated);
+    }
+
+    private static void requireItemId(String itemId) {
+        // Match the shared Kotlin domain's definition of a blank identifier.
+        if (itemId.chars().allMatch(value -> Character.isWhitespace(value) || Character.isSpaceChar(value))) {
+            throw new BoardServiceException("INVALID_REQUEST", "itemId");
+        }
     }
 
     private static int requireRevision(Integer expectedRevision) {
