@@ -120,6 +120,18 @@ Run the request validation tests from the repository root:
 
 Successful cases verify that label-only, completion-only, and combined PATCH requests reach the service with the correct values, including explicit `false` and null Java arguments for omitted fields. POST and DELETE routing and the creation response are checked as well. These tests exercise JSON decoding, request routing, controller checks, and error responses; they do not prove persistence or the domain's guarded completion behavior.
 
+## Checklist error HTTP tests (R3)
+
+Run the error response tests from the repository root:
+
+```sh
+./gradlew :backend:test --tests stickynotes.api.ChecklistErrorHttpTest
+```
+
+`ChecklistErrorHttpTest` starts the Spring HTTP server with the real `BoardServiceImpl` and shared JVM domain. It replaces `BoardRepository` with a Mockito bean and uses an unreachable test MongoDB URI. Requests exercise invalid labels, missing notes and items, every checklist mutation on a `DONE` note, the 20-item limit, incomplete completion, and reopening at full WIP capacity. The tests check HTTP status, stable code, message, optional error field, and absence of a save on rejection.
+
+Stale-revision requests target absent entities to verify that revision conflicts take precedence over entity lookup. Missing-item requests also use a `DONE` note to verify that item presence takes precedence over checklist immutability. A simulated failed conditional save checks that `currentRevision` comes from the conflict reload and that the service makes one save attempt. Repository exceptions verify neutral `503` and `500` responses. These tests exercise HTTP, application orchestration, and domain rejection, but do not prove MongoDB conditional writes or persisted state.
+
 ## Backend persistence unit tests
 
 Run the mapper, repository, and bootstrap tests with JDK 21 from the repository root:
