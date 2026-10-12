@@ -9,6 +9,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import stickynotes.api.dto.ApiErrorResponse;
 import stickynotes.application.BoardServiceException;
 
@@ -62,6 +63,13 @@ public class ApiExceptionHandler {
                         "INVALID_REVISION", "Missing expectedRevision parameter", ex.getParameterName(), null));
     }
 
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidParameterType(MethodArgumentTypeMismatchException ex) {
+        String code = "expectedRevision".equals(ex.getName()) ? "INVALID_REVISION" : "INVALID_REQUEST";
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiErrorResponse(code, defaultMessageFor(code), ex.getName(), null));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleGenericException(Exception ex) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -73,7 +81,7 @@ public class ApiExceptionHandler {
             case "INVALID_REQUEST" -> "Malformed or incomplete request payload.";
             case "INVALID_CONTENT" -> "Note content is blank or exceeds allowed size.";
             case "INVALID_COLOR" -> "Invalid note color provided.";
-            case "INVALID_REVISION" -> "Missing or negative expectedRevision.";
+            case "INVALID_REVISION" -> "expectedRevision must be a non-negative integer.";
             case "NOTE_NOT_FOUND" -> "Target note not found.";
             case "REVISION_CONFLICT" -> "Revision conflict detected.";
             case "DATABASE_UNAVAILABLE" -> "Database service is temporarily unavailable.";

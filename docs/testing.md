@@ -96,6 +96,30 @@ Parameterized scenarios exercise every mutation with a stale revision, a competi
 
 Service and shared-domain regressions verify that a missing checklist item on a `DONE` note produces `ITEM_NOT_FOUND` before the read-only check, and that a full WIP column produces `WIP_LIMIT_REACHED` before an out-of-range destination index. Both preserve the original board. `BlockerAndChecklistTest` and `MovementTest` execute the shared regressions on JVM and ChromeHeadless. The service tests do not exercise MongoDB or HTTP error mapping.
 
+## Checklist controller unit tests (R3)
+
+Run the checklist controller and existing application service tests from the repository root:
+
+```sh
+./gradlew :backend:test --tests stickynotes.api.ChecklistControllerTest --tests stickynotes.application.BoardServiceTest
+```
+
+`ChecklistControllerTest` checks that creation returns the appended item's ID from the target note when another note follows it, that partial updates preserve omitted fields and an explicit `false`, and that deletion returns the saved board. It also verifies that missing or negative revisions, a missing creation label, and a PATCH without mutable fields are rejected without calling the service.
+
+These tests call the Java controller methods with a mocked `BoardService`. They do not exercise Spring request routing, JSON decoding, HTTP error responses, or MongoDB. Within R3, checklist and guarded completion acceptance requires HTTP integration tests against the real service and database.
+
+## Checklist request HTTP tests (R3)
+
+Run the request validation tests from the repository root:
+
+```sh
+./gradlew :backend:test --tests stickynotes.api.ChecklistRequestHttpTest
+```
+
+`ChecklistRequestHttpTest` starts the Spring HTTP server on a random port and sends requests using the JDK HTTP client. It replaces `BoardService` with a Mockito bean and configures an unreachable test MongoDB URI, so no database is needed. It verifies HTTP `400` and zero service calls for wrong scalar types, numeric strings, decimal revisions, integer overflow, explicit null values, unknown fields, non-object bodies, malformed JSON, missing or negative revisions, and a PATCH without mutable fields. DELETE revision conversion failures are also checked through HTTP.
+
+Successful cases verify that label-only, completion-only, and combined PATCH requests reach the service with the correct values, including explicit `false` and null Java arguments for omitted fields. POST and DELETE routing and the creation response are checked as well. These tests exercise JSON decoding, request routing, controller checks, and error responses; they do not prove persistence or the domain's guarded completion behavior.
+
 ## Backend persistence unit tests
 
 Run the mapper, repository, and bootstrap tests with JDK 21 from the repository root:

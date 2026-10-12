@@ -3,7 +3,7 @@
 
 # API Contracts, Precedence Rules, and Error Handling
 
-This document specifies the target R2 communication protocol between the Vue frontend and the Java backend. The current Spring Boot backend exposes Actuator health endpoints and has a [board repository with conditional writes](architecture.md#4-concurrency-boundary). The note endpoints and request-level revision checks described below remain part of the R2 target.
+This document specifies the accepted communication protocol between the Vue frontend and the Java backend. The Spring Boot backend exposes board, note, movement, WIP, blocker, and checklist endpoints through `BoardService` and a [board repository with conditional writes](architecture.md#4-concurrency-boundary). The validation requirements below describe the accepted contract; the [testing guide](testing.md) identifies the layers exercised by each test suite.
 
 `GET /actuator/health/liveness` returns HTTP `200` with `{"status":"UP"}` when the application is running, including when MongoDB is unavailable. The aggregate endpoint is `GET /actuator/health`; `GET /actuator/health/readiness` currently reports application readiness without a MongoDB connectivity check. See [backend runtime configuration](development.md#backend-runtime) for startup and health-check instructions.
 
@@ -61,3 +61,15 @@ When processing any mutating command, the backend strictly applies validations i
     - WIP limit check (`WIP_LIMIT_REACHED` / `WIP_BELOW_OCCUPANCY`).
     - Destination index bound check (`INVALID_INDEX`).
 6. **Atomic Persistence (CAS)**: Atomic update with filter `_id="main"` and `revision=expectedRevision`. If matched count is 0 $\rightarrow$ `409 REVISION_CONFLICT`.
+
+## 4. Checklist endpoints (R3)
+
+`ChecklistController` exposes `POST /api/board/notes/{id}/checklist`, `PATCH /api/board/notes/{id}/checklist/{itemId}`, and `DELETE /api/board/notes/{id}/checklist/{itemId}`. Request and response schemas are defined in [OpenAPI](openapi.yaml).
+
+POST accepts `label` and `expectedRevision` and returns HTTP `201` with `{board, createdItemId}`. The service generates the item UUID; the controller obtains that ID from the appended item on the target note in the saved board.
+
+PATCH accepts `label` and/or `completed` with `expectedRevision`, and returns HTTP `200` with the saved board. Omitted fields stay unchanged. At the Java service boundary, a null argument represents an omitted field; `Boolean` preserves the distinction between an omitted completion value and `false`. Explicit JSON null values are rejected. DELETE takes `expectedRevision` from the query and returns HTTP `200` with the saved board.
+
+The two checklist request records use Jackson creator methods to inspect the original JSON types before constructing the typed request. Bodies must be objects with only the declared fields. A present `label` must be a JSON string, `completed` a JSON boolean, and `expectedRevision` an integer token within the Java int range. Numeric strings, floating-point tokens, explicit null values, and unknown fields return HTTP `400 INVALID_REQUEST` without calling the service.
+
+The controller rejects missing or negative revisions with `INVALID_REVISION`, a missing creation label with `INVALID_LABEL`, and a PATCH with no mutable fields with `INVALID_REQUEST`. An invalid query parameter type returns HTTP `400`; for `expectedRevision`, its code is `INVALID_REVISION`. Domain checks and conditional persistence use the existing service flow. The [request validation tests](testing.md#checklist-request-http-tests-r3) exercise the Spring HTTP server and JSON decoding with a mocked service. Within R3, guarded completion and persisted checklist acceptance still require HTTP integration tests against the real service and database.
