@@ -15,6 +15,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import com.mongodb.MongoOperationTimeoutException;
 import com.mongodb.client.result.UpdateResult;
 import java.util.List;
 import org.bson.BsonString;
@@ -25,6 +26,7 @@ import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.data.mongodb.UncategorizedMongoDbException;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
@@ -87,6 +89,18 @@ class BoardBootstrapTest {
     void allowsStartupWhenDatabaseIsUnavailableWithoutRetry() {
         when(mongoTemplate.upsert(any(Query.class), any(Update.class), eq(BoardDocument.class)))
                 .thenThrow(new DataAccessResourceFailureException("Database unavailable"));
+
+        assertDoesNotThrow(() -> bootstrap.run(arguments));
+
+        verify(mongoTemplate).upsert(any(Query.class), any(Update.class), eq(BoardDocument.class));
+        verifyNoMoreInteractions(mongoTemplate);
+    }
+
+    @Test
+    void allowsStartupWhenTheMongoOperationTimesOutWithoutRetry() {
+        when(mongoTemplate.upsert(any(Query.class), any(Update.class), eq(BoardDocument.class)))
+                .thenThrow(new UncategorizedMongoDbException(
+                        "Operation timed out", new MongoOperationTimeoutException("Database unavailable")));
 
         assertDoesNotThrow(() -> bootstrap.run(arguments));
 
