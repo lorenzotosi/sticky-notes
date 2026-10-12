@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani
+
 package stickynotes.infrastructure;
 
 import java.util.concurrent.TimeUnit;
@@ -14,10 +17,8 @@ public class MongoConfiguration {
     @Order(Ordered.LOWEST_PRECEDENCE)
     MongoClientSettingsBuilderCustomizer mongoTimeouts() {
         return builder -> {
-            builder.applyToClusterSettings(settings ->
-                    settings.serverSelectionTimeout(5, TimeUnit.SECONDS));
-            builder.applyToSocketSettings(settings ->
-                    settings.connectTimeout(5, TimeUnit.SECONDS));
+            builder.applyToClusterSettings(settings -> settings.serverSelectionTimeout(5, TimeUnit.SECONDS));
+            builder.applyToSocketSettings(settings -> settings.connectTimeout(5, TimeUnit.SECONDS));
             builder.timeout(5, TimeUnit.SECONDS);
         };
     }
