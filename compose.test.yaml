@@ -33,8 +33,6 @@ services:
     command:
       - ./gradlew
       - :backend:integrationTest
-      - --tests
-      - stickynotes.integration.MongoBoardRepositoryIntegrationTest
       - --no-daemon
       - --rerun-tasks
       - --project-cache-dir

@@ -237,8 +237,10 @@ paths:
         - name: itemId
           in: path
           required: true
+          description: Must contain at least one non-whitespace character.
           schema:
             type: string
+            minLength: 1
       requestBody:
         required: true
         content:
@@ -266,8 +268,10 @@ paths:
         - name: itemId
           in: path
           required: true
+          description: Must contain at least one non-whitespace character.
           schema:
             type: string
+            minLength: 1
         - name: expectedRevision
           in: query
           required: true
@@ -455,6 +459,7 @@ components:
 
     AddChecklistItemRequest:
       type: object
+      additionalProperties: false
       required: [label, expectedRevision]
       properties:
         label:
@@ -464,6 +469,8 @@ components:
         expectedRevision:
           type: integer
           minimum: 0
+          maximum: 2147483647
+          description: A JSON integer token; numeric strings and floating-point tokens are rejected.
 
     AddChecklistItemResponse:
       type: object
@@ -476,7 +483,12 @@ components:
 
     UpdateChecklistItemRequest:
       type: object
+      additionalProperties: false
+      description: Provide label, completed, or both. Omitted fields stay unchanged; explicit null values and scalar type coercions are rejected.
       required: [expectedRevision]
+      anyOf:
+        - required: [label]
+        - required: [completed]
       properties:
         label:
           type: string
@@ -487,6 +499,8 @@ components:
         expectedRevision:
           type: integer
           minimum: 0
+          maximum: 2147483647
+          description: A JSON integer token; numeric strings and floating-point tokens are rejected.
 
     ApiError:
       type: object
