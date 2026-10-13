@@ -351,6 +351,16 @@ class ChecklistHttpIntegrationTest {
     }
 
     @Test
+    void invalidCommandJsonPreservesTheStoredDocument() throws Exception {
+        assertRejected(
+                "PUT",
+                "/api/board/wip-limit",
+                "{\"limit\":1,\"expectedRevision\":5,\"extra\":true}",
+                400,
+                "INVALID_REQUEST");
+    }
+
+    @Test
     void missingItemPreservesTheStoredDocument() throws Exception {
         var error = assertRejected(
                 "PATCH", CHECKLIST + "/missing", "{\"completed\":true,\"expectedRevision\":5}", 404, "ITEM_NOT_FOUND");

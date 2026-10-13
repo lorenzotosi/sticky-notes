@@ -27,7 +27,7 @@ public class BoardController {
 
     @PutMapping("/wip-limit")
     public ResponseEntity<BoardSnapshot> setWipLimit(@RequestBody SetWipLimitRequest request) {
-        if (request == null || request.expectedRevision() == null) {
+        if (request == null || request.expectedRevision() == null || request.expectedRevision() < 0) {
             throw new BoardServiceException("INVALID_REVISION", "expectedRevision");
         }
         if (request.limit() == null || request.limit() < 1 || request.limit() > 20) {

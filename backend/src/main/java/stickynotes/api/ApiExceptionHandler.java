@@ -12,6 +12,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import stickynotes.api.dto.ApiErrorResponse;
 import stickynotes.application.BoardServiceException;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.exc.InvalidFormatException;
+import tools.jackson.databind.exc.InvalidNullException;
+import tools.jackson.databind.exc.UnrecognizedPropertyException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -52,6 +56,29 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiErrorResponse> handleMalformedJson(HttpMessageNotReadableException ex) {
+        if (ex.getCause() instanceof JacksonException invalid
+                && !(invalid instanceof InvalidNullException)
+                && !(invalid instanceof UnrecognizedPropertyException)
+                && !invalid.getPath().isEmpty()) {
+            String field = invalid.getPath().getLast().getPropertyName();
+            String code =
+                    switch (field == null ? "" : field) {
+                        case "destinationIndex" -> "INVALID_INDEX";
+                        case "limit" -> "INVALID_WIP_LIMIT";
+                        case "color" ->
+                            invalid instanceof InvalidFormatException format && format.getValue() instanceof String
+                                    ? "INVALID_COLOR"
+                                    : "INVALID_REQUEST";
+                        case "targetStatus" ->
+                            invalid instanceof InvalidFormatException format && format.getValue() instanceof String
+                                    ? "INVALID_STATUS"
+                                    : "INVALID_REQUEST";
+                        default -> "INVALID_REQUEST";
+                    };
+            if (!"INVALID_REQUEST".equals(code)) {
+                return handleBoardServiceException(new BoardServiceException(code, field));
+            }
+        }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ApiErrorResponse("INVALID_REQUEST", "Malformed JSON payload", null, null));
     }
