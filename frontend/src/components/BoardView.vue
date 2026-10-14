@@ -31,7 +31,9 @@ const emit = defineEmits([
   'move-note',
   'edit-wip-limit',
   'block-note',
-  'unblock-note'
+  'unblock-note',
+  'manage-checklist',
+  'toggle-checklist-item'
 ])
 
 const columns = [
@@ -165,6 +167,8 @@ function handleReorder(status, index, { noteId, direction }) {
             @reorder="(e) => handleReorder(col.status, index, e)"
             @block="(n) => emit('block-note', n)"
             @unblock="(id) => emit('unblock-note', id)"
+            @manage-checklist="(n) => emit('manage-checklist', n)"
+            @toggle-checklist-item="(e) => emit('toggle-checklist-item', e)"
           />
         </div>
       </section>
