@@ -8,6 +8,7 @@ import BoardView from './components/BoardView.vue'
 import NoteEditor from './components/NoteEditor.vue'
 import WipLimitEditor from './components/WipLimitEditor.vue'
 import BlockEditor from './components/BlockEditor.vue'
+import ChecklistEditor from './components/ChecklistEditor.vue'
 
 const {
   board,
@@ -21,7 +22,10 @@ const {
   moveNote,
   setWipLimit,
   blockNote,
-  unblockNote
+  unblockNote,
+  addChecklistItem,
+  updateChecklistItem,
+  deleteChecklistItem
 } = useBoard()
 
 const isEditorOpen = ref(false)
@@ -31,6 +35,9 @@ const createButtonRef = ref(null)
 const isWipEditorOpen = ref(false)
 const isBlockEditorOpen = ref(false)
 const blockingNote = ref(null)
+
+const isChecklistEditorOpen = ref(false)
+const checklistNote = ref(null)
 
 const currentDoingCount = computed(() => {
   return (board.value?.notes || []).filter(n => n.status === 'DOING').length
@@ -74,6 +81,16 @@ function openBlockEditor(note) {
 function closeBlockEditor() {
   isBlockEditorOpen.value = false
   blockingNote.value = null
+}
+
+function openChecklistEditor(note) {
+  checklistNote.value = note
+  isChecklistEditorOpen.value = true
+}
+
+function closeChecklistEditor() {
+  isChecklistEditorOpen.value = false
+  checklistNote.value = null
 }
 
 async function handleMoveNote({ noteId, targetStatus, destinationIndex }) {
@@ -121,6 +138,39 @@ async function handleSaveBlock({ noteId, reason }) {
 async function handleUnblockNote(noteId) {
   try {
     await unblockNote(noteId)
+  } catch {
+  }
+}
+
+const activeChecklistNote = computed(() => {
+  if (!checklistNote.value || !board.value) return null
+  return board.value.notes.find(n => n.id === checklistNote.value.id) || checklistNote.value
+})
+
+async function handleAddChecklistItem({ noteId, label }) {
+  try {
+    await addChecklistItem(noteId, label)
+  } catch {
+  }
+}
+
+async function handleToggleChecklistItem({ noteId, itemId, completed }) {
+  try {
+    await updateChecklistItem(noteId, itemId, { completed })
+  } catch {
+  }
+}
+
+async function handleUpdateChecklistItemLabel({ noteId, itemId, label }) {
+  try {
+    await updateChecklistItem(noteId, itemId, { label })
+  } catch {
+  }
+}
+
+async function handleDeleteChecklistItem({ noteId, itemId }) {
+  try {
+    await deleteChecklistItem(noteId, itemId)
   } catch {
   }
 }
@@ -205,6 +255,24 @@ onMounted(() => {
       </div>
     </div>
 
+    <div
+      v-if="isChecklistEditorOpen && activeChecklistNote"
+      class="app-modal"
+    >
+      <div class="app-modal__content">
+        <ChecklistEditor
+          :note="activeChecklistNote"
+          :saving="saving"
+          :error-message="error ? error.message : ''"
+          @close="closeChecklistEditor"
+          @add-item="handleAddChecklistItem"
+          @toggle-item="handleToggleChecklistItem"
+          @update-item-label="handleUpdateChecklistItemLabel"
+          @delete-item="handleDeleteChecklistItem"
+        />
+      </div>
+    </div>
+
     <BoardView
       :board="board"
       :loading="loading"
@@ -217,6 +285,8 @@ onMounted(() => {
       @edit-wip-limit="openWipEditor"
       @block-note="openBlockEditor"
       @unblock-note="handleUnblockNote"
+      @manage-checklist="openChecklistEditor"
+      @toggle-checklist-item="handleToggleChecklistItem"
     />
   </main>
 </template>
