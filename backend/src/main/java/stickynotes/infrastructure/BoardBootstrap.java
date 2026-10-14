@@ -3,11 +3,13 @@
 
 package stickynotes.infrastructure;
 
+import com.mongodb.MongoOperationTimeoutException;
 import com.mongodb.client.result.UpdateResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -43,13 +45,13 @@ public class BoardBootstrap implements ApplicationRunner {
      *
      * <p>The query matches only {@code _id=main}; all initial fields use {@code $setOnInsert}, so an
      * existing board retains its data and revision. Duplicate keys from concurrent startup are
-     * tolerated. Database resource failures are logged and allow startup to continue; restarting
-     * the backend after database recovery is required to retry initialization.
+     * tolerated. Database resource failures and operation timeouts are logged and allow startup to
+     * continue; restarting the backend after database recovery is required to retry initialization.
      *
      * @param args the application startup arguments; not used for board initialization
      * @throws IllegalStateException if MongoDB does not acknowledge initialization
      * @throws org.springframework.dao.DataAccessException for database errors other than duplicate
-     *     keys or resource failures
+     *     keys, resource failures, or operation timeouts
      */
     @Override
     public void run(ApplicationArguments args) {
@@ -68,7 +70,11 @@ public class BoardBootstrap implements ApplicationRunner {
             }
         } catch (DuplicateKeyException alreadyCreated) {
             // Another startup created main; preserve the existing board.
-        } catch (DataAccessResourceFailureException unavailable) {
+        } catch (DataAccessException unavailable) {
+            if (!(unavailable instanceof DataAccessResourceFailureException)
+                    && !(unavailable.getCause() instanceof MongoOperationTimeoutException)) {
+                throw unavailable;
+            }
             LOGGER.warn("Board initialization unavailable; restart the backend after MongoDB recovery");
         }
     }

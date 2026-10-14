@@ -10,10 +10,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
+import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -325,6 +327,37 @@ class ChecklistHttpIntegrationTest {
 
     static Stream<Arguments> invalidLabels() {
         return Stream.of(Arguments.of("POST", "   "), Arguments.of("PATCH", "a".repeat(121)));
+    }
+
+    @Test
+    void oversizedChunkedCommandPreservesTheStoredDocument() throws Exception {
+        Document stored = storedDocument();
+        JsonNode board = getBoard();
+        String json = "{\"completed\":true,\"expectedRevision\":5}";
+        byte[] body = (json + " ".repeat(65_537 - json.length())).getBytes(StandardCharsets.UTF_8);
+        var request = HttpRequest.newBuilder()
+                .uri(URI.create("http://127.0.0.1:" + port + CHECKLIST + "/item-1"))
+                .version(HttpClient.Version.HTTP_1_1)
+                .timeout(Duration.ofSeconds(5))
+                .header("Content-Type", "application/json")
+                .method("PATCH", HttpRequest.BodyPublishers.ofInputStream(() -> new ByteArrayInputStream(body)))
+                .build();
+
+        var error = response(http.send(request, HttpResponse.BodyHandlers.ofString()), 413);
+
+        assertEquals("PAYLOAD_TOO_LARGE", error.path("code").stringValue());
+        assertEquals(stored, storedDocument());
+        assertEquals(board, getBoard());
+    }
+
+    @Test
+    void invalidCommandJsonPreservesTheStoredDocument() throws Exception {
+        assertRejected(
+                "PUT",
+                "/api/board/wip-limit",
+                "{\"limit\":1,\"expectedRevision\":5,\"extra\":true}",
+                400,
+                "INVALID_REQUEST");
     }
 
     @Test

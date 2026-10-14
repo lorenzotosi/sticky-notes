@@ -27,7 +27,7 @@ public class MovementController {
     @PostMapping("/{id}/move")
     public ResponseEntity<BoardSnapshot> moveNote(
             @PathVariable("id") String noteId, @RequestBody MoveNoteRequest request) {
-        if (request == null || request.expectedRevision() == null) {
+        if (request == null || request.expectedRevision() == null || request.expectedRevision() < 0) {
             throw new BoardServiceException("INVALID_REVISION", "expectedRevision");
         }
         if (request.targetStatus() == null) {

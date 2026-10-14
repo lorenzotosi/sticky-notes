@@ -23,7 +23,7 @@ public class BlockController {
     @PutMapping("/{id}/block")
     public ResponseEntity<BoardSnapshot> blockNote(
             @PathVariable("id") String noteId, @RequestBody BlockNoteRequest request) {
-        if (request == null || request.expectedRevision() == null) {
+        if (request == null || request.expectedRevision() == null || request.expectedRevision() < 0) {
             throw new BoardServiceException("INVALID_REVISION", "expectedRevision");
         }
         if (request.reason() == null
@@ -38,7 +38,7 @@ public class BlockController {
     @DeleteMapping("/{id}/block")
     public ResponseEntity<BoardSnapshot> unblockNote(
             @PathVariable("id") String noteId, @RequestParam("expectedRevision") Integer expectedRevision) {
-        if (expectedRevision == null) {
+        if (expectedRevision == null || expectedRevision < 0) {
             throw new BoardServiceException("INVALID_REVISION", "expectedRevision");
         }
         BoardSnapshot updated = boardService.unblockNote(expectedRevision, noteId);
