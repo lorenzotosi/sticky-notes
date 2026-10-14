@@ -29,7 +29,9 @@ const emit = defineEmits([
   'move-status',
   'reorder',
   'block',
-  'unblock'
+  'unblock',
+  'manage-checklist',
+  'toggle-checklist-item'
 ])
 
 const isConfirmingDelete = ref(false)
@@ -71,6 +73,22 @@ function moveTo(targetStatus) {
 function reorder(direction) {
   emit('reorder', { noteId: props.note.id, direction })
 }
+
+const isChecklistComplete = computed(() => {
+  if (totalItemsCount.value === 0) return true
+  return completedItemsCount.value === totalItemsCount.value
+})
+
+const isDone = computed(() => props.note.status === 'DONE')
+
+function handleItemToggle(item) {
+  if (isDone.value || props.disabled) return
+  emit('toggle-checklist-item', {
+    noteId: props.note.id,
+    itemId: item.id,
+    completed: !item.completed
+  })
+}
 </script>
 
 <template>
@@ -109,14 +127,21 @@ function reorder(direction) {
       </p>
     </div>
 
-    <div
-      v-if="totalItemsCount > 0"
-      class="note-card__checklist"
-    >
+    <div class="note-card__checklist">
       <div class="note-card__checklist-header">
-        Checklist ({{ completedItemsCount }}/{{ totalItemsCount }})
+        <span>Checklist ({{ completedItemsCount }}/{{ totalItemsCount }})</span>
+        <button
+          type="button"
+          class="btn btn--sm btn--secondary"
+          :disabled="disabled"
+          aria-label="Gestisci checklist"
+          @click="emit('manage-checklist', note)"
+        >
+          Gestisci
+        </button>
       </div>
       <ul
+        v-if="totalItemsCount > 0"
         class="note-card__checklist-items"
         aria-label="Voci checklist"
       >
@@ -128,8 +153,9 @@ function reorder(direction) {
           <input
             type="checkbox"
             :checked="item.completed"
-            disabled
+            :disabled="disabled || isDone"
             :aria-label="item.label"
+            @change="handleItemToggle(item)"
           >
           <span>{{ item.label }}</span>
         </li>
@@ -195,7 +221,8 @@ function reorder(direction) {
           <button
             type="button"
             class="btn btn--sm btn--success"
-            :disabled="disabled || Boolean(note.blockedReason)"
+            :disabled="disabled || Boolean(note.blockedReason) || !isChecklistComplete"
+            :title="!isChecklistComplete ? 'Completa tutte le voci della checklist per concludere' : ''"
             aria-label="Completa"
             @click="moveTo('DONE')"
           >
