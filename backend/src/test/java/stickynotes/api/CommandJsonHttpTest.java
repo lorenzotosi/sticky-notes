@@ -34,8 +34,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = "spring.mongodb.uri=mongodb://127.0.0.1:1/sticky_notes_test"
-                + "?connectTimeoutMS=500&serverSelectionTimeoutMS=500")
+        properties = "spring.mongodb.uri=mongodb://127.0.0.1:1/sticky_notes_test")
 @ActiveProfiles("test")
 class CommandJsonHttpTest {
 
@@ -68,8 +67,7 @@ class CommandJsonHttpTest {
     static Stream<Arguments> invalidJson() {
         return Stream.of(
                 Arguments.of("POST", NOTES, "{\"content\":23,\"expectedRevision\":5}"),
-                Arguments.of("POST", NOTES, "{\"content\":\"Text\",\"color\":null,\"expectedRevision\":5}"),
-                Arguments.of("PATCH", NOTE, "{\"content\":\"Text\",\"color\":null,\"expectedRevision\":5}"),
+                Arguments.of("PATCH", NOTE, "{\"content\":null,\"expectedRevision\":5}"),
                 Arguments.of(
                         "POST", NOTE + "/move", "{\"targetStatus\":1,\"destinationIndex\":0,\"expectedRevision\":5}"),
                 Arguments.of("PUT", NOTE + "/block", "{\"reason\":false,\"expectedRevision\":5}"),
@@ -133,29 +131,34 @@ class CommandJsonHttpTest {
                 Arguments.of("DELETE", NOTE + "/block?expectedRevision=-1", null));
     }
 
-    @Test
-    void validCommandsKeepDefaultsAndOmittedPatchFields() throws Exception {
+    @ParameterizedTest
+    @MethodSource("validNoteBodies")
+    void validCommandsTreatNullLikeOmittedFields(String creation, String colorUpdate, String contentUpdate)
+            throws Exception {
         var note = new NoteSnapshot("note-1", "È", NoteColor.YELLOW, NoteStatus.TODO, null, List.of());
         var board = new BoardSnapshot("main", 1, 6, 3, List.of(note));
         when(boardService.createNote(5, "È", NoteColor.YELLOW)).thenReturn(board);
         when(boardService.updateNote(5, "note-1", null, NoteColor.BLUE)).thenReturn(board);
         when(boardService.updateNote(5, "note-1", "Renamed", null)).thenReturn(board);
 
-        assertEquals(
-                201,
-                send("POST", NOTES, "{\"content\":\"È\",\"expectedRevision\":5}")
-                        .statusCode());
-        assertEquals(
-                200,
-                send("PATCH", NOTE, "{\"color\":\"BLUE\",\"expectedRevision\":5}")
-                        .statusCode());
-        assertEquals(
-                200,
-                send("PATCH", NOTE, "{\"content\":\"Renamed\",\"expectedRevision\":5}")
-                        .statusCode());
+        assertEquals(201, send("POST", NOTES, creation).statusCode());
+        assertEquals(200, send("PATCH", NOTE, colorUpdate).statusCode());
+        assertEquals(200, send("PATCH", NOTE, contentUpdate).statusCode());
         verify(boardService).createNote(5, "È", NoteColor.YELLOW);
         verify(boardService).updateNote(5, "note-1", null, NoteColor.BLUE);
         verify(boardService).updateNote(5, "note-1", "Renamed", null);
+    }
+
+    static Stream<Arguments> validNoteBodies() {
+        return Stream.of(
+                Arguments.of(
+                        "{\"content\":\"È\",\"expectedRevision\":5}",
+                        "{\"color\":\"BLUE\",\"expectedRevision\":5}",
+                        "{\"content\":\"Renamed\",\"expectedRevision\":5}"),
+                Arguments.of(
+                        "{\"content\":\"È\",\"color\":null,\"expectedRevision\":5}",
+                        "{\"color\":\"BLUE\",\"content\":null,\"expectedRevision\":5}",
+                        "{\"content\":\"Renamed\",\"color\":null,\"expectedRevision\":5}"));
     }
 
     private HttpResponse<String> send(String method, String path, String body) throws Exception {

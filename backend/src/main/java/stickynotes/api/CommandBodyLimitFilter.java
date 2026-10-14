@@ -26,7 +26,7 @@ import stickynotes.api.dto.ApiErrorResponse;
 import tools.jackson.databind.json.JsonMapper;
 
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE + 1)
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class CommandBodyLimitFilter extends OncePerRequestFilter {
 
     private static final int MAX_BODY_BYTES = 64 * 1024;

@@ -5,6 +5,7 @@ package stickynotes.api;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -20,11 +21,14 @@ import java.time.Duration;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import stickynotes.application.BoardService;
@@ -35,9 +39,9 @@ import tools.jackson.databind.json.JsonMapper;
 
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = "spring.mongodb.uri=mongodb://127.0.0.1:1/sticky_notes_test"
-                + "?connectTimeoutMS=500&serverSelectionTimeoutMS=500")
+        properties = "spring.mongodb.uri=mongodb://127.0.0.1:1/sticky_notes_test")
 @ActiveProfiles("test")
+@ExtendWith(OutputCaptureExtension.class)
 class ChecklistHttpTest {
 
     private static final String CHECKLIST = "/api/board/notes/note-1/checklist";
@@ -136,11 +140,12 @@ class ChecklistHttpTest {
 
     @ParameterizedTest
     @MethodSource("infrastructureErrors")
-    void infrastructureErrorsHaveNeutralMessages(RuntimeException failure, int status, String code, String message)
-            throws Exception {
-        when(boardService.addItem(5, "note-1", "Item")).thenThrow(failure);
+    void infrastructureErrorsHaveNeutralMessages(
+            RuntimeException failure, int status, String code, String message, CapturedOutput output) throws Exception {
+        failure.initCause(new RuntimeException("mongodb://private-user:private-password@db/board"));
+        when(boardService.addItem(5, "note-1", "private note content")).thenThrow(failure);
 
-        var response = send("POST", CHECKLIST, "{\"label\":\"Item\",\"expectedRevision\":5}");
+        var response = send("POST", CHECKLIST, "{\"label\":\"private note content\",\"expectedRevision\":5}");
 
         assertEquals(status, response.statusCode(), response.body());
         var error = JSON.readTree(response.body());
@@ -149,6 +154,11 @@ class ChecklistHttpTest {
         assertFalse(error.has("field"));
         assertFalse(error.has("currentRevision"));
         assertFalse(response.body().contains("private diagnostic detail"));
+        assertTrue(output.getAll().contains("code=" + code + ", status=" + status));
+        assertFalse((output.getAll() + response.body()).contains("private diagnostic detail"));
+        assertFalse((output.getAll() + response.body()).contains("private note content"));
+        assertFalse((output.getAll() + response.body()).contains("private-user"));
+        assertFalse((output.getAll() + response.body()).contains("private-password"));
     }
 
     static Stream<Arguments> infrastructureErrors() {
@@ -158,6 +168,11 @@ class ChecklistHttpTest {
                         503,
                         "DATABASE_UNAVAILABLE",
                         "Database service is temporarily unavailable."),
+                Arguments.of(
+                        new BoardServiceException("INVALID_SNAPSHOT", null),
+                        500,
+                        "INVALID_SNAPSHOT",
+                        "INVALID_SNAPSHOT"),
                 Arguments.of(
                         new RuntimeException("private diagnostic detail"),
                         500,

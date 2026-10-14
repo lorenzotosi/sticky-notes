@@ -8,6 +8,11 @@ spring:
   mongodb:
     uri: ${MONGODB_URI:mongodb://127.0.0.1:27017/sticky_notes}
 
+logging:
+  level:
+    org.mongodb.driver: WARN
+    org.springframework.boot.mongodb.health.MongoHealthIndicator: ERROR
+
 management:
   endpoints:
     web:

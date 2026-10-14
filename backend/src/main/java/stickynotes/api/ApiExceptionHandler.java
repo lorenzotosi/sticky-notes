@@ -3,6 +3,8 @@
 
 package stickynotes.api;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -14,11 +16,12 @@ import stickynotes.api.dto.ApiErrorResponse;
 import stickynotes.application.BoardServiceException;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.exc.InvalidFormatException;
-import tools.jackson.databind.exc.InvalidNullException;
 import tools.jackson.databind.exc.UnrecognizedPropertyException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
     @ExceptionHandler(BoardServiceException.class)
     public ResponseEntity<ApiErrorResponse> handleBoardServiceException(BoardServiceException ex) {
@@ -48,6 +51,12 @@ public class ApiExceptionHandler {
                     default -> HttpStatus.INTERNAL_SERVER_ERROR;
                 };
 
+        if (status == HttpStatus.SERVICE_UNAVAILABLE) {
+            LOGGER.warn("API request failed: code={}, status={}", ex.getCode(), status.value());
+        } else if (status.is5xxServerError()) {
+            LOGGER.error("API request failed: code={}, status={}", ex.getCode(), status.value());
+        }
+
         ApiErrorResponse body = new ApiErrorResponse(
                 ex.getCode(), defaultMessageFor(ex.getCode()), ex.getField(), ex.getCurrentRevision());
 
@@ -57,7 +66,6 @@ public class ApiExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiErrorResponse> handleMalformedJson(HttpMessageNotReadableException ex) {
         if (ex.getCause() instanceof JacksonException invalid
-                && !(invalid instanceof InvalidNullException)
                 && !(invalid instanceof UnrecognizedPropertyException)
                 && !invalid.getPath().isEmpty()) {
             String field = invalid.getPath().getLast().getPropertyName();
@@ -99,6 +107,9 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleGenericException(Exception ex) {
+        LOGGER.error(
+                "API request failed: code=INTERNAL_SERVER_ERROR, status=500, exceptionType={}",
+                ex.getClass().getName());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ApiErrorResponse("INTERNAL_SERVER_ERROR", "An unexpected error occurred", null, null));
     }

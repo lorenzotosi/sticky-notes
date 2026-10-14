@@ -33,8 +33,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = "spring.mongodb.uri=mongodb://127.0.0.1:1/sticky_notes_test"
-                + "?connectTimeoutMS=500&serverSelectionTimeoutMS=500")
+        properties = "spring.mongodb.uri=mongodb://127.0.0.1:1/sticky_notes_test")
 @ActiveProfiles("test")
 class CommandBodyLimitHttpTest {
 
