@@ -27,7 +27,7 @@ All commits and Pull Request titles must adhere strictly to the **Conventional C
 - `test(...)`: Adding or refactoring tests (no release).
 - `build(...)`: Changes that affect build tooling, Gradle scripts, or dependencies (no release).
 - `ci(...)`: Changes to CI/CD workflows and scripts (no release).
-- `chore(release)`: Delivery of versioned operational artifacts (triggers patch release).
+- `chore(...)`: Maintenance changes, including release preparation (no release).
 
 ## 4. Task States & Definition of Done
 Tasks progress through the following states:

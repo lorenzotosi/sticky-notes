@@ -3,7 +3,7 @@
 
 # User Experience & Interface States Specification
 
-This document defines the required layout, user interactions, accessibility behavior, and state transitions for the planned Sticky Notes Kanban board. The Vue interface is currently a minimal in-memory note list. Diagrams and card layouts are illustrative; accessibility requirements are mandatory.
+This document defines the required layout, user interactions, accessibility behavior, and state transitions for the Sticky Notes Kanban board. The Vue interface loads and changes persistent board state through the HTTP API. Diagrams and card layouts describe the required design; the [testing guide](testing.md) identifies the implemented verification scope.
 
 ---
 
@@ -52,8 +52,8 @@ graph TD
 | **Reorder Up / Down** | Allowed                                      | Allowed | Allowed                                |
 | **Move to DOING** | Allowed (if unblocked and DOING < WIP Limit) | N/A | Allowed (Reopen, if DOING < WIP Limit) |
 | **Move to TODO** | N/A                                          | Allowed (if unblocked) | Rejected (`INVALID_TRANSITION`)        |
-| **Move to DONE** | Rejected (`INVALID_TRANSITION`)              | Allowed (if unblocked & checklist full) | N/A                                    |
-| **Block / Unblock** | Allowed                                      | Allowed | Rejected (`NOTE_DONE_READ_ONLY`)       |
+| **Move to DONE** | Rejected (`INVALID_TRANSITION`)              | Allowed (if unblocked & checklist complete) | N/A                                    |
+| **Block / Unblock** | Allowed                                      | Allowed | Controls unavailable; blocking returns `INVALID_STATUS`. |
 | **Edit Checklist** | Allowed                                      | Allowed | Read-Only                              |
 | **Delete Note** | Allowed (with confirmation)                  | Allowed (with confirmation) | Allowed (with confirmation)            |
 
@@ -69,9 +69,10 @@ flowchart TD
     Ready -->|User clicks Action| Submitting[Submitting Command...]
 
     Submitting -->|200 / 201 OK| Ready
-    Submitting -->|400 Invalid Rule| ShowInlineError[Show Error Message<br/>e.g. 'WIP limit reached']
+    Submitting -->|400 Invalid Payload| ShowInlineError[Show Error Message]
+    Submitting -->|409 Domain Rejection| ShowInlineError
     Submitting -->|409 Revision Conflict| Conflict[Show Conflict Notice<br/>Keep user draft intact & reload board]
-    Submitting -->|500 / Network Fail| ShowInlineError
+    Submitting -->|500 / 503 / Network Fail| ShowInlineError
 
     ShowInlineError --> Ready
     Conflict --> Ready

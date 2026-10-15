@@ -18,7 +18,7 @@ We strictly bound the application scope to a **single shared Kanban board** with
 ## Consequences
 ### Positive
 - **Focus on Core Process Quality**: Development effort remains focused on rigorous domain rules, full JVM/JS multiplatform verification, Spring Boot/MongoDB integration, and Docker CI/CD delivery.
-- **Deterministic Testing**: Local end-to-end and integration tests run reliably in CI without managing authentication tokens or external infrastructure.
+- **Test Infrastructure**: Domain, frontend component, and MongoDB integration checks do not require authentication tokens or hosted infrastructure. A complete browser-to-database journey needs separate verification.
 
 ### Negative / Trade-offs
 - The system is not designed for public multi-user hosting or untrusted environments without adding an API Gateway or Identity and Access Bounded Context in future iterations.
