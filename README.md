@@ -5,6 +5,12 @@
 
 Kanban web application for persistent sticky notes. Kotlin Multiplatform shares the domain between a Java/Spring Boot backend and a Vue/JavaScript frontend.
 
+## Versions
+
+Versions `0.x.y` are initial development releases; interfaces and behavior may change incompatibly. Version `1.0.0` establishes the first stable public API and supported product scope. A prerelease suffix such as `-beta.1` identifies a preview of a specific version, not development in general.
+
+See the [release policy](docs/ci-cd.md#release-policy) for stability criteria, release notes, and the relationship with integration gates R0-R5.
+
 ## Start here
 
 Use JDK 21 and the [configured toolchain](docs/development.md#toolchain-requirements). Start the [development MongoDB instance](docs/development.md#full-stack-end-to-end-execution) before using the persistent board, then run these commands from the repository root:
