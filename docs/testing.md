@@ -5,7 +5,7 @@
 
 `commons/src/commonTest` contains domain scenarios shared by the JVM and ChromeHeadless targets. `browserDomainTest` is an alias for `jsBrowserTest`. The backend also has application service and persistence unit tests, real MongoDB integration tests, and an HTTP startup and liveness test.
 
-This guide explains how to execute the implemented tests and which [domain rules](domain.md) they cover. [R1 evidence](evidence/R1.md) records the historical domain and consumer scope; [R3 evidence](evidence/R3.md) records HTTP, MongoDB, and outage-recovery results.
+This guide explains how to execute the implemented tests and which [domain rules](domain.md) they cover. [R1 evidence](evidence/R1.md) records the observed domain and consumer results; [R3 evidence](evidence/R3.md) records checklist HTTP results and the available concurrency observations.
 
 ## Test design
 
@@ -227,6 +227,46 @@ After a direct IDE or containerized test run, remove the isolated test environme
 ```
 
 On Windows PowerShell, use `.\gradlew.bat` instead of `./gradlew` for the Gradle commands.
+
+## Concurrent HTTP commands and MongoDB (R3)
+
+`ConcurrentBoardTest` starts two independent Spring application contexts in one JVM, each with a random loopback HTTP port and its own MongoDB client. Both use the same unique `sticky_notes_concurrent_…` database. Each test seeds the board after startup and compares the initial `GET /api/board` responses with that snapshot.
+
+Repository spies share a `CyclicBarrier` at the start of `save()`. Both services must have loaded and validated their commands before either spy calls the real MongoDB save. The fixture unwraps Spring repository proxies before creating the spies and injects them into the services with `ReflectionTestUtils`. Reads, domain execution, and conditional replacements remain real. The [concurrency guide](concurrency.md) explains why this overlap exercises the database boundary.
+
+The three scenarios are:
+
+- `lastWipSlotAllowsExactlyOneMove`: revision 7, WIP limit 1, and two `TODO` notes compete for the last slot. The test requires one HTTP `200` and one `409 REVISION_CONFLICT`, compares the successful response and stored board with the complete winning snapshot at revision 8, and checks fresh GETs through both backends.
+- `concurrentEditsPreserveTheAcknowledgedWinner`: two PATCH requests edit the same note from revision 7 to `Alpha` or `Beta`. The test checks the opposing `409` response and persisted winning content; its final assertions compare the content rather than the complete snapshot.
+- `wipLimitChangeAndMoveShareOneRevisionBoundary`: a board at revision 7 has WIP limit 2, A in `TODO`, and B in `DOING`. Lowering the limit to 1 competes with moving A into `DOING`; both commands are valid from the seed. When the limit request succeeds, the test checks the opposing `409`, limit 1, and one note in each of `TODO` and `DOING`. When the movement succeeds, it checks HTTP `200`/`409` and two notes in `DOING`.
+
+Run all three tests with JDK 21 and a running Docker engine:
+
+```sh
+./gradlew :backend:integrationTest \
+  --tests stickynotes.integration.ConcurrentBoardTest \
+  --rerun-tasks --no-build-cache --no-daemon
+```
+
+The integration task uses the existing isolated MongoDB container and cleanup lifecycle. Each test closes both backend contexts and the HTTP client before dropping its database. Inspect `backend/build/test-results/integrationTest/TEST-stickynotes.integration.ConcurrentBoardTest.xml` and `backend/build/reports/tests/integrationTest/index.html`. A complete class run must show all three methods with zero failures, errors, or skips. A report filtered to one method proves only that scenario.
+
+These tests exercise HTTP, service orchestration, the shared JVM domain, and MongoDB through two application contexts in one JVM. They do not exercise separate JVM processes or database failover. [R3 evidence](evidence/R3.md#concurrent-commands-and-conditional-writes) distinguishes the inspected report from the maintainer-reported mutation result.
+
+### Revision-filter mutation check
+
+Use the last-slot test to verify that removing the concurrency guard is detected:
+
+```sh
+./gradlew :backend:integrationTest \
+  --tests stickynotes.integration.ConcurrentBoardTest.lastWipSlotAllowsExactlyOneMove \
+  --rerun-tasks --no-build-cache --no-daemon
+```
+
+1. Run the command with the original implementation and retain the passing report.
+2. In `MongoBoardRepository.save()`, temporarily remove only `.and("revision").is(expectedRevision)` from the replacement query. Keep the `_id="main"` predicate and the replacement logic unchanged.
+3. Run the same command. Both validated candidates can now be saved, so the test must fail because the expected `409` is replaced by another HTTP `200`. A compilation error, timeout, or unavailable database does not establish this result.
+4. Restore the revision predicate and rerun the command. The test must pass again. Restore the predicate even if the experiment fails unexpectedly, and do not commit the temporary mutation.
+5. Preserve the reports before the next run overwrites them. Record the source revision, execution environment, command or IDE configuration, observed failure, and restored passing result in `docs/evidence/R3.md`.
 
 ## Checklist HTTP and MongoDB integration tests (R3)
 

@@ -33,10 +33,11 @@ The project is organized around these functional gates. They define integration 
 
 - [Domain rules](domain.md)
 - [Glossary](glossary.md)
+- [Concurrent commands and the board revision](concurrency.md)
 - [Generated domain API reference](api/index.html)
 - [Shared-domain acceptance evidence](evidence/R1.md)
-- [Persistent CRUD verification scope](evidence/R2.md)
-- [HTTP command and persistence evidence](evidence/R3.md)
+- [Persistent CRUD acceptance evidence](evidence/R2.md)
+- [R3 HTTP and persistence evidence](evidence/R3.md)
 
 ## Architecture decisions
 
