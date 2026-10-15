@@ -3,11 +3,11 @@
 
 # Sticky Notes
 
-Minimal web application for creating sticky notes. Kotlin Multiplatform shares the domain between a Java/Spring Boot backend and a Vue/JavaScript frontend.
+Kanban web application for persistent sticky notes. Kotlin Multiplatform shares the domain between a Java/Spring Boot backend and a Vue/JavaScript frontend.
 
 ## Start here
 
-Run these commands from the repository root using JDK 21:
+Use JDK 21 and the [configured toolchain](docs/development.md#toolchain-requirements). Start the [development MongoDB instance](docs/development.md#full-stack-end-to-end-execution) before using the persistent board, then run these commands from the repository root:
 
 ```bash
 ./gradlew fullBuild
@@ -27,8 +27,8 @@ The liveness endpoint returns HTTP `200` with `{"status":"UP"}` when the applica
 The frontend is started separately during development:
 
 ```bash
+./gradlew :frontend:frontendInstall
 cd frontend
-npm ci
 npm run dev
 ```
 
@@ -52,6 +52,6 @@ Stop an existing backend process before starting another instance on the same po
 - `frontend/`: Vue application.
 - `docs/`: architecture, process, CI/CD and deployment notes.
 
-The Vue form creates in-memory notes through the generated Kotlin/JS domain package. The backend is not needed for this interaction; reloading the page discards the notes.
+The Vue frontend reads and changes the board through the backend REST API. The generated Kotlin/JS domain package supplies client prevalidation; the backend validates commands and persists the board in MongoDB. Reloading the page fetches the stored board.
 
 See [shared-domain acceptance evidence](docs/evidence/R1.md) for the JVM/browser scenarios, Java/Vue consumers, generated artifacts, and reproduction commands.

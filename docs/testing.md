@@ -5,7 +5,7 @@
 
 `commons/src/commonTest` contains domain scenarios shared by the JVM and ChromeHeadless targets. `browserDomainTest` is an alias for `jsBrowserTest`. The backend also has application service and persistence unit tests, real MongoDB integration tests, and an HTTP startup and liveness test.
 
-This guide explains how to execute the implemented tests and which [domain rules](domain.md) they cover. [R1 evidence](evidence/R1.md) records the observed domain and consumer results; [R3 checklist evidence](evidence/R3.md) records the checklist HTTP and MongoDB results.
+This guide explains how to execute the implemented tests and which [domain rules](domain.md) they cover. [R1 evidence](evidence/R1.md) records the historical domain and consumer scope; [R3 evidence](evidence/R3.md) records HTTP, MongoDB, and outage-recovery results.
 
 ## Test design
 
@@ -30,7 +30,7 @@ export CHROME_BIN="$(command -v google-chrome)"
 
 On Windows PowerShell, set `$env:CHROME_BIN` to the full path of `chrome.exe` (normally under `C:\Program Files\Google\Chrome\Application\`) and run `.\gradlew.bat :commons:jvmTest :commons:browserDomainTest`. Set the Gradle JVM in IntelliJ IDEA to JDK 21.
 
-CI uses the Chrome installation on the [GitHub Actions Ubuntu runner](https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md). The quality workflow checks `google-chrome --version`, exports `CHROME_BIN`, and runs `fullBuild`, which includes both common test targets. Compare `commons/build/test-results/jvmTest/` and `commons/build/test-results/jsBrowserTest/`: both must show the shared scenarios executed, with no skipped tests. The workflow uploads these reports even when a test fails.
+CI uses the Chrome installation on the [GitHub Actions Ubuntu runner](https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md). The quality workflow checks `google-chrome --version`, exports `CHROME_BIN`, and runs `check` or `fullBuild` according to the event; both include the common test targets. Compare `commons/build/test-results/jvmTest/` and `commons/build/test-results/jsBrowserTest/`: both must show the shared scenarios executed, with no skipped tests. The workflow uploads these reports even when a test fails.
 
 To check that both targets detect a core regression, temporarily change an expected value in a shared domain test to an incorrect value. Run `./gradlew :commons:jvmTest :commons:browserDomainTest --rerun-tasks --continue` and confirm that test fails in both reports. Restore the assertion and rerun the command; both targets must pass.
 
@@ -85,9 +85,9 @@ Run the Spring Boot startup test with JDK 21 from the repository root:
 ./gradlew :backend:test --tests stickynotes.MainTest
 ```
 
-`MainTest.livenessIsUpWithoutDatabase` uses `@SpringBootTest` with a random HTTP port and the `test` profile. It overrides the MongoDB URI with `mongodb://127.0.0.1:1/sticky_notes_test` and short connection timeouts so the database is unreachable independently of the development URI.
+`MainTest.livenessIsUpWithoutDatabase` uses `@SpringBootTest` with a random HTTP port and the `test` profile. It overrides the MongoDB URI with the unreachable loopback port 1, independently of the development URI. The application-wide five-second MongoDB timeouts still apply.
 
-The test runs the startup bootstrap against the unreachable database, sends a real HTTP request to `/actuator/health/liveness`, checks status `200`, parses the JSON body, and checks that `status` is `UP`. This verifies that a bootstrap connectivity failure allows Spring Boot startup and HTTP liveness; it does not verify note persistence or database-aware readiness.
+The test runs the startup bootstrap against the unreachable database, sends a real HTTP request to `/actuator/health/liveness`, checks status `200`, parses the JSON body, and checks that `status` is `UP`. Its URI contains credential fixtures, and captured startup output must omit both the username and password. This verifies that a bootstrap connectivity failure allows Spring Boot startup and HTTP liveness; it does not verify note persistence or database-aware readiness.
 
 Inspect `backend/build/reports/tests/test/index.html` or `backend/build/test-results/test/TEST-stickynotes.MainTest.xml`. A passing run must show the test executed with zero failures, errors, or skips. `:backend:check`, the repository-wide `check`, and `fullBuild` include the backend test suite. GitHub Actions retains the backend test reports.
 
@@ -119,7 +119,47 @@ Representative rejected payloads cover wrong JSON types, numeric strings, decima
 
 The blank-item-ID regression sends URL-encoded ordinary and non-breaking spaces through PATCH and DELETE. It checks `400 INVALID_REQUEST`, the `itemId` error field, and zero service calls.
 
-Simulated infrastructure failures verify neutral `503` and `500` messages and omission of unavailable error metadata. Domain combinations and conditional-save behavior remain in the shared domain and application service suites. These HTTP tests do not prove persistence; the [MongoDB HTTP suite](#checklist-http-and-mongodb-integration-tests-r3) exercises the real service and database.
+Simulated infrastructure failures verify neutral `503` and `500` responses and omission of unavailable error metadata. Captured console output must contain the error code and HTTP status and omit note content, credentials, and exception details. Domain combinations and conditional-save behavior remain in the shared domain and application service suites. These HTTP tests do not prove persistence; the [MongoDB HTTP suite](#checklist-http-and-mongodb-integration-tests-r3) exercises the real service and database.
+
+## Command JSON validation (R3)
+
+Run the command JSON and checklist HTTP suites with JDK 21:
+
+```sh
+./gradlew :backend:test \
+  --tests stickynotes.api.CommandJsonHttpTest \
+  --tests stickynotes.api.ChecklistHttpTest \
+  --max-workers=1 --no-configuration-cache
+```
+
+`CommandJsonHttpTest` uses the real Spring HTTP server and a mocked `BoardService`. It rejects unknown fields, malformed or non-object bodies, wrong scalar types, numeric enum ordinals, fractional indices, and invalid revisions before a service call. Invalid enum names, indices, and WIP limits retain their documented codes and fields. Successful note commands verify that omitted and null optional fields have the same effect: default creation color and unchanged PATCH fields. A PATCH containing only null mutable fields is rejected. Existing checklist cases retain their stricter null checks and omission-versus-false coverage.
+
+`ChecklistHttpIntegrationTest.invalidCommandJsonPreservesTheStoredDocument` verifies an unknown-field rejection through HTTP, the real service, and MongoDB. The rejected command preserves the complete raw MongoDB document and GET snapshot, including the revision. Run it through the existing MongoDB lifecycle:
+
+```sh
+./gradlew :backend:integrationTest \
+  --tests 'stickynotes.integration.ChecklistHttpIntegrationTest.invalidCommandJsonPreservesTheStoredDocument' \
+  --max-workers=1 --no-configuration-cache
+```
+
+## HTTP command body-size limit (R3)
+
+Run the focused HTTP tests with JDK 21:
+
+```sh
+./gradlew :backend:test --tests stickynotes.api.CommandBodyLimitHttpTest
+```
+
+`CommandBodyLimitHttpTest` sends requests through the real Spring HTTP server with a mocked `BoardService`. It verifies that oversized POST, PUT, PATCH, and DELETE bodies return `413 PAYLOAD_TOO_LARGE` without calling the service. A chunked request with no `Content-Length` contains 65,537 UTF-8 bytes but only 65,536 characters, protecting byte counting from a character-count regression. A valid JSON command padded with whitespace to exactly 65,536 bytes succeeds with both known-length and chunked transfer, preserving the decoded non-ASCII label.
+
+`ChecklistHttpIntegrationTest.oversizedChunkedCommandPreservesTheStoredDocument` exercises the same filter with the real service and MongoDB. Its otherwise valid command would toggle an item; an oversized body instead returns `413`, and both the complete raw MongoDB document and a fresh GET remain identical, including the revision. Run it with the [MongoDB integration lifecycle](#backend-mongodb-integration-tests-r2):
+
+```sh
+./gradlew :backend:integrationTest \
+  --tests 'stickynotes.integration.ChecklistHttpIntegrationTest.oversizedChunkedCommandPreservesTheStoredDocument'
+```
+
+The focused HTTP suite covers the transport and size permutations; the MongoDB suite uses one representative rejection to prove persistence preservation. Results are recorded in [R3 HTTP and persistence evidence](evidence/R3.md).
 
 ## Backend persistence unit tests
 
@@ -139,7 +179,7 @@ Run the mapper, repository, and bootstrap tests with JDK 21 from the repository 
 - Wrong board IDs, mismatched or negative revisions, revision overflow, and invalid domain state being rejected before any database interaction.
 - A save failure being propagated without a retry.
 
-`BoardBootstrapTest` simulates MongoDB responses and captures the upsert query and update. It checks that initial creation and repeated startup use only the `_id="main"` filter and `$setOnInsert` fields, so the bootstrap never requests a replacement or unconditional field update. It also covers duplicate-key tolerance without retry, rejection of unacknowledged initialization, startup continuation on database resource failure, and propagation of other database errors.
+`BoardBootstrapTest` simulates MongoDB responses and captures the upsert query and update. It checks that initial creation and repeated startup use only the `_id="main"` filter and `$setOnInsert` fields, so the bootstrap never requests a replacement or unconditional field update. It also covers duplicate-key tolerance without retry, rejection of unacknowledged initialization, startup continuation on database resource failure or a translated MongoDB operation timeout, and propagation of other database errors.
 
 Inspect `backend/build/reports/tests/test/index.html` or the XML files under `backend/build/test-results/test/`. A passing run must show all three persistence test classes executed with zero failures, errors, or skips. `:backend:check` includes these tests and the backend formatting check.
 
@@ -210,10 +250,58 @@ One sequence creates the twentieth item on the target note when another note fol
 
 Representative rejected labels, a missing item, and a stale revision check HTTP status, codes, and metadata through the real service. Each rejection compares the complete raw MongoDB document and a fresh GET with their pre-request values. Other malformed-input and domain combinations stay in the focused HTTP, service, and shared-domain suites.
 
-Inspect `backend/build/reports/tests/integrationTest/index.html` and `backend/build/test-results/integrationTest/TEST-stickynotes.integration.ChecklistHttpIntegrationTest.xml`. The Compose `tests` service runs every class in the integration source set; its command does not filter out the checklist suite. These tests cover HTTP, application orchestration, the shared JVM domain, and real MongoDB. They do not exercise the Vue interface or restart MongoDB. Recorded results and reproduction details are in [R3 checklist evidence](evidence/R3.md).
+Inspect `backend/build/reports/tests/integrationTest/index.html` and `backend/build/test-results/integrationTest/TEST-stickynotes.integration.ChecklistHttpIntegrationTest.xml`. The Compose `tests` service runs the persistence and checklist suites. These tests cover HTTP, application orchestration, the shared JVM domain, and real MongoDB. They do not exercise the Vue interface or restart MongoDB. Recorded results and reproduction details are in [R3 HTTP and persistence evidence](evidence/R3.md).
+
+## MongoDB outage and recovery (R3)
+
+This is a manual integration check, separate from `:backend:check`. Use JDK 21, Docker, and free loopback ports 27019 and 8081. The test Compose MongoDB uses memory-backed storage, so use a separate container for this restart check.
+
+1. Start an isolated MongoDB container using the image pinned in `compose.test.yaml`:
+
+   ```sh
+   docker run -d --name sticky-notes-recovery -p 127.0.0.1:27019:27017 \
+     mongo@sha256:f071cbf97a6e52fb7f07ce9ca5d862ad79876bf0eba9ba97758337d740449638
+   ```
+
+   Wait until `docker exec sticky-notes-recovery mongosh --quiet --eval 'db.adminCommand({ping:1}).ok'` returns `1`. In another terminal, start the backend:
+
+   ```sh
+   MONGODB_URI=mongodb://127.0.0.1:27019/sticky_notes_recovery PORT=8081 \
+     ./gradlew :backend:bootRun --args='--spring.profiles.active=local'
+   ```
+
+2. Wait for `/actuator/health/readiness` to return `200 UP`, create a note, and save the HTTP and MongoDB state:
+
+   ```sh
+   curl -i http://127.0.0.1:8081/actuator/health/readiness
+   curl -i -H 'Content-Type: application/json' -d '{"content":"Recovery check","expectedRevision":0}' \
+     http://127.0.0.1:8081/api/board/notes
+   curl -fsS http://127.0.0.1:8081/api/board > /tmp/sticky-notes-before.json
+   docker exec sticky-notes-recovery mongosh --quiet sticky_notes_recovery \
+     --eval 'EJSON.stringify(db.boards.findOne({_id:"main"}))' > /tmp/sticky-notes-before.bson.json
+   ```
+
+3. Run `docker stop sticky-notes-recovery`. Use `curl -i --max-time 8` to check liveness (`200 UP`), readiness (`503 DOWN`), and `/api/board` (`503 DATABASE_UNAVAILABLE`). A PUT to `/api/board/wip-limit` with `{"limit":4,"expectedRevision":1}` must also return `503`; malformed JSON must return `400`. Health bodies contain only `status`.
+
+4. Run `docker start sticky-notes-recovery`. Retry readiness for up to thirty seconds until it returns `200 UP`, keeping the backend running. Compare both saved states:
+
+   ```sh
+   curl -fsS http://127.0.0.1:8081/api/board > /tmp/sticky-notes-after.json
+   docker exec sticky-notes-recovery mongosh --quiet sticky_notes_recovery \
+     --eval 'EJSON.stringify(db.boards.findOne({_id:"main"}))' > /tmp/sticky-notes-after.bson.json
+   cmp /tmp/sticky-notes-before.json /tmp/sticky-notes-after.json
+   cmp /tmp/sticky-notes-before.bson.json /tmp/sticky-notes-after.bson.json
+   curl -i -X PUT -H 'Content-Type: application/json' -d '{"limit":4,"expectedRevision":1}' \
+     http://127.0.0.1:8081/api/board/wip-limit
+   ```
+
+   Both comparisons must match; the final write must return `200` with revision `2` and WIP limit `4`.
+
+5. Stop this backend with Ctrl-C and remove only the isolated check container and its temporary volumes with `docker rm -f -v sticky-notes-recovery`. Record the observed result separately from automated test reports.
 
 ## Other test scopes
 
-- `frontend/src/App.test.js` exercises the real generated Kotlin/JS package through the Vue note form: creation and rendering, blank-content rejection, and oversized-content rejection with board/draft preservation and recovery after a valid submission. The oversized test submits programmatically so HTML `maxlength` cannot mask a missing domain check.
+- `frontend/src/App.test.js` mounts the Kanban interface with mocked HTTP responses and verifies loading, note creation, deletion confirmation, and movement. It does not exercise a real server or database.
+- `frontend/src/composables/useBoard.test.js` uses a mocked API client and the real Kotlin/JS prevalidation to check loading, draft preservation, concurrent-command prevention, WIP rejection before dispatch, and board refresh on revision conflict. `NoteEditor.test.js` checks blank content with the shared validator; `domain.test.js` covers the facade's JSON and domain boundaries.
 - `backend/src/test/java/stickynotes/DomainInteropTest.java` verifies Java access to the shared JVM facade.
 - `backend/src/test/java/stickynotes/MainTest.java` verifies Spring Boot startup and HTTP liveness, as described [above](#backend-startup-and-liveness).
