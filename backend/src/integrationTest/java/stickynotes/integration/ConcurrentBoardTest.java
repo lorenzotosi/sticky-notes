@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.util.AopTestUtils;
 import org.springframework.test.util.ReflectionTestUtils;
 import stickynotes.Main;
@@ -43,6 +44,24 @@ import tools.jackson.databind.json.JsonMapper;
 
 class ConcurrentBoardTest {
 
+    private static final int SCHEMA_VERSION = 1;
+    private static final int INITIAL_REVISION = 7;
+    private static final int UPDATED_REVISION = 8;
+    private static final int SINGLE_SLOT_WIP_LIMIT = 1;
+    private static final int TWO_SLOT_WIP_LIMIT = 2;
+    private static final int CONCURRENT_REQUEST_COUNT = 2;
+    private static final int FIRST_NOTE_INDEX = 0;
+    private static final int DOING_START_INDEX = 0;
+    private static final int DOING_APPEND_INDEX = 1;
+    private static final int MONGO_PING_COMMAND_VALUE = 1;
+    private static final int RANDOM_SERVER_PORT = 0;
+    private static final long SAVE_BARRIER_TIMEOUT_SECONDS = 30;
+    private static final long DOING_COUNT_AFTER_LIMIT_CHANGE = 1;
+    private static final long TODO_COUNT_AFTER_LIMIT_CHANGE = 1;
+    private static final long DOING_COUNT_AFTER_MOVE = 2;
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(5);
+    private static final Duration WIP_CHANGE_REQUEST_TIMEOUT = Duration.ofSeconds(30);
+
     private static final String DEFAULT_URI =
             "mongodb://127.0.0.1:27018/?serverSelectionTimeoutMS=1000&connectTimeoutMS=1000&socketTimeoutMS=1000";
     private static final JsonMapper JSON = JsonMapper.builder().build();
@@ -56,10 +75,11 @@ class ConcurrentBoardTest {
                 new NoteSnapshot("note-a", "First note", NoteColor.YELLOW, NoteStatus.TODO, null, List.of());
         NoteSnapshot noteB =
                 new NoteSnapshot("note-b", "Second note", NoteColor.BLUE, NoteStatus.TODO, null, List.of());
-        var expected = new BoardSnapshot("main", 1, 7, 1, List.of(noteA, noteB));
+        var expected = new BoardSnapshot(
+                "main", SCHEMA_VERSION, INITIAL_REVISION, SINGLE_SLOT_WIP_LIMIT, List.of(noteA, noteB));
 
         try (MongoClient mongo = MongoClients.create(uri)) {
-            mongo.getDatabase("admin").runCommand(new Document("ping", 1));
+            mongo.getDatabase("admin").runCommand(new Document("ping", MONGO_PING_COMMAND_VALUE));
             try (var first = startBackend(uri, database);
                     var second = startBackend(uri, database);
                     var http = HttpClient.newHttpClient()) {
@@ -78,7 +98,7 @@ class ConcurrentBoardTest {
 
                 var repository = new MongoBoardRepository(template);
 
-                var barrier = new CyclicBarrier(2);
+                var barrier = new CyclicBarrier(CONCURRENT_REQUEST_COUNT);
 
                 for (var backend : List.of(first, second)) {
                     MongoBoardRepository realRepository =
@@ -88,7 +108,7 @@ class ConcurrentBoardTest {
 
                     doAnswer(invocation -> {
                                 try {
-                                    barrier.await(30, SECONDS);
+                                    barrier.await(SAVE_BARRIER_TIMEOUT_SECONDS, SECONDS);
                                 } catch (InterruptedException exception) {
                                     Thread.currentThread().interrupt();
                                     throw exception;
@@ -102,16 +122,17 @@ class ConcurrentBoardTest {
                     ReflectionTestUtils.setField(backend.getBean(BoardServiceImpl.class), "repository", repositorySpy);
                 }
 
-                String moveBody = "{\"targetStatus\":\"DOING\",\"destinationIndex\":0,\"expectedRevision\":7}";
+                String moveBody = "{\"targetStatus\":\"DOING\",\"destinationIndex\":%d,\"expectedRevision\":%d}"
+                        .formatted(DOING_START_INDEX, INITIAL_REVISION);
                 var requestA = HttpRequest.newBuilder()
                         .uri(URI.create("http://127.0.0.1:" + firstPort + "/api/board/notes/note-a/move"))
-                        .timeout(Duration.ofSeconds(5))
+                        .timeout(REQUEST_TIMEOUT)
                         .header("Content-Type", "application/json")
                         .POST(HttpRequest.BodyPublishers.ofString(moveBody))
                         .build();
                 var requestB = HttpRequest.newBuilder()
                         .uri(URI.create("http://127.0.0.1:" + secondPort + "/api/board/notes/note-b/move"))
-                        .timeout(Duration.ofSeconds(5))
+                        .timeout(REQUEST_TIMEOUT)
                         .header("Content-Type", "application/json")
                         .POST(HttpRequest.BodyPublishers.ofString(moveBody))
                         .build();
@@ -122,28 +143,32 @@ class ConcurrentBoardTest {
                 HttpResponse<String> responseA = futureA.join();
                 HttpResponse<String> responseB = futureB.join();
 
-                assertTrue((responseA.statusCode() == 200 && responseB.statusCode() == 409)
-                        || (responseA.statusCode() == 409 && responseB.statusCode() == 200));
+                assertTrue((responseA.statusCode() == HttpStatus.OK.value()
+                                && responseB.statusCode() == HttpStatus.CONFLICT.value())
+                        || (responseA.statusCode() == HttpStatus.CONFLICT.value()
+                                && responseB.statusCode() == HttpStatus.OK.value()));
 
-                boolean aWon = responseA.statusCode() == 200;
+                boolean aWon = responseA.statusCode() == HttpStatus.OK.value();
                 BoardSnapshot expectedAfterMove;
                 if (aWon) {
-                    assertEquals(409, responseB.statusCode());
+                    assertEquals(HttpStatus.CONFLICT.value(), responseB.statusCode());
                     assertEquals(
                             "REVISION_CONFLICT",
                             JSON.readTree(responseB.body()).path("code").stringValue());
                     NoteSnapshot winnerA = new NoteSnapshot(
                             "note-a", "First note", NoteColor.YELLOW, NoteStatus.DOING, null, List.of());
-                    expectedAfterMove = new BoardSnapshot("main", 1, 8, 1, List.of(noteB, winnerA));
+                    expectedAfterMove = new BoardSnapshot(
+                            "main", SCHEMA_VERSION, UPDATED_REVISION, SINGLE_SLOT_WIP_LIMIT, List.of(noteB, winnerA));
                     assertEquals(JSON.valueToTree(expectedAfterMove), JSON.readTree(responseA.body()));
                 } else {
-                    assertEquals(409, responseA.statusCode());
+                    assertEquals(HttpStatus.CONFLICT.value(), responseA.statusCode());
                     assertEquals(
                             "REVISION_CONFLICT",
                             JSON.readTree(responseA.body()).path("code").stringValue());
                     NoteSnapshot winnerB = new NoteSnapshot(
                             "note-b", "Second note", NoteColor.BLUE, NoteStatus.DOING, null, List.of());
-                    expectedAfterMove = new BoardSnapshot("main", 1, 8, 1, List.of(noteA, winnerB));
+                    expectedAfterMove = new BoardSnapshot(
+                            "main", SCHEMA_VERSION, UPDATED_REVISION, SINGLE_SLOT_WIP_LIMIT, List.of(noteA, winnerB));
                     assertEquals(JSON.valueToTree(expectedAfterMove), JSON.readTree(responseB.body()));
                 }
 
@@ -163,10 +188,11 @@ class ConcurrentBoardTest {
         String database = "sticky_notes_concurrent_" + UUID.randomUUID();
 
         NoteSnapshot noteA = new NoteSnapshot("note-a", "notaA", NoteColor.YELLOW, NoteStatus.TODO, null, List.of());
-        var expected = new BoardSnapshot("main", 1, 7, 1, List.of(noteA));
+        var expected =
+                new BoardSnapshot("main", SCHEMA_VERSION, INITIAL_REVISION, SINGLE_SLOT_WIP_LIMIT, List.of(noteA));
 
         try (MongoClient mongo = MongoClients.create(uri)) {
-            mongo.getDatabase("admin").runCommand(new Document("ping", 1));
+            mongo.getDatabase("admin").runCommand(new Document("ping", MONGO_PING_COMMAND_VALUE));
             try (var first = startBackend(uri, database);
                     var second = startBackend(uri, database);
                     var http = HttpClient.newHttpClient()) {
@@ -185,7 +211,7 @@ class ConcurrentBoardTest {
 
                 var repository = new MongoBoardRepository(template);
 
-                var barrier = new CyclicBarrier(2);
+                var barrier = new CyclicBarrier(CONCURRENT_REQUEST_COUNT);
 
                 for (var backend : List.of(first, second)) {
                     MongoBoardRepository realRepository =
@@ -195,7 +221,7 @@ class ConcurrentBoardTest {
 
                     doAnswer(invocation -> {
                                 try {
-                                    barrier.await(30, SECONDS);
+                                    barrier.await(SAVE_BARRIER_TIMEOUT_SECONDS, SECONDS);
                                 } catch (InterruptedException exception) {
                                     Thread.currentThread().interrupt();
                                     throw exception;
@@ -209,18 +235,18 @@ class ConcurrentBoardTest {
                     ReflectionTestUtils.setField(backend.getBean(BoardServiceImpl.class), "repository", repositorySpy);
                 }
 
-                String editAAlpha = "{\"content\":\"Alpha\",\"expectedRevision\":7}";
-                String editABeta = "{\"content\":\"Beta\",\"expectedRevision\":7}";
+                String editAAlpha = "{\"content\":\"Alpha\",\"expectedRevision\":%d}".formatted(INITIAL_REVISION);
+                String editABeta = "{\"content\":\"Beta\",\"expectedRevision\":%d}".formatted(INITIAL_REVISION);
                 var requestA = HttpRequest.newBuilder()
                         .uri(URI.create("http://127.0.0.1:" + firstPort + "/api/board/notes/note-a"))
                         .header("Content-Type", "application/json")
-                        .timeout(Duration.ofSeconds(5))
+                        .timeout(REQUEST_TIMEOUT)
                         .method("PATCH", (HttpRequest.BodyPublishers.ofString(editAAlpha)))
                         .build();
                 var requestB = HttpRequest.newBuilder()
                         .uri(URI.create("http://127.0.0.1:" + secondPort + "/api/board/notes/note-a"))
                         .header("Content-Type", "application/json")
-                        .timeout(Duration.ofSeconds(5))
+                        .timeout(REQUEST_TIMEOUT)
                         .method("PATCH", HttpRequest.BodyPublishers.ofString(editABeta))
                         .build();
 
@@ -230,15 +256,15 @@ class ConcurrentBoardTest {
                 HttpResponse<String> responseA = futureA.join();
                 HttpResponse<String> responseB = futureB.join();
 
-                String expectedContent = responseA.statusCode() == 200 ? "Alpha" : "Beta";
+                String expectedContent = responseA.statusCode() == HttpStatus.OK.value() ? "Alpha" : "Beta";
 
                 if (expectedContent.equals("Alpha")) {
-                    assertEquals(409, responseB.statusCode());
-                    NoteSnapshot note = repository.load().get().getNotes().get(0);
+                    assertEquals(HttpStatus.CONFLICT.value(), responseB.statusCode());
+                    NoteSnapshot note = repository.load().get().getNotes().get(FIRST_NOTE_INDEX);
                     assertEquals(expectedContent, note.getContent());
                 } else {
-                    assertEquals(409, responseA.statusCode());
-                    NoteSnapshot note = repository.load().get().getNotes().get(0);
+                    assertEquals(HttpStatus.CONFLICT.value(), responseA.statusCode());
+                    NoteSnapshot note = repository.load().get().getNotes().get(FIRST_NOTE_INDEX);
                     assertEquals(expectedContent, note.getContent());
                 }
 
@@ -255,10 +281,11 @@ class ConcurrentBoardTest {
 
         NoteSnapshot noteA = new NoteSnapshot("note-a", "notaA", NoteColor.YELLOW, NoteStatus.TODO, null, List.of());
         NoteSnapshot noteB = new NoteSnapshot("note-b", "notaB", NoteColor.YELLOW, NoteStatus.DOING, null, List.of());
-        var expected = new BoardSnapshot("main", 1, 7, 2, List.of(noteA, noteB));
+        var expected =
+                new BoardSnapshot("main", SCHEMA_VERSION, INITIAL_REVISION, TWO_SLOT_WIP_LIMIT, List.of(noteA, noteB));
 
         try (MongoClient mongo = MongoClients.create(uri)) {
-            mongo.getDatabase("admin").runCommand(new Document("ping", 1));
+            mongo.getDatabase("admin").runCommand(new Document("ping", MONGO_PING_COMMAND_VALUE));
             try (var first = startBackend(uri, database);
                     var second = startBackend(uri, database);
                     var http = HttpClient.newHttpClient()) {
@@ -277,7 +304,7 @@ class ConcurrentBoardTest {
 
                 var repository = new MongoBoardRepository(template);
 
-                var barrier = new CyclicBarrier(2);
+                var barrier = new CyclicBarrier(CONCURRENT_REQUEST_COUNT);
 
                 for (var backend : List.of(first, second)) {
                     MongoBoardRepository realRepository =
@@ -287,7 +314,7 @@ class ConcurrentBoardTest {
 
                     doAnswer(invocation -> {
                                 try {
-                                    barrier.await(30, SECONDS);
+                                    barrier.await(SAVE_BARRIER_TIMEOUT_SECONDS, SECONDS);
                                 } catch (InterruptedException exception) {
                                     Thread.currentThread().interrupt();
                                     throw exception;
@@ -301,20 +328,22 @@ class ConcurrentBoardTest {
                     ReflectionTestUtils.setField(backend.getBean(BoardServiceImpl.class), "repository", repositorySpy);
                 }
 
-                String limitBody = "{\"limit\":1,\"expectedRevision\":7}";
+                String limitBody =
+                        "{\"limit\":%d,\"expectedRevision\":%d}".formatted(SINGLE_SLOT_WIP_LIMIT, INITIAL_REVISION);
 
                 var requestA = HttpRequest.newBuilder()
                         .uri(URI.create("http://127.0.0.1:" + firstPort + "/api/board/wip-limit"))
-                        .timeout(Duration.ofSeconds(30))
+                        .timeout(WIP_CHANGE_REQUEST_TIMEOUT)
                         .header("Content-Type", "application/json")
                         .PUT(HttpRequest.BodyPublishers.ofString(limitBody))
                         .build();
 
-                String moveBody = "{\"targetStatus\":\"DOING\",\"destinationIndex\":1,\"expectedRevision\":7}";
+                String moveBody = "{\"targetStatus\":\"DOING\",\"destinationIndex\":%d,\"expectedRevision\":%d}"
+                        .formatted(DOING_APPEND_INDEX, INITIAL_REVISION);
 
                 var requestB = HttpRequest.newBuilder()
                         .uri(URI.create("http://127.0.0.1:" + secondPort + "/api/board/notes/note-a/move"))
-                        .timeout(Duration.ofSeconds(30))
+                        .timeout(WIP_CHANGE_REQUEST_TIMEOUT)
                         .header("Content-Type", "application/json")
                         .POST(HttpRequest.BodyPublishers.ofString(moveBody))
                         .build();
@@ -325,27 +354,27 @@ class ConcurrentBoardTest {
                 HttpResponse<String> responseA = futureA.join();
                 HttpResponse<String> responseB = futureB.join();
 
-                if (responseA.statusCode() == 200) {
-                    assertEquals(409, responseB.statusCode());
-                    assertEquals(repository.load().get().getWipLimit(), 1);
+                if (responseA.statusCode() == HttpStatus.OK.value()) {
+                    assertEquals(HttpStatus.CONFLICT.value(), responseB.statusCode());
+                    assertEquals(repository.load().get().getWipLimit(), SINGLE_SLOT_WIP_LIMIT);
                     assertEquals(
                             repository.load().get().getNotes().stream()
                                     .filter(x -> x.getStatus().equals(NoteStatus.DOING))
                                     .count(),
-                            1);
+                            DOING_COUNT_AFTER_LIMIT_CHANGE);
                     assertEquals(
-                    repository.load().get().getNotes().stream()
-                            .filter(x -> x.getStatus().equals(NoteStatus.TODO))
-                            .count(),
-                            1);
+                            repository.load().get().getNotes().stream()
+                                    .filter(x -> x.getStatus().equals(NoteStatus.TODO))
+                                    .count(),
+                            TODO_COUNT_AFTER_LIMIT_CHANGE);
                 } else {
-                    assertEquals(200, responseB.statusCode());
-                    assertEquals(409, responseA.statusCode());
+                    assertEquals(HttpStatus.OK.value(), responseB.statusCode());
+                    assertEquals(HttpStatus.CONFLICT.value(), responseA.statusCode());
                     assertEquals(
                             repository.load().get().getNotes().stream()
                                     .filter(x -> x.getStatus().equals(NoteStatus.DOING))
                                     .count(),
-                            2);
+                            DOING_COUNT_AFTER_MOVE);
                 }
 
             } finally {
@@ -360,7 +389,7 @@ class ConcurrentBoardTest {
                         "--spring.profiles.active=test",
                         "--spring.mongodb.uri=" + uri,
                         "--spring.mongodb.database=" + database,
-                        "--server.port=0",
+                        "--server.port=" + RANDOM_SERVER_PORT,
                         "--server.address=127.0.0.1",
                         "--spring.main.banner-mode=off");
     }
@@ -373,11 +402,11 @@ class ConcurrentBoardTest {
     private static JsonNode getBoard(HttpClient http, int port) throws Exception {
         var request = HttpRequest.newBuilder()
                 .uri(URI.create("http://127.0.0.1:" + port + "/api/board"))
-                .timeout(Duration.ofSeconds(5))
+                .timeout(REQUEST_TIMEOUT)
                 .GET()
                 .build();
         var response = http.send(request, HttpResponse.BodyHandlers.ofString());
-        assertEquals(200, response.statusCode(), response.body());
+        assertEquals(HttpStatus.OK.value(), response.statusCode(), response.body());
         return JSON.readTree(response.body());
     }
 }
