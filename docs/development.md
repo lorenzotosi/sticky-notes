@@ -67,13 +67,13 @@ The `:backend:integrationTest` task starts MongoDB through `testMongoUp` and alw
 
 ### Gradle Configuration Cache
 
-Gradle configuration cache is supported across the task graph. You can execute:
+Gradle can reuse the configured task graph with:
 
 ```sh
 ./gradlew fullBuild --configuration-cache
 ```
 
-Subsequent runs will reuse the cached task graph (`Configuration cache entry reused`).
+Subsequent compatible runs report `Configuration cache entry reused`. If Spotless reports a stale JVM-local cache, rerun with `--no-configuration-cache`.
 
 ## Backend runtime
 
@@ -93,6 +93,8 @@ The configuration is in `backend/src/main/resources/application.yml`. The `local
 
 Supply connection credentials through the environment; do not commit them to configuration files. Spring Data configures the MongoDB client used by `MongoBoardRepository` to load validated board snapshots and perform conditional saves. See [architecture](architecture.md) for the persistence boundary and [persistence unit tests](testing.md#backend-persistence-unit-tests) for verification commands.
 
+`MongoConfiguration` applies five-second server-selection, connection, and operation timeouts after the URI settings, including when `MONGODB_URI` or `TEST_MONGODB_URI` is supplied. The operation timeout applies to each MongoDB operation, not the entire HTTP request.
+
 At startup, `BoardBootstrap` attempts to create an empty `main` board in `boards`, with schema version `1`, revision `0`, and WIP limit `3`. Insert-only fields preserve an existing board across restarts. If MongoDB is unreachable, startup continues with a warning and liveness remains available; restart the backend after MongoDB recovers to retry initialization. There is no background bootstrap retry.
 
 Check liveness after startup, using the configured port:
@@ -101,7 +103,7 @@ Check liveness after startup, using the configured port:
 curl -i http://127.0.0.1:8080/actuator/health/liveness
 ```
 
-The expected response is HTTP `200` with `{"status":"UP"}`, including when MongoDB is unavailable. `GET /actuator/health` aggregates health checks, including MongoDB connectivity, and may return `503` when the database is unavailable. `GET /actuator/health/readiness` currently reports application readiness without a MongoDB connectivity check.
+The expected response is HTTP `200` with `{"status":"UP"}`, including when MongoDB is unavailable. `GET /actuator/health` aggregates health checks, including MongoDB connectivity. `GET /actuator/health/readiness` combines application readiness with MongoDB connectivity and returns `503` when the database is unavailable. HTTP management exposure is limited to `health` and `info`; health details are hidden and default info contributors are disabled.
 
 Build and run the executable JAR with JDK 21:
 
@@ -122,6 +124,7 @@ The frontend is a Vue 3 SPA built with Vite. It interacts with the backend REST 
 From the repository root, start the Vite development server:
 
 ```sh
+./gradlew :frontend:frontendInstall
 cd frontend
 npm run dev
 ```
@@ -143,12 +146,13 @@ server: {
 ### Full-Stack End-to-End Execution
 To run and test the complete persistent vertical slice locally:
 
-1. Start MongoDB:
+1. Start a development MongoDB instance on the API's default port. For the first run:
 ```sh
-./gradlew testMongoUp
-# or run Docker directly:
-docker run -d --name mongo-local -p 27017:27017 mongo:latest
+docker run -d --name sticky-notes-mongo -p 127.0.0.1:27017:27017 \
+  -v sticky-notes-mongo-data:/data/db \
+  mongo@sha256:f071cbf97a6e52fb7f07ce9ca5d862ad79876bf0eba9ba97758337d740449638
 ```
+For later runs, use `docker start sticky-notes-mongo`. The named volume preserves development data. The integration-test container started by `testMongoUp` uses port 27018 and temporary memory-backed storage; it is not this development database.
 2. Start Backend API:
 ```sh
 ./gradlew :backend:bootJar
@@ -156,11 +160,14 @@ java -jar backend/build/libs/backend.jar --spring.profiles.active=local
 ```
 3. Start Frontend Dev Server:
 ```sh
+./gradlew :frontend:frontendInstall
 cd frontend
 npm run dev
 ```
 
 Open http://localhost:5173 in a browser. Board state, note creations, edits, and deletions persist across page reloads and backend restarts directly into MongoDB.
+
+Stop the development database with `docker stop sticky-notes-mongo`; keep its named volume for the next session.
 
 
 ## Dependency Management and Locking

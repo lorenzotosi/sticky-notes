@@ -4,7 +4,7 @@
 openapi: 3.0.3
 info:
   title: Sticky Notes Kanban API
-  description: Planned REST API contract for the Sticky Notes collaborative Kanban board. These endpoints are not implemented yet.
+  description: REST API for the Sticky Notes Kanban board. Command bodies are limited to 65,536 bytes, including chunked transfer. Larger bodies return 413 before command execution.
   version: 1.0.0
   license:
     name: MIT
@@ -31,6 +31,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /board/wip-limit:
     put:
@@ -53,6 +55,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '409':
           $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /board/notes:
     post:
@@ -75,6 +83,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '409':
           $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /board/notes/{id}:
     patch:
@@ -101,6 +115,12 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
     delete:
       summary: Delete a note
       operationId: deleteNote
@@ -125,6 +145,12 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /board/notes/{id}/move:
     post:
@@ -151,6 +177,12 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /board/notes/{id}/block:
     put:
@@ -177,6 +209,12 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
     delete:
       summary: Unblock a note
       operationId: unblockNote
@@ -201,6 +239,12 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /board/notes/{id}/checklist:
     post:
@@ -227,6 +271,12 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /board/notes/{id}/checklist/{itemId}:
     patch:
@@ -260,6 +310,12 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
     delete:
       summary: Delete checklist item
       operationId: deleteChecklistItem
@@ -291,6 +347,12 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
 components:
   parameters:
@@ -383,6 +445,7 @@ components:
 
     CreateNoteRequest:
       type: object
+      additionalProperties: false
       required: [content, expectedRevision]
       properties:
         content:
@@ -390,12 +453,16 @@ components:
           minLength: 1
           maxLength: 500
         color:
-          allOf:
-            - $ref: '#/components/schemas/NoteColor'
+          type: string
+          nullable: true
+          enum: [YELLOW, BLUE, GREEN, PINK, null]
+          description: Omitted or null uses the default color.
           default: YELLOW
         expectedRevision:
           type: integer
           minimum: 0
+          maximum: 2147483647
+          description: A JSON integer token; numeric strings and floating-point tokens are rejected.
 
     CreateNoteResponse:
       type: object
@@ -408,20 +475,35 @@ components:
 
     UpdateNoteRequest:
       type: object
+      additionalProperties: false
+      description: Provide at least one non-null value for content or color. Omitted and null fields stay unchanged.
       required: [expectedRevision]
+      anyOf:
+        - required: [content]
+          properties:
+            content: {type: string}
+        - required: [color]
+          properties:
+            color: {type: string}
       properties:
         content:
           type: string
+          nullable: true
           minLength: 1
           maxLength: 500
         color:
-          $ref: '#/components/schemas/NoteColor'
+          type: string
+          nullable: true
+          enum: [YELLOW, BLUE, GREEN, PINK, null]
         expectedRevision:
           type: integer
           minimum: 0
+          maximum: 2147483647
+          description: A JSON integer token; numeric strings and floating-point tokens are rejected.
 
     MoveNoteRequest:
       type: object
+      additionalProperties: false
       required: [targetStatus, destinationIndex, expectedRevision]
       properties:
         targetStatus:
@@ -429,12 +511,17 @@ components:
         destinationIndex:
           type: integer
           minimum: 0
+          maximum: 2147483647
+          description: A JSON integer token; numeric strings and floating-point tokens are rejected.
         expectedRevision:
           type: integer
           minimum: 0
+          maximum: 2147483647
+          description: A JSON integer token; numeric strings and floating-point tokens are rejected.
 
     SetWipLimitRequest:
       type: object
+      additionalProperties: false
       required: [limit, expectedRevision]
       properties:
         limit:
@@ -444,9 +531,12 @@ components:
         expectedRevision:
           type: integer
           minimum: 0
+          maximum: 2147483647
+          description: A JSON integer token; numeric strings and floating-point tokens are rejected.
 
     BlockNoteRequest:
       type: object
+      additionalProperties: false
       required: [reason, expectedRevision]
       properties:
         reason:
@@ -456,6 +546,8 @@ components:
         expectedRevision:
           type: integer
           minimum: 0
+          maximum: 2147483647
+          description: A JSON integer token; numeric strings and floating-point tokens are rejected.
 
     AddChecklistItemRequest:
       type: object
@@ -540,6 +632,24 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiError'
+    PayloadTooLarge:
+      description: Command body exceeds 65,536 bytes; the board and revision are unchanged.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            code: PAYLOAD_TOO_LARGE
+            message: Request body exceeds 64 KiB.
+    InternalServerError:
+      description: Unexpected server failure; the response omits exception details.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            code: INTERNAL_SERVER_ERROR
+            message: An unexpected error occurred
     ServiceUnavailable:
       description: Database connectivity failure
       content:
