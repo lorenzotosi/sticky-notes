@@ -427,7 +427,7 @@ class ChecklistHttpIntegrationTest {
     }
 
     @Test
-        void staleRevisionTakesPrecedenceOverMissingNote() throws Exception {
+    void staleRevisionTakesPrecedenceOverMissingNote() throws Exception {
         var error = assertRejected(
                 "PATCH",
                 "/api/board/notes/missing",
