@@ -24,6 +24,24 @@ The `deliverables` artifact contains `backend/build/libs/backend.jar`, the Commo
 
 After a successful full build on `main`, semantic-release derives the next version from squash-merge titles and creates the GitHub release from those deliverables. Release executions are serialized to prevent concurrent version calculations. It uses the workflow `GITHUB_TOKEN`; no repository secret is required. The same push publishes the Markdown documentation and generated Dokka API reference through GitHub Pages.
 
+## Release policy
+
+Releases remain automatic after successful full builds on `main`. They identify distributable revisions, including incremental changes that do not yet provide a complete UI/API/database interaction.
+
+- `0.x.y` identifies initial development. Public interfaces and behavior may change incompatibly; the number is not a percentage of completion.
+- `1.0.0` establishes the first stable public API and supported product scope. Later versions communicate compatibility through SemVer; stable software continues to evolve.
+- A suffix such as `-beta.1` identifies a preview of a specific intended version. A `0.x.y` release is not automatically a prerelease and does not receive the GitHub Pre-release flag merely because its major version is zero. The current workflow publishes normal versions from `main`; preview channels require an explicit configuration change.
+
+Before merging a change that would produce the first stable release, both maintainers must review the declared product scope and public API, evidence for the required interactions across UI/API/database, reproducible installation, and documented operational limits and upgrade requirements. Record that decision and the supporting evidence in the pull request. The automated version calculation does not perform this readiness review: during `0.x`, a major-triggering commit can already produce `1.0.0`.
+
+Integration gates [R0-R5](index.md#integration-gates) describe verification boundaries, independently of versions. A release can contribute to a gate without completing it. Neither a version number nor completion of a gate automatically declares the product stable.
+
+### Release notes
+
+Automatic notes retain feature, fix, performance, and breaking-change entries, plus comparison and commit links. They also explain version maturity and link to the policy, installation instructions, and gate evidence at the released tag, so readers see documentation for the downloaded revision.
+
+Gate references are optional context, not release names or required fields. Do not infer gate completion from commit titles or generate a checklist of all gates in every release.
+
 ## Version rules
 
 Pull request titles use `type(scope): description`, where the scope is optional. With squash merging, the pull request title becomes the commit message analyzed on `main`.

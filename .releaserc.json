@@ -23,7 +23,12 @@
       }
     ],
     [
-      "@semantic-release/release-notes-generator"
+      "@semantic-release/release-notes-generator",
+      {
+        "writerOpts": {
+          "mainTemplate": "{{> header}}\n\nVersions `0.x.y` are initial development releases with no stable API guarantee. Version `1.0.0` establishes the first stable public API and supported product scope. Prerelease suffixes identify previews of specific versions.\n\nDocumentation for this release: [release policy]({{host}}/{{owner}}/{{repository}}/blob/{{currentTag}}/docs/ci-cd.md#release-policy), [installation]({{host}}/{{owner}}/{{repository}}/blob/{{currentTag}}/docs/deployment.md), and [integration gates and evidence]({{host}}/{{owner}}/{{repository}}/blob/{{currentTag}}/docs/index.md). A release can contribute to a gate without completing it.\n\n{{#each commitGroups}}\n{{#if title}}\n### {{title}}\n\n{{/if}}{{#each commits}}{{> commit root=@root}}{{/each}}\n{{/each}}\n{{> footer}}"
+        }
+      }
     ],
     [
       "@semantic-release/github",
