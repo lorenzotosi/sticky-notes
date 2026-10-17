@@ -153,4 +153,85 @@ describe('useBoard composable', () => {
     expect(error.value.code).toBe('REVISION_CONFLICT')
     expect(board.value.revision).toBe(2)
   })
+
+  it('populates conflictState and preserves draft when editing a note concurrently deleted', async () => {
+    const client = createMockClient()
+    const initialBoard = {
+      id: 'main',
+      schemaVersion: 1,
+      revision: 1,
+      wipLimit: 3,
+      notes: [{ id: 'note-1', content: 'Old', color: 'YELLOW', status: 'TODO', blockedReason: null, checklist: [] }]
+    }
+    const boardWithoutNote = {
+      id: 'main',
+      schemaVersion: 1,
+      revision: 2,
+      wipLimit: 3,
+      notes: []
+    }
+
+    client.getBoard
+      .mockResolvedValueOnce(initialBoard)
+      .mockResolvedValueOnce(boardWithoutNote)
+
+    client.updateNote.mockRejectedValueOnce(
+      new ApiError(409, { code: 'REVISION_CONFLICT', message: 'Conflict', currentRevision: 2 })
+    )
+
+    const { fetchBoard, updateNote, conflictState, draft } = useBoard(client)
+    await fetchBoard()
+
+    await expect(updateNote('note-1', { content: 'Updated in window 2', color: 'PINK' })).rejects.toThrow()
+
+    expect(draft.value.content).toBe('Updated in window 2')
+    expect(conflictState.value).not.toBeNull()
+    expect(conflictState.value.targetDeleted).toBe(true)
+    expect(conflictState.value.preservedText).toBe('Updated in window 2')
+  })
+
+  it('reconciles board state upon request timeout without automatic duplicate resend', async () => {
+    const client = createMockClient()
+    const initialBoard = { id: 'main', schemaVersion: 1, revision: 1, wipLimit: 3, notes: [] }
+    const savedBoardOnServer = {
+      id: 'main',
+      schemaVersion: 1,
+      revision: 2,
+      wipLimit: 3,
+      notes: [{ id: 'n-1', content: 'Saved before timeout', color: 'YELLOW', status: 'TODO', blockedReason: null, checklist: [] }]
+    }
+
+    client.getBoard
+      .mockResolvedValueOnce(initialBoard)
+      .mockResolvedValueOnce(savedBoardOnServer)
+
+    client.createNote.mockRejectedValueOnce(
+      new ApiError(408, { code: 'REQUEST_TIMEOUT', message: 'Request timed out' })
+    )
+
+    const { board, fetchBoard, createNote } = useBoard(client)
+    await fetchBoard()
+
+    await expect(createNote('Saved before timeout', 'YELLOW')).rejects.toThrow()
+    expect(client.createNote).toHaveBeenCalledTimes(1)
+    expect(board.value.revision).toBe(2)
+    expect(board.value.notes).toHaveLength(1)
+  })
+
+  it('ignores stale out-of-order fetchBoard responses with lower revision', async () => {
+    const client = createMockClient()
+    const newerBoard = { id: 'main', schemaVersion: 1, revision: 5, wipLimit: 3, notes: [] }
+    const staleBoard = { id: 'main', schemaVersion: 1, revision: 3, wipLimit: 3, notes: [] }
+
+    client.getBoard
+      .mockResolvedValueOnce(newerBoard)
+      .mockResolvedValueOnce(staleBoard)
+
+    const { board, fetchBoard } = useBoard(client)
+    await fetchBoard()
+    expect(board.value.revision).toBe(5)
+
+    await fetchBoard()
+    expect(board.value.revision).toBe(5)
+  })
 })
