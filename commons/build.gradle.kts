@@ -117,49 +117,55 @@ val jvmJacocoCoverageVerification =
         }
     }
 
-val verifyDomainBoundaries =
-    tasks.register("verifyDomainBoundaries") {
-        group = "verification"
-        description = "Verifies that commons does not depend on infrastructure frameworks or import JVM APIs in commonMain."
+abstract class VerifyDomainBoundaries : DefaultTask() {
+    @get:InputFiles
+    abstract val sourceFiles: ConfigurableFileCollection
 
-        val commonMainSources =
-            fileTree("src/commonMain") {
-                include("**/*.kt")
-            }
-        val buildScriptFile = file("build.gradle.kts")
+    @get:InputFile
+    abstract val buildScriptFile: RegularFileProperty
 
-        inputs.files(commonMainSources)
-        inputs.file(buildScriptFile)
+    @TaskAction
+    fun verify() {
+        val forbiddenImportRegex =
+            Regex("""^\s*import\s+(java\.|javax\.|jdk\.|org\.springframework\.|org\.mongodb\.)""")
+        val violations = mutableListOf<String>()
 
-        doLast {
-            val forbiddenImportRegex =
-                Regex("""^\s*import\s+(java\.|javax\.|jdk\.|org\.springframework\.|org\.mongodb\.)""")
-            val violations = mutableListOf<String>()
-
-            commonMainSources.files.forEach { sourceFile ->
-                sourceFile.readLines().forEachIndexed { index, line ->
-                    if (forbiddenImportRegex.containsMatchIn(line)) {
-                        violations.add("${sourceFile.relativeTo(projectDir)}:${index + 1}: forbidden import '$line'")
-                    }
+        sourceFiles.files.forEach { sourceFile ->
+            sourceFile.readLines().forEachIndexed { index, line ->
+                if (forbiddenImportRegex.containsMatchIn(line)) {
+                    violations.add("${sourceFile.name}:${index + 1}: forbidden import '$line'")
                 }
-            }
-
-            val forbiddenBuildDependencyRegex =
-                Regex("""(org\.springframework|org\.mongodb|spring-boot|mongodb-driver)""")
-            buildScriptFile.readLines().forEachIndexed { index, line ->
-                val trimmed = line.trim()
-                if (!trimmed.startsWith("//") &&
-                    !trimmed.startsWith("Regex") &&
-                    forbiddenBuildDependencyRegex.containsMatchIn(trimmed)
-                ) {
-                    violations.add("build.gradle.kts:${index + 1}: forbidden infrastructure reference '$trimmed'")
-                }
-            }
-
-            check(violations.isEmpty()) {
-                "Domain boundary violations detected:\n${violations.joinToString("\n")}"
             }
         }
+
+        val forbiddenBuildDependencyRegex =
+            Regex("""(org\.springframework|org\.mongodb|spring-boot|mongodb-driver)""")
+        buildScriptFile.get().asFile.readLines().forEachIndexed { index, line ->
+            val trimmed = line.trim()
+            if (!trimmed.startsWith("//") &&
+                !trimmed.startsWith("Regex") &&
+                forbiddenBuildDependencyRegex.containsMatchIn(trimmed)
+            ) {
+                violations.add("build.gradle.kts:${index + 1}: forbidden infrastructure reference '$trimmed'")
+            }
+        }
+
+        check(violations.isEmpty()) {
+            "Domain boundary violations detected:\n${violations.joinToString("\n")}"
+        }
+    }
+}
+
+val verifyDomainBoundaries =
+    tasks.register<VerifyDomainBoundaries>("verifyDomainBoundaries") {
+        group = "verification"
+        description = "Verifies that commons does not depend on infrastructure frameworks or import JVM APIs in commonMain."
+        sourceFiles.from(
+            fileTree("src/commonMain") {
+                include("**/*.kt")
+            },
+        )
+        buildScriptFile.set(layout.projectDirectory.file("build.gradle.kts"))
     }
 
 tasks.named("check") {
