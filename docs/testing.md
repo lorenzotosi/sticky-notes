@@ -5,7 +5,7 @@
 
 `commons/src/commonTest` contains domain scenarios shared by the JVM and ChromeHeadless targets. `browserDomainTest` is an alias for `jsBrowserTest`. The backend also has application service and persistence unit tests, real MongoDB integration tests, and an HTTP startup and liveness test.
 
-This guide explains how to execute the implemented tests and which [domain rules](domain.md) they cover. [R1 evidence](evidence/R1.md) records the observed domain and consumer results; [R3 evidence](evidence/R3.md) records checklist HTTP results and the available concurrency observations.
+This guide explains how to execute the implemented tests and which [domain rules](domain.md) they cover. [R1 evidence](evidence/R1.md) records the observed domain and consumer results; [R3 evidence](evidence/R3.md) records the results of the complete Kanban behaviour, including the checklist HTTP results, the concurrent commands, and the browser review of the interface.
 
 ## Test design
 
@@ -159,7 +159,7 @@ Run the focused HTTP tests with JDK 21:
   --tests 'stickynotes.integration.ChecklistHttpIntegrationTest.oversizedChunkedCommandPreservesTheStoredDocument'
 ```
 
-The focused HTTP suite covers the transport and size permutations; the MongoDB suite uses one representative rejection to prove persistence preservation. Results are recorded in [R3 HTTP and persistence evidence](evidence/R3.md).
+The focused HTTP suite covers the transport and size permutations; the MongoDB suite uses one representative rejection to prove persistence preservation. Results are recorded in [R3 acceptance evidence](evidence/R3.md).
 
 ## Backend persistence unit tests
 
@@ -250,7 +250,7 @@ Run all three tests with JDK 21 and a running Docker engine:
 
 The integration task uses the existing isolated MongoDB container and cleanup lifecycle. Each test closes both backend contexts and the HTTP client before dropping its database. Inspect `backend/build/test-results/integrationTest/TEST-stickynotes.integration.ConcurrentBoardTest.xml` and `backend/build/reports/tests/integrationTest/index.html`. A complete class run must show all three methods with zero failures, errors, or skips. A report filtered to one method proves only that scenario.
 
-These tests exercise HTTP, service orchestration, the shared JVM domain, and MongoDB through two application contexts in one JVM. They do not exercise separate JVM processes or database failover. [R3 evidence](evidence/R3.md#concurrent-commands-and-conditional-writes) distinguishes the inspected report from the maintainer-reported mutation result.
+These tests exercise HTTP, service orchestration, the shared JVM domain, and MongoDB through two application contexts in one JVM. They do not exercise separate JVM processes or database failover. [R3 evidence](evidence/R3.md#concurrent-commands-and-conditional-writes) records the executed concurrency scenarios; the mutation procedure above is a separate, repeatable check.
 
 ### Revision-filter mutation check
 
@@ -292,7 +292,7 @@ One sequence creates the twentieth item on the target note when another note fol
 
 Representative rejected labels, a missing item, and a stale revision check HTTP status, codes, and metadata through the real service. Each rejection compares the complete raw MongoDB document and a fresh GET with their pre-request values. Other malformed-input and domain combinations stay in the focused HTTP, service, and shared-domain suites.
 
-Inspect `backend/build/reports/tests/integrationTest/index.html` and `backend/build/test-results/integrationTest/TEST-stickynotes.integration.ChecklistHttpIntegrationTest.xml`. The Compose `tests` service runs the persistence and checklist suites. These tests cover HTTP, application orchestration, the shared JVM domain, and real MongoDB. They do not exercise the Vue interface or restart MongoDB. Recorded results and reproduction details are in [R3 HTTP and persistence evidence](evidence/R3.md).
+Inspect `backend/build/reports/tests/integrationTest/index.html` and `backend/build/test-results/integrationTest/TEST-stickynotes.integration.ChecklistHttpIntegrationTest.xml`. The Compose `tests` service runs the persistence and checklist suites. These tests cover HTTP, application orchestration, the shared JVM domain, and real MongoDB. They do not exercise the Vue interface or restart MongoDB. Recorded results and reproduction details are in [R3 acceptance evidence](evidence/R3.md).
 
 ## MongoDB outage and recovery (R3)
 
