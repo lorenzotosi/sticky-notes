@@ -26,7 +26,6 @@ The project is organized around these functional gates. They define integration 
 
 - [Requirements](requirements.md)
 - [UI and interaction design](ux.md)
-- [Accessible Kanban interface verification](accessibility.md)
 - [API contracts](contracts.md)
 - [OpenAPI definition](openapi.yaml)
 
@@ -36,6 +35,7 @@ The project is organized around these functional gates. They define integration 
 - [Glossary](glossary.md)
 - [Concurrent commands and the board revision](concurrency.md)
 - [Generated domain API reference](api/index.html)
+- [Accessibility verification](accessibility.md)
 - [Shared-domain acceptance evidence](evidence/R1.md)
 - [Persistent CRUD acceptance evidence](evidence/R2.md)
 - [R3 acceptance evidence](evidence/R3.md)

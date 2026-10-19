@@ -94,8 +94,10 @@ When an operation fails with `409 REVISION_CONFLICT`:
 
 * **No Drag-and-Drop Requirement**: All movements are executed via accessible `<button>` elements (e.g., "Move to Doing", "Move Up", "Move Down").
 * **Focus Restoration**:
-    * Closing an editor restores focus to the invoking card's "Edit" button.
-    * Deleting a note restores focus to the nearest sibling note or the "Add Note" button if the column becomes empty.
+    * Opening an editor moves focus into its first field.
+    * Closing an editor restores focus to the control that opened it.
+    * A deletion confirmation takes the focus and returns it to the deletion control when it is cancelled.
+    * Deleting a note moves focus to the first remaining card of the same column, or to the "Add Note" button if the column becomes empty.
 * **Form Controls**: Labels and input fields are explicitly associated via `id` and `for` attributes.
 
 ### 5.2 Visual & Sensory Cues

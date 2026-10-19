@@ -37,11 +37,12 @@ The focus colour keeps a ratio of 5.88:1 on the yellow note, 4.96:1 on the blue 
 | Opening the checklist editor | Focus moves to the new item field |
 | Renaming a checklist item | Focus moves to the rename field, which carries the accessible name "Nuova etichetta della voce" |
 | Cancelling a rename | Focus returns to the "Rinomina voce" button |
+| Saving a rename | While the request is in flight the rename button is disabled and cannot take the focus; when the request settles the focus returns to the "Rinomina voce" button |
 | Requesting a deletion | Focus moves to "Conferma eliminazione" inside the confirmation marked as `alertdialog` |
 | Cancelling a deletion | Focus returns to the "Elimina nota" button |
 | Confirming a deletion | Focus moves to the first remaining note of the same column, or to the "Nuova nota" button when the column becomes empty |
 
-The editors are inline panels rather than overlays, so they are announced by their heading and by the live region of the application, which reports loading, saving, and error states.
+The editors are inline panels rather than overlays. Opening one moves the focus into its first field, so the keyboard user lands on the form to fill in. The application exposes a live region that reports loading, saving, and error states; it does not announce the opening of an editor.
 
 ## Names and labels
 
@@ -91,8 +92,9 @@ The 197 character note with a 42 character unbroken token wraps over five lines 
 | The accessible name "Modifica motivo blocco" did not contain the visible label "Modifica blocco" | Automated audit | The name matches the visible label | `frontend/src/components/NoteCard.vue` |
 | The document language was `en` while the interface is Italian | Document inspection | The document declares `lang="it"` | `frontend/index.html` |
 | Focus was lost when the deletion confirmation replaced the card footer | Browser observation | Focus enters the confirmation and returns to the trigger when it is cancelled | `frontend/src/components/NoteCard.vue` |
-| Closing the WIP limit, block, and checklist editors returned focus nowhere, and closing the note editor always returned focus to the "Nuova nota" button | Browser observation | The control that opened an editor is remembered and refocused when the editor closes | `frontend/src/App.vue` |
-| The checklist rename field had no accessible name and received no focus | Browser observation | The field is named and focused, and cancelling restores the focus to the rename button | `frontend/src/components/ChecklistEditor.vue` |
+| Closing the WIP limit, block, and checklist editors returned focus nowhere, and closing the note editor always returned focus to the "Nuova nota" button | Browser observation | The control that opened the editor is captured from the click event and refocused when the editor closes, independently of the way the browser handles the focus of a clicked button | `frontend/src/App.vue` |
+| The checklist rename field had no accessible name and received no focus | Browser observation | The field is named and focused | `frontend/src/components/ChecklistEditor.vue` |
+| Saving a rename left the focus on the document body, because the rename button is disabled while the request is in flight | Browser observation | The focus returns to the rename button when the request settles | `frontend/src/components/ChecklistEditor.vue` |
 
 After the corrections the automated accessibility audit of the running interface reports no finding and scores the accessibility category with the maximum value.
 
@@ -101,4 +103,4 @@ After the corrections the automated accessibility audit of the running interface
 - No assistive technology was run. The verification used the accessibility tree exposed by the browser, the computed styles of the rendered interface, and an automated accessibility audit.
 - Contrast was measured for the single light theme of the interface.
 - Reflow was measured in frames of 360 and 640 CSS pixels instead of a resized browser window.
-- Focus movement is covered by component tests for the deletion confirmation, the closing of an editor, and the checklist rename. The remaining focus behaviour was observed in the browser only.
+- Focus movement is covered by component tests for the deletion confirmation, the closing of an editor, and the checklist rename, including the rename saved while the request is in flight. The remaining focus behaviour was observed in the browser only.
