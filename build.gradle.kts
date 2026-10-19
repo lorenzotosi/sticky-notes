@@ -88,6 +88,7 @@ val verifyLicense =
                     ".kotlin/**",
                     "**/build/**",
                     "**/node_modules/**",
+                    "**/coverage/**",
                     "**/dist/**",
                     "gradlew*",
                     "**/gradle-wrapper.properties",

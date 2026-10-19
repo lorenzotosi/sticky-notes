@@ -6,6 +6,7 @@ plugins {
     java
     alias(libs.plugins.spotless)
     alias(libs.plugins.spring.boot)
+    jacoco
 }
 
 java {
@@ -73,6 +74,35 @@ tasks.withType<JavaCompile>().configureEach {
 
 tasks.test {
     useJUnitPlatform()
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+val filteredMainClasses =
+    sourceSets.main.get().output.asFileTree.matching {
+        exclude("stickynotes/Main.class")
+    }
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    classDirectories.setFrom(filteredMainClasses)
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+}
+
+tasks.jacocoTestCoverageVerification {
+    dependsOn(tasks.jacocoTestReport)
+    classDirectories.setFrom(filteredMainClasses)
+    violationRules {
+        rule {
+            limit {
+                counter = "LINE"
+                value = "COVEREDRATIO"
+                minimum = "0.80".toBigDecimal()
+            }
+        }
+    }
 }
 
 val integrationTest =
@@ -88,5 +118,10 @@ val integrationTest =
     }
 
 tasks.named("check") {
-    dependsOn("spotlessCheck", integrationTest)
+    dependsOn(
+        "spotlessCheck",
+        tasks.jacocoTestReport,
+        tasks.jacocoTestCoverageVerification,
+        integrationTest,
+    )
 }

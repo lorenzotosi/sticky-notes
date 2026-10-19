@@ -23,6 +23,19 @@ export default defineConfig({
       deps: {
         inline: ['sticky-notes-domain']
       }
+    },
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'lcov', 'clover'],
+      reportsDirectory: './coverage',
+      include: ['src/**/*.{js,vue}'],
+      exclude: [
+        'src/main.js',
+        'src/**/*.test.js'
+      ],
+      thresholds: {
+        lines: 80
+      }
     }
   }
 })

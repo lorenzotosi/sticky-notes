@@ -186,4 +186,47 @@ describe('App.vue CRUD orchestration', () => {
 
     expect(wrapper.find('.board-column--doing').text()).toContain('Task')
   })
+
+  it('opens and closes wip limit, block, and checklist modals', async () => {
+    const mockBoard = {
+      id: 'main',
+      schemaVersion: 1,
+      revision: 1,
+      wipLimit: 3,
+      notes: [
+        {
+          id: 'note-1',
+          content: 'Task in progress',
+          color: 'YELLOW',
+          status: 'DOING',
+          blockedReason: null,
+          checklist: [{ id: 'item-1', label: 'Item 1', completed: false }]
+        }
+      ]
+    }
+
+    fetch.mockResolvedValue({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => mockBoard
+    })
+
+    const wrapper = mount(App)
+    await flushPromises()
+
+    await wrapper.find('button[aria-label="Modifica limite WIP"]').trigger('click')
+    expect(wrapper.find('.wip-limit-editor').exists()).toBe(true)
+    await wrapper.find('.wip-limit-editor__btn--cancel, .btn--cancel').trigger('click')
+    expect(wrapper.find('.wip-limit-editor').exists()).toBe(false)
+
+    await wrapper.find('button[aria-label="Blocca nota"]').trigger('click')
+    expect(wrapper.find('.block-editor').exists()).toBe(true)
+    await wrapper.find('.block-editor__btn--cancel, .btn--cancel').trigger('click')
+    expect(wrapper.find('.block-editor').exists()).toBe(false)
+
+    await wrapper.find('button[aria-label="Gestisci checklist"]').trigger('click')
+    expect(wrapper.find('.checklist-editor').exists()).toBe(true)
+    await wrapper.find('.checklist-editor__footer button').trigger('click')
+    expect(wrapper.find('.checklist-editor').exists()).toBe(false)
+  })
 })
