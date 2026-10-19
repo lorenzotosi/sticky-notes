@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani
 
+import org.gradle.testing.jacoco.tasks.JacocoCoverageVerification
+import org.gradle.testing.jacoco.tasks.JacocoReport
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.dokka)
     alias(libs.plugins.spotless)
     alias(libs.plugins.detekt)
     alias(libs.plugins.kotlinx.serialization)
+    jacoco
 }
 
 dokka {
@@ -55,8 +59,117 @@ kotlin {
     }
 }
 
+val jvmTestTask = tasks.named<Test>("jvmTest")
+
+val filteredCommonsClasses =
+    fileTree(layout.buildDirectory.dir("classes/kotlin/jvm/main")) {
+        exclude(
+            "**/*\$\$serializer.class",
+            "**/*\$serializer.class",
+            "**/*Serializer*.class",
+        )
+    }
+
+val jvmJacocoReport =
+    tasks.register<JacocoReport>("jvmJacocoReport") {
+        group = "verification"
+        description = "Generates JaCoCo XML and HTML coverage reports for the JVM domain target."
+        dependsOn(jvmTestTask)
+
+        executionData.setFrom(layout.buildDirectory.file("jacoco/jvmTest.exec"))
+        classDirectories.setFrom(filteredCommonsClasses)
+        sourceDirectories.setFrom(
+            files(
+                "src/commonMain/kotlin",
+                "src/jvmMain/kotlin",
+            ),
+        )
+
+        reports {
+            xml.required.set(true)
+            html.required.set(true)
+        }
+    }
+
+val jvmJacocoCoverageVerification =
+    tasks.register<JacocoCoverageVerification>("jvmJacocoCoverageVerification") {
+        group = "verification"
+        description = "Verifies minimum line coverage threshold on the shared domain JVM classes."
+        dependsOn(jvmJacocoReport)
+
+        executionData.setFrom(layout.buildDirectory.file("jacoco/jvmTest.exec"))
+        classDirectories.setFrom(filteredCommonsClasses)
+        sourceDirectories.setFrom(
+            files(
+                "src/commonMain/kotlin",
+                "src/jvmMain/kotlin",
+            ),
+        )
+
+        violationRules {
+            rule {
+                limit {
+                    counter = "LINE"
+                    value = "COVEREDRATIO"
+                    minimum = "0.80".toBigDecimal()
+                }
+            }
+        }
+    }
+
+val verifyDomainBoundaries =
+    tasks.register("verifyDomainBoundaries") {
+        group = "verification"
+        description = "Verifies that commons does not depend on infrastructure frameworks or import JVM APIs in commonMain."
+
+        val commonMainSources =
+            fileTree("src/commonMain") {
+                include("**/*.kt")
+            }
+        val buildScriptFile = file("build.gradle.kts")
+
+        inputs.files(commonMainSources)
+        inputs.file(buildScriptFile)
+
+        doLast {
+            val forbiddenImportRegex =
+                Regex("""^\s*import\s+(java\.|javax\.|jdk\.|org\.springframework\.|org\.mongodb\.)""")
+            val violations = mutableListOf<String>()
+
+            commonMainSources.files.forEach { sourceFile ->
+                sourceFile.readLines().forEachIndexed { index, line ->
+                    if (forbiddenImportRegex.containsMatchIn(line)) {
+                        violations.add("${sourceFile.relativeTo(projectDir)}:${index + 1}: forbidden import '$line'")
+                    }
+                }
+            }
+
+            val forbiddenBuildDependencyRegex =
+                Regex("""(org\.springframework|org\.mongodb|spring-boot|mongodb-driver)""")
+            buildScriptFile.readLines().forEachIndexed { index, line ->
+                val trimmed = line.trim()
+                if (!trimmed.startsWith("//") &&
+                    !trimmed.startsWith("Regex") &&
+                    forbiddenBuildDependencyRegex.containsMatchIn(trimmed)
+                ) {
+                    violations.add("build.gradle.kts:${index + 1}: forbidden infrastructure reference '$trimmed'")
+                }
+            }
+
+            check(violations.isEmpty()) {
+                "Domain boundary violations detected:\n${violations.joinToString("\n")}"
+            }
+        }
+    }
+
 tasks.named("check") {
-    dependsOn("spotlessCheck", "detekt")
+    dependsOn(
+        "spotlessCheck",
+        "detekt",
+        verifyDomainBoundaries,
+        jvmJacocoReport,
+        jvmJacocoCoverageVerification,
+    )
 }
 
 tasks.register("browserDomainTest") {

@@ -347,3 +347,12 @@ This is a manual integration check, separate from `:backend:check`. Use JDK 21, 
 - `frontend/src/composables/useBoard.test.js` uses a mocked API client and the real Kotlin/JS prevalidation to check loading, draft preservation, concurrent-command prevention, WIP rejection before dispatch, and board refresh on revision conflict. `NoteEditor.test.js` checks blank content with the shared validator; `domain.test.js` covers the facade's JSON and domain boundaries.
 - `backend/src/test/java/stickynotes/DomainInteropTest.java` verifies Java access to the shared JVM facade.
 - `backend/src/test/java/stickynotes/MainTest.java` verifies Spring Boot startup and HTTP liveness, as described [above](#backend-startup-and-liveness).
+
+## Code coverage and architectural boundary checks
+
+Coverage reports and domain boundary checks run as part of `./gradlew check` and `./gradlew fullBuild`:
+
+- **Shared domain (`:commons`)**: JaCoCo measures line coverage on the JVM target (`:commons:jvmJacocoReport`) and enforces a minimum 80% line coverage threshold (`:commons:jvmJacocoCoverageVerification`). Reports are generated at `commons/build/reports/jacoco/jvmJacocoReport/html/index.html` and `commons/build/reports/jacoco/jvmJacocoReport/jvmJacocoReport.xml`. Note that JVM JaCoCo coverage measures the shared Kotlin domain executed on the JVM; multi-runtime execution in headless Chrome is verified separately by `:commons:browserDomainTest` (`jsBrowserTest`).
+- **Backend (`:backend`)**: JaCoCo measures unit and HTTP test coverage (`:backend:jacocoTestReport`) and enforces a minimum 80% line coverage threshold (`:backend:jacocoTestCoverageVerification`), excluding only the `stickynotes.Main` bootstrap entry point. Reports are generated at `backend/build/reports/jacoco/test/html/index.html` and `backend/build/reports/jacoco/test/jacocoTestReport.xml`.
+- **Frontend (`:frontend`)**: Vitest with `@vitest/coverage-v8` measures coverage across maintained source files under `frontend/src/**/*.{js,vue}`, excluding `src/main.js`, test files, and the generated Kotlin/JS package (`sticky-notes-domain`), enforcing at least 80% line coverage. Reports are generated under `frontend/coverage/index.html` and `frontend/coverage/lcov.info`.
+- **Domain boundary verification (`:commons:verifyDomainBoundaries`)**: verifies that `commons/src/commonMain` contains no JVM-specific imports (`java.*`, `javax.*`, `jdk.*`) and no infrastructure imports (`org.springframework.*`, `org.mongodb.*`), and that `commons/build.gradle.kts` declares no Spring or MongoDB dependencies.
