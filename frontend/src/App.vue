@@ -9,12 +9,15 @@ import NoteEditor from './components/NoteEditor.vue'
 import WipLimitEditor from './components/WipLimitEditor.vue'
 import BlockEditor from './components/BlockEditor.vue'
 import ChecklistEditor from './components/ChecklistEditor.vue'
+import ConflictNotice from './components/ConflictNotice.vue'
 
 const {
   board,
   loading,
   saving,
   error,
+  conflictState,
+  clearConflict,
   fetchBoard,
   createNote,
   updateNote,
@@ -39,6 +42,8 @@ const blockingNote = ref(null)
 const isChecklistEditorOpen = ref(false)
 const checklistNote = ref(null)
 
+const draftOverride = ref(null)
+
 const currentDoingCount = computed(() => {
   return (board.value?.notes || []).filter(n => n.status === 'DOING').length
 })
@@ -50,6 +55,7 @@ function handleRetry() {
 function openCreateEditor() {
   editingNote.value = null
   isEditorOpen.value = true
+  draftOverride.value = null
 }
 
 function openEditEditor(note) {
@@ -60,6 +66,7 @@ function openEditEditor(note) {
 function closeEditor() {
   isEditorOpen.value = false
   editingNote.value = null
+  draftOverride.value = null
   if (createButtonRef.value) {
     createButtonRef.value.focus()
   }
@@ -175,6 +182,15 @@ async function handleDeleteChecklistItem({ noteId, itemId }) {
   }
 }
 
+function handleCreateFromConflictDraft({ content, color }) {
+  isBlockEditorOpen.value = false
+  isChecklistEditorOpen.value = false
+  editingNote.value = null
+  draftOverride.value = { content, color }
+  clearConflict()
+  isEditorOpen.value = true
+}
+
 onMounted(() => {
   fetchBoard().catch(() => {})
 })
@@ -204,6 +220,13 @@ onMounted(() => {
         <span v-else-if="saving">Salvataggio in corso</span>
         <span v-else-if="error">{{ error.message }}</span>
       </div>
+
+      <ConflictNotice
+        v-if="conflictState"
+        :conflict="conflictState"
+        @dismiss="clearConflict"
+        @create-from-draft="handleCreateFromConflictDraft"
+      />
     </header>
 
     <div
@@ -212,8 +235,9 @@ onMounted(() => {
     >
       <div class="app-modal__content">
         <NoteEditor
-          :initial-content="editingNote ? editingNote.content : ''"
-          :initial-color="editingNote ? editingNote.color : 'YELLOW'"
+          :key="editingNote ? editingNote.id : (draftOverride ? 'draft-recovery' : 'new')"
+          :initial-content="editingNote ? editingNote.content : (draftOverride ? draftOverride.content : '')"
+          :initial-color="editingNote ? editingNote.color : (draftOverride ? draftOverride.color : 'YELLOW')"
           :is-editing="Boolean(editingNote)"
           :saving="saving"
           :error-message="error ? error.message : ''"

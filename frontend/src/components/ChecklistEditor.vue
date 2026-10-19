@@ -2,7 +2,7 @@
 <!-- SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani -->
 
 <script setup>
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 
 const props = defineProps({
   note: {
@@ -76,7 +76,15 @@ function handleAddItem() {
     noteId: props.note.id,
     label: newLabel.value
   })
-  newLabel.value = ''
+
+  watch(
+    () => (props.note.checklist || []).length,
+    (newLen, oldLen) => {
+      if (newLen > oldLen && !props.errorMessage) {
+        newLabel.value = ''
+      }
+    }
+  )
 }
 
 function startRename(item) {
