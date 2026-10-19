@@ -35,6 +35,7 @@ const isEditorOpen = ref(false)
 const editingNote = ref(null)
 const createButtonRef = ref(null)
 const editorTriggerRef = ref(null)
+const appRootRef = ref(null)
 
 const isWipEditorOpen = ref(false)
 const isBlockEditorOpen = ref(false)
@@ -53,7 +54,12 @@ function handleRetry() {
   fetchBoard().catch(() => {})
 }
 
-function rememberEditorTrigger() {
+function rememberEditorTrigger(event) {
+  const clicked = event?.currentTarget
+  if (clicked) {
+    editorTriggerRef.value = clicked
+    return
+  }
   const active = document.activeElement
   editorTriggerRef.value = active && active !== document.body ? active : null
 }
@@ -71,8 +77,9 @@ function restoreEditorFocus() {
 }
 
 function focusAfterDelete(status) {
-  const column = status
-    ? document.querySelector(`.board-column--${status.toLowerCase()}`)
+  const root = appRootRef.value
+  const column = root && status
+    ? root.querySelector(`.board-column--${status.toLowerCase()}`)
     : null
   const nextEditButton = column?.querySelector('button[aria-label="Modifica nota"]')
   if (nextEditButton) {
@@ -91,8 +98,8 @@ function openCreateEditor() {
   draftOverride.value = null
 }
 
-function openEditEditor(note) {
-  rememberEditorTrigger()
+function openEditEditor(note, event) {
+  rememberEditorTrigger(event)
   editingNote.value = note
   isEditorOpen.value = true
 }
@@ -104,8 +111,8 @@ function closeEditor() {
   restoreEditorFocus()
 }
 
-function openWipEditor() {
-  rememberEditorTrigger()
+function openWipEditor(event) {
+  rememberEditorTrigger(event)
   isWipEditorOpen.value = true
 }
 
@@ -114,8 +121,8 @@ function closeWipEditor() {
   restoreEditorFocus()
 }
 
-function openBlockEditor(note) {
-  rememberEditorTrigger()
+function openBlockEditor(note, event) {
+  rememberEditorTrigger(event)
   blockingNote.value = note
   isBlockEditorOpen.value = true
 }
@@ -126,8 +133,8 @@ function closeBlockEditor() {
   restoreEditorFocus()
 }
 
-function openChecklistEditor(note) {
-  rememberEditorTrigger()
+function openChecklistEditor(note, event) {
+  rememberEditorTrigger(event)
   checklistNote.value = note
   isChecklistEditorOpen.value = true
 }
@@ -223,13 +230,13 @@ async function handleDeleteChecklistItem({ noteId, itemId }) {
   }
 }
 
-function handleCreateFromConflictDraft({ content, color }) {
+function handleCreateFromConflictDraft({ content, color }, event) {
   isBlockEditorOpen.value = false
   isChecklistEditorOpen.value = false
   editingNote.value = null
   draftOverride.value = { content, color }
   clearConflict()
-  rememberEditorTrigger()
+  rememberEditorTrigger(event)
   isEditorOpen.value = true
 }
 
@@ -239,7 +246,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="app-container">
+  <main
+    ref="appRootRef"
+    class="app-container"
+  >
     <header class="app-header">
       <div class="app-header__main">
         <h1>Sticky Notes Kanban</h1>

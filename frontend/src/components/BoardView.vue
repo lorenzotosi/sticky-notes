@@ -128,7 +128,7 @@ function handleReorder(status, index, { noteId, direction }) {
               class="btn btn--sm btn--secondary"
               :disabled="disabled"
               aria-label="Modifica limite WIP"
-              @click="emit('edit-wip-limit')"
+              @click="emit('edit-wip-limit', $event)"
             >
               Modifica limite
             </button>
@@ -161,13 +161,13 @@ function handleReorder(status, index, { noteId, direction }) {
             :disabled="disabled"
             :is-first="index === 0"
             :is-last="index === notesByStatus[col.status].length - 1"
-            @edit="emit('edit-note', note)"
+            @edit="(note, event) => emit('edit-note', note, event)"
             @delete="emit('delete-note', note.id)"
             @move-status="handleMoveStatus"
             @reorder="(e) => handleReorder(col.status, index, e)"
-            @block="(n) => emit('block-note', n)"
-            @unblock="(id) => emit('unblock-note', id)"
-            @manage-checklist="(n) => emit('manage-checklist', n)"
+            @block="(note, event) => emit('block-note', note, event)"
+            @unblock="(id, event) => emit('unblock-note', id, event)"
+            @manage-checklist="(note, event) => emit('manage-checklist', note, event)"
             @toggle-checklist-item="(e) => emit('toggle-checklist-item', e)"
           />
         </div>

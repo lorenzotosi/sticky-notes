@@ -146,7 +146,7 @@ function handleItemToggle(item) {
           class="btn btn--sm btn--secondary"
           :disabled="disabled"
           aria-label="Gestisci checklist"
-          @click="emit('manage-checklist', note)"
+          @click="emit('manage-checklist', note, $event)"
         >
           Gestisci
         </button>
@@ -284,7 +284,7 @@ function handleItemToggle(item) {
             class="btn btn--sm btn--warning"
             :disabled="disabled"
             aria-label="Blocca nota"
-            @click="emit('block', note)"
+            @click="emit('block', note, $event)"
           >
             Blocca
           </button>
@@ -294,7 +294,7 @@ function handleItemToggle(item) {
               class="btn btn--sm btn--warning"
               :disabled="disabled"
               aria-label="Modifica blocco"
-              @click="emit('block', note)"
+              @click="emit('block', note, $event)"
             >
               Modifica blocco
             </button>
@@ -303,7 +303,7 @@ function handleItemToggle(item) {
               class="btn btn--sm btn--success"
               :disabled="disabled"
               aria-label="Sblocca nota"
-              @click="emit('unblock', note.id)"
+              @click="emit('unblock', note.id, $event)"
             >
               Sblocca
             </button>
@@ -317,7 +317,7 @@ function handleItemToggle(item) {
           class="btn btn--sm btn--secondary"
           :disabled="disabled"
           aria-label="Modifica nota"
-          @click="emit('edit', note)"
+          @click="emit('edit', note, $event)"
         >
           Modifica
         </button>

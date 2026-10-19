@@ -72,7 +72,7 @@ async function copyPreservedText() {
           v-if="conflict.targetDeleted"
           type="button"
           class="btn btn--sm btn--primary"
-          @click="emit('create-from-draft', { content: conflict.preservedText, color: conflict.preservedColor || 'YELLOW' })"
+          @click="emit('create-from-draft', { content: conflict.preservedText, color: conflict.preservedColor || 'YELLOW' }, $event)"
         >
           Crea come nuova nota
         </button>

@@ -258,7 +258,6 @@ describe('App.vue CRUD orchestration', () => {
     await flushPromises()
 
     const wipButton = wrapper.find('button[aria-label="Modifica limite WIP"]')
-    wipButton.element.focus()
     await wipButton.trigger('click')
     expect(wrapper.find('.wip-limit-editor').exists()).toBe(true)
 
@@ -267,7 +266,6 @@ describe('App.vue CRUD orchestration', () => {
     expect(document.activeElement).toBe(wipButton.element)
 
     const checklistButton = wrapper.find('button[aria-label="Gestisci checklist"]')
-    checklistButton.element.focus()
     await checklistButton.trigger('click')
     expect(wrapper.find('.checklist-editor').exists()).toBe(true)
 

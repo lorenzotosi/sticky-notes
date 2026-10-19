@@ -3,6 +3,7 @@
 
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
+import { defineComponent, h, ref } from 'vue'
 import ChecklistEditor from './ChecklistEditor.vue'
 
 describe('ChecklistEditor.vue', () => {
@@ -79,6 +80,45 @@ describe('ChecklistEditor.vue', () => {
     expect(document.activeElement).toBe(renameInput.element)
 
     await wrapper.find('.btn--cancel').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(document.activeElement).toBe(wrapper.find('button[aria-label="Rinomina voce"]').element)
+
+    wrapper.unmount()
+  })
+
+  it('restores focus to the rename button when the rename request settles', async () => {
+    const Host = defineComponent({
+      setup() {
+        const saving = ref(false)
+        const note = ref(sampleNote)
+        const onUpdateItemLabel = () => {
+          saving.value = true
+        }
+        return { saving, note, onUpdateItemLabel }
+      },
+      render() {
+        return h(ChecklistEditor, {
+          note: this.note,
+          saving: this.saving,
+          'onUpdate-item-label': this.onUpdateItemLabel
+        })
+      }
+    })
+
+    const wrapper = mount(Host, { attachTo: document.body })
+
+    await wrapper.find('button[aria-label="Rinomina voce"]').trigger('click')
+    await wrapper.vm.$nextTick()
+    await wrapper.find('.checklist-editor__input--inline').setValue('Voce rinominata')
+    await wrapper.find('.checklist-editor__edit-inline .btn--success').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.vm.saving).toBe(true)
+    expect(document.activeElement).not.toBe(wrapper.find('button[aria-label="Rinomina voce"]').element)
+
+    wrapper.vm.saving = false
+    await wrapper.vm.$nextTick()
     await wrapper.vm.$nextTick()
 
     expect(document.activeElement).toBe(wrapper.find('button[aria-label="Rinomina voce"]').element)

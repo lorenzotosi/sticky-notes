@@ -32,6 +32,8 @@ const clientError = ref('')
 const editingItemId = ref(null)
 const editingItemLabel = ref('')
 const newLabelInputRef = ref(null)
+const rootRef = ref(null)
+const pendingRenameFocusId = ref(null)
 
 const maxItems = 20
 const maxLabelLength = 120
@@ -92,25 +94,41 @@ async function startRename(item) {
   editingItemId.value = item.id
   editingItemLabel.value = item.label
   await nextTick()
-  const input = document.querySelector('.checklist-editor__input--inline')
+  const input = rootRef.value?.querySelector('.checklist-editor__input--inline')
   if (input) {
     input.focus()
   }
 }
 
 function focusRenameButton(itemId) {
-  const button = document.querySelector(`button[data-rename-item="${itemId}"]`)
-  if (button) {
+  const button = rootRef.value?.querySelector(`button[data-rename-item="${itemId}"]`)
+  if (button && !button.disabled) {
     button.focus()
+    return true
   }
+  return false
+}
+
+function endRename() {
+  editingItemId.value = null
+  editingItemLabel.value = ''
 }
 
 function cancelRename() {
   const itemId = editingItemId.value
-  editingItemId.value = null
-  editingItemLabel.value = ''
+  endRename()
   nextTick(() => focusRenameButton(itemId))
 }
+
+watch(
+  () => props.saving,
+  (saving) => {
+    if (saving || !pendingRenameFocusId.value) return
+    const itemId = pendingRenameFocusId.value
+    pendingRenameFocusId.value = null
+    nextTick(() => focusRenameButton(itemId))
+  }
+)
 
 function saveRename(item) {
   clientError.value = ''
@@ -127,13 +145,17 @@ function saveRename(item) {
   }
 
   if (trimmed !== item.label) {
+    pendingRenameFocusId.value = item.id
     emit('update-item-label', {
       noteId: props.note.id,
       itemId: item.id,
       label: editingItemLabel.value
     })
+    endRename()
+    nextTick(() => focusRenameButton(item.id))
+    return
   }
-  cancelRename()
+  endRename()
 }
 
 function handleToggle(item) {
@@ -155,7 +177,10 @@ function handleDelete(itemId) {
 </script>
 
 <template>
-  <div class="checklist-editor">
+  <div
+    ref="rootRef"
+    class="checklist-editor"
+  >
     <div class="checklist-editor__header">
       <h3 class="checklist-editor__title">
         Gestione Checklist
