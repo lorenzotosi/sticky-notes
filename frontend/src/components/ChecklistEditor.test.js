@@ -62,4 +62,27 @@ describe('ChecklistEditor.vue', () => {
     expect(wrapper.find('input[type="checkbox"]').attributes('disabled')).toBeDefined()
     expect(wrapper.find('button[aria-label="Rimuovi voce"]').exists()).toBe(false)
   })
+
+  it('focuses the rename field and returns focus to the rename button', async () => {
+    const wrapper = mount(ChecklistEditor, {
+      props: { note: sampleNote },
+      attachTo: document.body
+    })
+
+    const renameButton = wrapper.find('button[aria-label="Rinomina voce"]')
+    renameButton.element.focus()
+    await renameButton.trigger('click')
+    await wrapper.vm.$nextTick()
+
+    const renameInput = wrapper.find('.checklist-editor__input--inline')
+    expect(renameInput.attributes('aria-label')).toBe('Nuova etichetta della voce')
+    expect(document.activeElement).toBe(renameInput.element)
+
+    await wrapper.find('.btn--cancel').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(document.activeElement).toBe(wrapper.find('button[aria-label="Rinomina voce"]').element)
+
+    wrapper.unmount()
+  })
 })

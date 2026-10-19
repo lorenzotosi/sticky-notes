@@ -251,7 +251,7 @@ function handleReorder(status, index, { noteId, direction }) {
 }
 
 .board-column__empty {
-  color: #6b7280;
+  color: #4b5563;
   font-size: 0.875rem;
   font-style: italic;
   padding: 1rem 0;

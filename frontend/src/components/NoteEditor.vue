@@ -269,7 +269,9 @@ function handleSubmit() {
 }
 
 .note-editor__button:disabled {
-  opacity: 0.6;
+  background-color: #e5e7eb;
+  color: #4b5563;
+  border-color: #d1d5db;
   cursor: not-allowed;
 }
 </style>

@@ -2,7 +2,7 @@
 <!-- SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani -->
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 
 const props = defineProps({
   note: {
@@ -35,6 +35,8 @@ const emit = defineEmits([
 ])
 
 const isConfirmingDelete = ref(false)
+const deleteButtonRef = ref(null)
+const confirmDeleteButtonRef = ref(null)
 
 const completedItemsCount = computed(() => {
   return (props.note.checklist || []).filter(item => item.completed).length
@@ -53,12 +55,21 @@ const colorLabels = {
 
 const colorLabel = computed(() => colorLabels[props.note.color] || props.note.color)
 
-function requestDelete() {
+async function requestDelete() {
   isConfirmingDelete.value = true
+  await nextTick()
+  if (confirmDeleteButtonRef.value) {
+    confirmDeleteButtonRef.value.focus()
+  }
 }
 
 function cancelDelete() {
   isConfirmingDelete.value = false
+  nextTick(() => {
+    if (deleteButtonRef.value) {
+      deleteButtonRef.value.focus()
+    }
+  })
 }
 
 function confirmDelete() {
@@ -181,6 +192,7 @@ function handleItemToggle(item) {
           Annulla
         </button>
         <button
+          ref="confirmDeleteButtonRef"
           type="button"
           class="btn btn--sm btn--danger"
           :disabled="disabled"
@@ -281,7 +293,7 @@ function handleItemToggle(item) {
               type="button"
               class="btn btn--sm btn--warning"
               :disabled="disabled"
-              aria-label="Modifica motivo blocco"
+              aria-label="Modifica blocco"
               @click="emit('block', note)"
             >
               Modifica blocco
@@ -310,6 +322,7 @@ function handleItemToggle(item) {
           Modifica
         </button>
         <button
+          ref="deleteButtonRef"
           type="button"
           class="btn btn--sm btn--danger-ghost"
           :disabled="disabled"
@@ -425,7 +438,7 @@ function handleItemToggle(item) {
 
 .note-card__checklist-item--completed span {
   text-decoration: line-through;
-  opacity: 0.65;
+  color: #4b5563;
 }
 
 .note-card__footer {

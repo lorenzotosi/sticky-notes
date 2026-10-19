@@ -87,15 +87,29 @@ function handleAddItem() {
   )
 }
 
-function startRename(item) {
+async function startRename(item) {
   if (isDone.value) return
   editingItemId.value = item.id
   editingItemLabel.value = item.label
+  await nextTick()
+  const input = document.querySelector('.checklist-editor__input--inline')
+  if (input) {
+    input.focus()
+  }
+}
+
+function focusRenameButton(itemId) {
+  const button = document.querySelector(`button[data-rename-item="${itemId}"]`)
+  if (button) {
+    button.focus()
+  }
 }
 
 function cancelRename() {
+  const itemId = editingItemId.value
   editingItemId.value = null
   editingItemLabel.value = ''
+  nextTick(() => focusRenameButton(itemId))
 }
 
 function saveRename(item) {
@@ -234,6 +248,7 @@ function handleDelete(itemId) {
             v-model="editingItemLabel"
             type="text"
             class="checklist-editor__input checklist-editor__input--inline"
+            aria-label="Nuova etichetta della voce"
             :disabled="saving"
             @keyup.enter="saveRename(item)"
             @keyup.esc="cancelRename"
@@ -271,6 +286,7 @@ function handleDelete(itemId) {
             type="button"
             class="btn btn--sm btn--secondary"
             :disabled="saving"
+            :data-rename-item="item.id"
             aria-label="Rinomina voce"
             @click="startRename(item)"
           >
@@ -373,7 +389,7 @@ function handleDelete(itemId) {
   position: absolute;
   right: 0.5rem;
   font-size: 0.6875rem;
-  color: #9ca3af;
+  color: #4b5563;
 }
 
 .checklist-editor__empty {
@@ -411,7 +427,7 @@ function handleDelete(itemId) {
 
 .checklist-editor__item-label--completed {
   text-decoration: line-through;
-  opacity: 0.6;
+  color: #4b5563;
 }
 
 .checklist-editor__edit-inline {

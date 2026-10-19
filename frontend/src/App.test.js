@@ -229,4 +229,52 @@ describe('App.vue CRUD orchestration', () => {
     await wrapper.find('.checklist-editor__footer button').trigger('click')
     expect(wrapper.find('.checklist-editor').exists()).toBe(false)
   })
+
+  it('restores focus to the control that opened the editor', async () => {
+    const mockBoard = {
+      id: 'main',
+      schemaVersion: 1,
+      revision: 1,
+      wipLimit: 3,
+      notes: [
+        {
+          id: 'note-1',
+          content: 'Task in progress',
+          color: 'YELLOW',
+          status: 'DOING',
+          blockedReason: null,
+          checklist: []
+        }
+      ]
+    }
+
+    fetch.mockResolvedValue({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => mockBoard
+    })
+
+    const wrapper = mount(App, { attachTo: document.body })
+    await flushPromises()
+
+    const wipButton = wrapper.find('button[aria-label="Modifica limite WIP"]')
+    wipButton.element.focus()
+    await wipButton.trigger('click')
+    expect(wrapper.find('.wip-limit-editor').exists()).toBe(true)
+
+    await wrapper.find('.wip-limit-editor .btn--cancel').trigger('click')
+    expect(wrapper.find('.wip-limit-editor').exists()).toBe(false)
+    expect(document.activeElement).toBe(wipButton.element)
+
+    const checklistButton = wrapper.find('button[aria-label="Gestisci checklist"]')
+    checklistButton.element.focus()
+    await checklistButton.trigger('click')
+    expect(wrapper.find('.checklist-editor').exists()).toBe(true)
+
+    await wrapper.find('.checklist-editor__footer button').trigger('click')
+    expect(wrapper.find('.checklist-editor').exists()).toBe(false)
+    expect(document.activeElement).toBe(checklistButton.element)
+
+    wrapper.unmount()
+  })
 })

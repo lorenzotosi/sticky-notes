@@ -2,7 +2,7 @@
 <!-- SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani -->
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useBoard } from './composables/useBoard.js'
 import BoardView from './components/BoardView.vue'
 import NoteEditor from './components/NoteEditor.vue'
@@ -34,6 +34,7 @@ const {
 const isEditorOpen = ref(false)
 const editingNote = ref(null)
 const createButtonRef = ref(null)
+const editorTriggerRef = ref(null)
 
 const isWipEditorOpen = ref(false)
 const isBlockEditorOpen = ref(false)
@@ -52,13 +53,46 @@ function handleRetry() {
   fetchBoard().catch(() => {})
 }
 
+function rememberEditorTrigger() {
+  const active = document.activeElement
+  editorTriggerRef.value = active && active !== document.body ? active : null
+}
+
+function restoreEditorFocus() {
+  const trigger = editorTriggerRef.value
+  editorTriggerRef.value = null
+  if (trigger && trigger.isConnected) {
+    trigger.focus()
+    return
+  }
+  if (createButtonRef.value) {
+    createButtonRef.value.focus()
+  }
+}
+
+function focusAfterDelete(status) {
+  const column = status
+    ? document.querySelector(`.board-column--${status.toLowerCase()}`)
+    : null
+  const nextEditButton = column?.querySelector('button[aria-label="Modifica nota"]')
+  if (nextEditButton) {
+    nextEditButton.focus()
+    return
+  }
+  if (createButtonRef.value) {
+    createButtonRef.value.focus()
+  }
+}
+
 function openCreateEditor() {
+  rememberEditorTrigger()
   editingNote.value = null
   isEditorOpen.value = true
   draftOverride.value = null
 }
 
 function openEditEditor(note) {
+  rememberEditorTrigger()
   editingNote.value = note
   isEditorOpen.value = true
 }
@@ -67,20 +101,21 @@ function closeEditor() {
   isEditorOpen.value = false
   editingNote.value = null
   draftOverride.value = null
-  if (createButtonRef.value) {
-    createButtonRef.value.focus()
-  }
+  restoreEditorFocus()
 }
 
 function openWipEditor() {
+  rememberEditorTrigger()
   isWipEditorOpen.value = true
 }
 
 function closeWipEditor() {
   isWipEditorOpen.value = false
+  restoreEditorFocus()
 }
 
 function openBlockEditor(note) {
+  rememberEditorTrigger()
   blockingNote.value = note
   isBlockEditorOpen.value = true
 }
@@ -88,9 +123,11 @@ function openBlockEditor(note) {
 function closeBlockEditor() {
   isBlockEditorOpen.value = false
   blockingNote.value = null
+  restoreEditorFocus()
 }
 
 function openChecklistEditor(note) {
+  rememberEditorTrigger()
   checklistNote.value = note
   isChecklistEditorOpen.value = true
 }
@@ -98,6 +135,7 @@ function openChecklistEditor(note) {
 function closeChecklistEditor() {
   isChecklistEditorOpen.value = false
   checklistNote.value = null
+  restoreEditorFocus()
 }
 
 async function handleMoveNote({ noteId, targetStatus, destinationIndex }) {
@@ -120,8 +158,11 @@ async function handleSaveNote(payload) {
 }
 
 async function handleDeleteNote(noteId) {
+  const deletedNote = board.value?.notes?.find(note => note.id === noteId)
   try {
     await deleteNote(noteId)
+    await nextTick()
+    focusAfterDelete(deletedNote?.status)
   } catch {
   }
 }
@@ -188,6 +229,7 @@ function handleCreateFromConflictDraft({ content, color }) {
   editingNote.value = null
   draftOverride.value = { content, color }
   clearConflict()
+  rememberEditorTrigger()
   isEditorOpen.value = true
 }
 
