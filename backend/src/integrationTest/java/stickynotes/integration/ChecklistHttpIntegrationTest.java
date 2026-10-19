@@ -368,6 +368,77 @@ class ChecklistHttpIntegrationTest {
         assertEquals("itemId", error.path("field").stringValue());
     }
 
+    @Test
+    void allDocumentedEndpointsReturnTheirContractStatusAndPersist() throws Exception {
+        JsonNode board = getBoard();
+        assertStored(board, 5);
+
+        var createdNote = response(
+                send("POST", "/api/board/notes", "{\"content\":\"Contract note\",\"expectedRevision\":5}"), 201);
+        String createdNoteId = createdNote.path("createdNoteId").stringValue();
+        board = createdNote.path("board");
+        assertStored(board, 6);
+
+        JsonNode note = note(board, createdNoteId);
+        assertTrue(note.has("blockedReason"));
+        assertTrue(note.path("blockedReason").isNull());
+        assertTrue(note.path("checklist").isArray());
+        assertEquals(0, note.path("checklist").size());
+
+        board = response(
+                send(
+                        "PATCH",
+                        "/api/board/notes/" + createdNoteId,
+                        "{\"content\":\"Updated contract note\",\"expectedRevision\":6}"),
+                200);
+        assertStored(board, 7);
+
+        board = response(send("DELETE", "/api/board/notes/" + createdNoteId + "?expectedRevision=7", null), 200);
+        assertStored(board, 8);
+
+        board = response(send("PUT", "/api/board/wip-limit", "{\"limit\":2,\"expectedRevision\":8}"), 200);
+        assertStored(board, 9);
+
+        board = response(
+                send(
+                        "POST",
+                        NOTE + "/move",
+                        "{\"targetStatus\":\"DOING\",\"destinationIndex\":0,\"expectedRevision\":9}"),
+                200);
+        assertStored(board, 10);
+
+        board = response(send("PUT", NOTE + "/block", "{\"reason\":\"Waiting\",\"expectedRevision\":10}"), 200);
+        assertStored(board, 11);
+
+        board = response(send("DELETE", NOTE + "/block?expectedRevision=11", null), 200);
+        assertStored(board, 12);
+
+        var createdItem =
+                response(send("POST", CHECKLIST, "{\"label\":\"Contract item\",\"expectedRevision\":12}"), 201);
+        String itemId = createdItem.path("createdItemId").stringValue();
+        board = createdItem.path("board");
+        assertStored(board, 13);
+
+        board = response(send("PATCH", CHECKLIST + "/" + itemId, "{\"completed\":true,\"expectedRevision\":13}"), 200);
+        assertStored(board, 14);
+
+        board = response(send("DELETE", CHECKLIST + "/" + itemId + "?expectedRevision=14", null), 200);
+        assertStored(board, 15);
+    }
+
+    @Test
+    void staleRevisionTakesPrecedenceOverMissingNote() throws Exception {
+        var error = assertRejected(
+                "PATCH",
+                "/api/board/notes/missing",
+                "{\"content\":\"Changed\",\"expectedRevision\":4}",
+                409,
+                "REVISION_CONFLICT");
+
+        assertEquals(5, error.path("currentRevision").intValue());
+        assertFalse(error.has("field"));
+    }
+
     private void startBackend() {
         backend = new SpringApplication(Main.class)
                 .run(
