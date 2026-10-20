@@ -13,6 +13,28 @@ java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get().toInt()))
 }
 
+/*
+ * A release build passes the released version through the `releaseVersion`
+ * property. A local build is not a release, so it identifies the commit the
+ * artifact was produced from instead of claiming a version that was never
+ * published.
+ */
+val gitRevisionOutput: String =
+    providers
+        .exec {
+            workingDir(rootDir)
+            commandLine("git", "rev-parse", "HEAD")
+            isIgnoreExitValue = true
+        }.standardOutput
+        .asText
+        .getOrElse("")
+        .trim()
+
+val gitRevision: String = gitRevisionOutput.ifEmpty { "unknown" }
+
+val releaseVersion: String =
+    providers.gradleProperty("releaseVersion").getOrElse("0.0.0-dev+${gitRevision.take(12)}")
+
 spotless {
     java {
         target("src/**/*.java")
@@ -72,6 +94,20 @@ tasks.withType<JavaCompile>().configureEach {
 }
 */
 
+tasks.bootJar {
+    // The archive name is fixed, so the delivery pipeline, the documentation and
+    // the container build always find the same artifact whatever version the
+    // build carries.
+    archiveFileName.set("backend.jar")
+    manifest {
+        attributes(
+            "Implementation-Title" to "Sticky Notes backend",
+            "Implementation-Version" to releaseVersion,
+            "Implementation-Revision" to gitRevision,
+        )
+    }
+}
+
 tasks.test {
     useJUnitPlatform()
     finalizedBy(tasks.jacocoTestReport)
@@ -125,3 +161,32 @@ tasks.named("check") {
         integrationTest,
     )
 }
+
+/*
+ * The runtime image is assembled from the JAR produced by the build, so the
+ * image carries the application only: no Gradle runtime, no sources, no build
+ * cache. The version and the commit are passed as build arguments and stored as
+ * image labels, so a candidate image identifies the source it was produced from.
+ */
+val backendImageTag = "sticky-notes-backend:${releaseVersion.replace('+', '-')}"
+
+val dockerImage =
+    tasks.register<Exec>("dockerImage") {
+        group = "build"
+        description = "Builds the non-root backend runtime image $backendImageTag from the verified JAR."
+        dependsOn(tasks.bootJar)
+        workingDir(rootDir)
+        commandLine(
+            "docker",
+            "build",
+            "--file",
+            "backend/Dockerfile",
+            "--tag",
+            backendImageTag,
+            "--build-arg",
+            "VERSION=$releaseVersion",
+            "--build-arg",
+            "REVISION=$gitRevision",
+            ".",
+        )
+    }

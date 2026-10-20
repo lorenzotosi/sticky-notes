@@ -347,6 +347,7 @@ This is a manual integration check, separate from `:backend:check`. Use JDK 21, 
 - `frontend/src/composables/useBoard.test.js` uses a mocked API client and the real Kotlin/JS prevalidation to check loading, draft preservation, concurrent-command prevention, WIP rejection before dispatch, and board refresh on revision conflict. `NoteEditor.test.js` checks blank content with the shared validator; `domain.test.js` covers the facade's JSON and domain boundaries.
 - `backend/src/test/java/stickynotes/DomainInteropTest.java` verifies Java access to the shared JVM facade.
 - `backend/src/test/java/stickynotes/MainTest.java` verifies Spring Boot startup and HTTP liveness, as described [above](#backend-startup-and-liveness).
+- `backend/src/test/java/stickynotes/container/BackendImagePolicyTest.java` verifies the runtime image contract: a base image pinned to a digest, a single copied artifact, an unprivileged user, and an entrypoint in exec form with a declared stop signal.
 
 ## Code coverage and architectural boundary checks
 

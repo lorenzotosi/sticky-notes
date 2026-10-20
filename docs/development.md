@@ -56,6 +56,7 @@ The project unifies all module checks into a non-circular Gradle task graph.
 | `./gradlew fullTest` | Runs the Commons checks and all backend and frontend test suites without producing every final deliverable. |
 | `./gradlew check` | Runs repository-wide verification: formatting, Detekt, license validation, JVM and JavaScript tests, frontend linting, and frontend tests. |
 | `./gradlew fullBuild` | Runs `check`, then builds the Commons libraries, backend executable JAR, frontend production bundle, and documentation artifact. |
+| `./gradlew :backend:dockerImage` | Builds the non-root backend runtime image from the verified JAR. Requires a running Docker engine. The image tag follows the `releaseVersion` property; without it the build identifies its commit. See [deployment](deployment.md#backend-runtime-image). |
 | `./gradlew :commons:browserDomainTest` | Runs the shared Commons domain tests in ChromeHeadless through the Kotlin/JS target. |
 | `./gradlew :frontend:frontendInstall` | Installs the exact npm dependencies recorded in `frontend/package-lock.json` by running `npm ci`. |
 | `./gradlew :frontend:frontendLint` | Installs the frontend dependencies when necessary and runs the ESLint checks. |
@@ -112,7 +113,7 @@ Build and run the executable JAR with JDK 21:
 java -jar backend/build/libs/backend.jar --spring.profiles.active=local
 ```
 
-Stop an existing backend process with `Ctrl+C` before starting another on the same port. `fullBuild` also produces this JAR through `:backend:build`. See [testing](testing.md#backend-startup-and-liveness) for the automated startup check and [deployment](deployment.md) for release packaging.
+Stop an existing backend process with `Ctrl+C` before starting another on the same port. `fullBuild` also produces this JAR through `:backend:build`. See [testing](testing.md#backend-startup-and-liveness) for the automated startup check and [deployment](deployment.md) for release packaging and for the runtime image that carries the same JAR.
 
 
 ## Frontend development and local stack
