@@ -150,7 +150,26 @@ describe('NoteCard.vue', () => {
     }
     const wrapper = mount(NoteCard, { props: { note: doneNote } })
     expect(wrapper.find('button[aria-label="Blocca nota"]').exists()).toBe(false)
-    expect(wrapper.find('button[aria-label="Modifica motivo blocco"]').exists()).toBe(false)
+    expect(wrapper.find('button[aria-label="Modifica blocco"]').exists()).toBe(false)
+  })
+
+  it('moves focus into the delete confirmation and back when cancelled', async () => {
+    const wrapper = mount(NoteCard, { props: { note: sampleNote }, attachTo: document.body })
+    const deleteBtn = wrapper.find('button[aria-label="Elimina nota"]')
+    deleteBtn.element.focus()
+
+    await deleteBtn.trigger('click')
+    await wrapper.vm.$nextTick()
+
+    const confirmBtn = wrapper.find('.btn--danger')
+    expect(document.activeElement).toBe(confirmBtn.element)
+
+    await wrapper.find('.btn--cancel').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(document.activeElement).toBe(wrapper.find('button[aria-label="Elimina nota"]').element)
+
+    wrapper.unmount()
   })
 
 })

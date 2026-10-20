@@ -32,6 +32,8 @@ const clientError = ref('')
 const editingItemId = ref(null)
 const editingItemLabel = ref('')
 const newLabelInputRef = ref(null)
+const rootRef = ref(null)
+const pendingRenameFocusId = ref(null)
 
 const maxItems = 20
 const maxLabelLength = 120
@@ -87,16 +89,46 @@ function handleAddItem() {
   )
 }
 
-function startRename(item) {
+async function startRename(item) {
   if (isDone.value) return
   editingItemId.value = item.id
   editingItemLabel.value = item.label
+  await nextTick()
+  const input = rootRef.value?.querySelector('.checklist-editor__input--inline')
+  if (input) {
+    input.focus()
+  }
 }
 
-function cancelRename() {
+function focusRenameButton(itemId) {
+  const button = rootRef.value?.querySelector(`button[data-rename-item="${itemId}"]`)
+  if (button && !button.disabled) {
+    button.focus()
+    return true
+  }
+  return false
+}
+
+function endRename() {
   editingItemId.value = null
   editingItemLabel.value = ''
 }
+
+function cancelRename() {
+  const itemId = editingItemId.value
+  endRename()
+  nextTick(() => focusRenameButton(itemId))
+}
+
+watch(
+  () => props.saving,
+  (saving) => {
+    if (saving || !pendingRenameFocusId.value) return
+    const itemId = pendingRenameFocusId.value
+    pendingRenameFocusId.value = null
+    nextTick(() => focusRenameButton(itemId))
+  }
+)
 
 function saveRename(item) {
   clientError.value = ''
@@ -113,13 +145,17 @@ function saveRename(item) {
   }
 
   if (trimmed !== item.label) {
+    pendingRenameFocusId.value = item.id
     emit('update-item-label', {
       noteId: props.note.id,
       itemId: item.id,
       label: editingItemLabel.value
     })
+    endRename()
+    nextTick(() => focusRenameButton(item.id))
+    return
   }
-  cancelRename()
+  endRename()
 }
 
 function handleToggle(item) {
@@ -141,7 +177,10 @@ function handleDelete(itemId) {
 </script>
 
 <template>
-  <div class="checklist-editor">
+  <div
+    ref="rootRef"
+    class="checklist-editor"
+  >
     <div class="checklist-editor__header">
       <h3 class="checklist-editor__title">
         Gestione Checklist
@@ -234,6 +273,7 @@ function handleDelete(itemId) {
             v-model="editingItemLabel"
             type="text"
             class="checklist-editor__input checklist-editor__input--inline"
+            aria-label="Nuova etichetta della voce"
             :disabled="saving"
             @keyup.enter="saveRename(item)"
             @keyup.esc="cancelRename"
@@ -271,6 +311,7 @@ function handleDelete(itemId) {
             type="button"
             class="btn btn--sm btn--secondary"
             :disabled="saving"
+            :data-rename-item="item.id"
             aria-label="Rinomina voce"
             @click="startRename(item)"
           >
@@ -373,7 +414,7 @@ function handleDelete(itemId) {
   position: absolute;
   right: 0.5rem;
   font-size: 0.6875rem;
-  color: #9ca3af;
+  color: #4b5563;
 }
 
 .checklist-editor__empty {
@@ -411,7 +452,7 @@ function handleDelete(itemId) {
 
 .checklist-editor__item-label--completed {
   text-decoration: line-through;
-  opacity: 0.6;
+  color: #4b5563;
 }
 
 .checklist-editor__edit-inline {
