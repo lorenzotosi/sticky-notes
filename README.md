@@ -51,6 +51,16 @@ java -jar backend/build/libs/backend.jar --spring.profiles.active=local
 
 Stop an existing backend process before starting another instance on the same port. Press `Ctrl+C` in its terminal to stop it.
 
+## Backend runtime image
+
+Build the non-root container image that carries the same JAR:
+
+```bash
+./gradlew :backend:dockerImage
+```
+
+The image runs as an unprivileged account, records the version and the commit in its labels, and needs a reachable MongoDB through the `MONGODB_URI` environment variable. See [deployment](docs/deployment.md#backend-runtime-image) for the image metadata and the runtime configuration.
+
 ## Repository layout
 
 - `commons/`: Kotlin Multiplatform domain, targeting JVM and JavaScript.
