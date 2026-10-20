@@ -23,7 +23,7 @@ See [backend runtime configuration](development.md#backend-runtime) for the prof
 
 ## Backend runtime image
 
-The backend is also delivered as a container image. The image carries the executable JAR on a JRE 21 base image pinned to a digest, and nothing else: no Gradle runtime, no sources, no build cache. The application runs as the unprivileged account `sticky-notes` with UID 10001, and the only writable location is the temporary directory inherited from the base image.
+The backend is also delivered as a container image. The image carries the executable JAR on a JRE 21 base image pinned to a digest, and nothing else: no Gradle runtime, no sources, no build cache. The application runs as the unprivileged account `sticky-notes` with UID 10001, and it writes only to the temporary directory inherited from the base image and to its own `/app` directory.
 
 Build the image from the repository root with a running Docker engine:
 
@@ -31,13 +31,13 @@ Build the image from the repository root with a running Docker engine:
 ./gradlew :backend:dockerImage
 ```
 
-The task produces the JAR first and assembles the image from it, so the image carries exactly the artifact the build produced. The image is tagged `sticky-notes-backend:<version>`. The version comes from the `releaseVersion` property, which a release build passes to Gradle:
+The task produces the JAR first and assembles the image from it, so the image carries exactly the artifact the build produced. The image is tagged `sticky-notes-backend:<version>`, with `+` replaced by `-` because a Docker tag does not accept that character. The version itself comes from the `releaseVersion` property, which a release pipeline can pass to Gradle:
 
 ```sh
 ./gradlew :backend:dockerImage -PreleaseVersion=1.2.3
 ```
 
-Without that property the build identifies the commit it was produced from, as `0.0.0-dev+<commit>`, and the image carries the same value in its tag. The version and the full commit are recorded twice: in the JAR manifest and in the image labels.
+Without that property the build identifies the commit it was produced from, as `0.0.0-dev+<commit>`. That value is kept unchanged in the JAR manifest and in the image label, while the tag carries the same value as `0.0.0-dev-<commit>`. The version and the full commit are recorded twice: in the JAR manifest and in the image labels. The tag is also written to `backend/build/docker/image-tag.txt`, so a script can address the image without repeating the naming rule.
 
 ```sh
 unzip -p backend/build/libs/backend.jar META-INF/MANIFEST.MF

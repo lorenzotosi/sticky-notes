@@ -18,19 +18,27 @@ java {
  * property. A local build is not a release, so it identifies the commit the
  * artifact was produced from instead of claiming a version that was never
  * published.
+ *
+ * The revision lookup never stops the build. An environment without the Git
+ * executable, such as the container that runs the integration tests, produces
+ * an unknown revision instead of a configuration failure.
  */
-val gitRevisionOutput: String =
-    providers
-        .exec {
-            workingDir(rootDir)
-            commandLine("git", "rev-parse", "HEAD")
-            isIgnoreExitValue = true
-        }.standardOutput
-        .asText
-        .getOrElse("")
-        .trim()
-
-val gitRevision: String = gitRevisionOutput.ifEmpty { "unknown" }
+val gitRevision: String =
+    (
+        try {
+            providers
+                .exec {
+                    workingDir(rootDir)
+                    commandLine("git", "rev-parse", "HEAD")
+                    isIgnoreExitValue = true
+                }.standardOutput
+                .asText
+                .getOrElse("")
+                .trim()
+        } catch (e: Exception) {
+            ""
+        }
+    ).ifEmpty { "unknown" }
 
 val releaseVersion: String =
     providers.gradleProperty("releaseVersion").getOrElse("0.0.0-dev+${gitRevision.take(12)}")
@@ -111,6 +119,10 @@ tasks.bootJar {
 tasks.test {
     useJUnitPlatform()
     finalizedBy(tasks.jacocoTestReport)
+    // The image policy test reads the Dockerfile, so the suite must run again
+    // when that file changes.
+    inputs.file(rootProject.layout.projectDirectory.file("backend/Dockerfile"))
+        .withPropertyName("backendDockerfile")
 }
 
 val filteredMainClasses =
@@ -170,11 +182,31 @@ tasks.named("check") {
  */
 val backendImageTag = "sticky-notes-backend:${releaseVersion.replace('+', '-')}"
 
+/*
+ * The tag is written next to the build output, so the shell scripts that
+ * exercise the image can address it without repeating the naming rule.
+ */
+val imageTagFile = layout.buildDirectory.file("docker/image-tag.txt")
+
+val writeImageTag =
+    tasks.register("writeImageTag") {
+        group = "build"
+        description = "Writes the backend runtime image tag into the build directory."
+        val tag = backendImageTag
+        val target = imageTagFile
+        outputs.file(target)
+        doLast {
+            val file = target.get().asFile
+            file.parentFile.mkdirs()
+            file.writeText(tag)
+        }
+    }
+
 val dockerImage =
     tasks.register<Exec>("dockerImage") {
         group = "build"
         description = "Builds the non-root backend runtime image $backendImageTag from the verified JAR."
-        dependsOn(tasks.bootJar)
+        dependsOn(tasks.bootJar, writeImageTag)
         workingDir(rootDir)
         commandLine(
             "docker",

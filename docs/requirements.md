@@ -8,7 +8,7 @@ This document defines the functional requirements and business rules for the Sti
 The [testing guide](testing.md) describes the implemented checks, and the [R1 acceptance evidence](evidence/R1.md) records the observed shared-domain and consumer results. A requirement can need checks at several layers; domain evidence alone does not prove API, persistence, or UI behavior.
 
 ## 1. System Scope & Boundaries
-- **Deployment & Access**: The application is intended to run as a single shared board via Docker Compose in a trusted, single-team environment without authentication or multiple boards. Docker deployment is not implemented yet.
+- **Deployment & Access**: The application is intended to run as a single shared board via Docker Compose in a trusted, single-team environment without authentication or multiple boards. The [deployment guide](deployment.md) describes what the repository delivers today.
 - **Out of Scope (Explicitly Deferred)**: User accounts/sessions, multi-tenancy, real-time WebSocket sync, deadlines/reminders, attachments, drag-and-drop, Kubernetes orchestration, and event sourcing.
 
 ---

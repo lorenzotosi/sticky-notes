@@ -23,8 +23,9 @@ LABEL org.opencontainers.image.title="Sticky Notes backend" \
       org.opencontainers.image.revision="${REVISION}" \
       org.opencontainers.image.licenses="MIT"
 
-# The application owns an unprivileged account and no other writable location
-# than the shared temporary directory inherited from the base image.
+# The application owns an unprivileged account. It writes only to the shared
+# temporary directory inherited from the base image and to its own /app
+# directory.
 RUN groupadd --gid 10001 sticky-notes \
     && useradd --uid 10001 --gid sticky-notes --home-dir /app --shell /usr/sbin/nologin --no-create-home sticky-notes \
     && mkdir -p /app \
