@@ -1,0 +1,59 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani
+
+name: sticky-notes
+
+services:
+  mongo:
+    image: mongo@sha256:f071cbf97a6e52fb7f07ce9ca5d862ad79876bf0eba9ba97758337d740449638
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-stickynotes}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-stickynotes_password}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-sticky_notes}
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - internal-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.adminCommand({ ping: 1 }).ok ? 0 : 1)"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  api:
+    image: sticky-notes-api:local
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    environment:
+      MONGODB_URI: mongodb://${MONGO_USER:-stickynotes}:${MONGO_PASSWORD:-stickynotes_password}@mongo:27017/${MONGO_DATABASE:-sticky_notes}?authSource=admin
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - internal-net
+
+  web:
+    image: sticky-notes-web:local
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - internal-net
+
+networks:
+  internal-net:
+    driver: bridge
+
+volumes:
+  mongo-data:
+    
