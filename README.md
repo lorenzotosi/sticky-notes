@@ -13,7 +13,7 @@ See the [release policy](docs/ci-cd.md#release-policy) for stability criteria, r
 
 ## Start here
 
-Use JDK 21 and the [configured toolchain](docs/development.md#toolchain-requirements). Start the [development MongoDB instance](docs/development.md#full-stack-end-to-end-execution) before using the persistent board, then run these commands from the repository root:
+Use JDK 21 and the [configured toolchain](docs/development.md#toolchain-requirements). Gradle downloads the JDK 21 when the machine does not provide it, so any JDK 17 or later is enough to start the build. Start the [development MongoDB instance](docs/development.md#full-stack-end-to-end-execution) before using the persistent board, then run these commands from the repository root:
 
 ```bash
 ./gradlew fullBuild
@@ -61,12 +61,31 @@ Build the non-root container image that carries the same JAR:
 
 The image runs as an unprivileged account, records the version and the commit in its labels, and needs a reachable MongoDB through the `MONGODB_URI` environment variable. See [deployment](docs/deployment.md#backend-runtime-image) for the image metadata and the runtime configuration.
 
+## Local stack with Docker Compose
+
+The whole application also runs as three containers. The runtime of the stack needs neither a JDK nor Node.js on the machine; building the images needs the toolchain of the [development guide](docs/development.md#toolchain-requirements):
+
+```bash
+./gradlew buildImages
+./scripts/start-local.sh
+```
+
+The interface is available at `http://127.0.0.1:8080`. Only that port is published: the API and MongoDB stay inside the Docker network. The board data is kept in a named volume and survives a stop.
+
+```bash
+./scripts/stop-local.sh
+```
+
+See [deployment](docs/deployment.md#delivery-stack) for the services, the configuration, and the development override.
+
 ## Repository layout
 
 - `commons/`: Kotlin Multiplatform domain, targeting JVM and JavaScript.
 - `backend/`: Java/Spring Boot application with Actuator health endpoints.
 - `frontend/`: Vue application.
 - `docs/`: architecture, process, CI/CD and deployment notes.
+- `compose.yaml`, `compose.dev.yaml`: delivery stack and development override.
+- `scripts/`: local stack lifecycle scripts.
 
 The Vue frontend reads and changes the board through the backend REST API. The generated Kotlin/JS domain package supplies client prevalidation; the backend validates commands and persists the board in MongoDB. Reloading the page fetches the stored board.
 

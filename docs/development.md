@@ -5,10 +5,10 @@
 
 ## Toolchain Requirements
 
-- **JDK 21** for Java and Kotlin multiplatform modules.
+- **JDK 21** for Java and Kotlin multiplatform modules. Gradle provisions it when the machine does not provide it, through the Foojay Disco catalogue declared in `settings.gradle.kts`, so a JDK 17 or later is enough to start Gradle.
 - **Gradle 9.7.1** managed via the official `./gradlew` wrapper.
 - **Node.js 24.21.0**, pinned in `.nvmrc`, compatible with semantic-release and Vite.
-- **Docker with Compose**, running Linux containers, for the backend MongoDB integration tests.
+- **Docker with Compose**, running Linux containers, for the backend MongoDB integration tests and the delivery stack.
 
 The repository uses the official Gradle wrapper. Binary distribution integrity is verified via `distributionSha256Sum` declared in `gradle/wrapper/gradle-wrapper.properties`.
 
@@ -22,6 +22,8 @@ java -version
 ./gradlew --version
 ```
 
+The export is a convenience for the development machine, not a requirement of the build: the modules compile with the JDK 21 toolchain, and Gradle downloads it when no local installation provides it. The daemon itself runs on any JDK 17 or later.
+
 On Windows, point `JAVA_HOME` to your JDK 21 installation path in your active PowerShell session before running `.\gradlew.bat --version`.
 
 For Node.js, use a version manager that supports `.nvmrc` (such as nvm or fnm), then verify:
@@ -32,7 +34,7 @@ node --version
 npm --version
 ```
 
-The toolchain verification must display Java 21 under Gradle's `Daemon JVM` section and Node.js `v24.21.0`.
+The toolchain verification must display Java 21 under Gradle's `Daemon JVM` section when JDK 21 is the active one, and Node.js `v24.21.0`. The toolchains of the build are listed by `./gradlew javaToolchains`, which also reports the JDK downloaded by the resolver.
 
 ## Build and Verification Entry Points
 
@@ -57,6 +59,7 @@ The project unifies all module checks into a non-circular Gradle task graph.
 | `./gradlew check` | Runs repository-wide verification: formatting, Detekt, license validation, JVM and JavaScript tests, frontend linting, and frontend tests. |
 | `./gradlew fullBuild` | Runs `check`, then builds the Commons libraries, backend executable JAR, frontend production bundle, and documentation artifact. |
 | `./gradlew :backend:dockerImage` | Builds the non-root backend runtime image from the verified JAR. Requires a running Docker engine. The image tag follows the `releaseVersion` property; without it the build identifies its commit. See [deployment](deployment.md#backend-runtime-image). |
+| `./gradlew buildImages` | Builds the backend and web container images used by the local Compose stack. Requires a running Docker engine. See [deployment](deployment.md#delivery-stack). |
 | `./gradlew :commons:browserDomainTest` | Runs the shared Commons domain tests in ChromeHeadless through the Kotlin/JS target. |
 | `./gradlew :frontend:frontendInstall` | Installs the exact npm dependencies recorded in `frontend/package-lock.json` by running `npm ci`. |
 | `./gradlew :frontend:frontendLint` | Installs the frontend dependencies when necessary and runs the ESLint checks. |
@@ -169,6 +172,28 @@ npm run dev
 Open http://localhost:5173 in a browser. Board state, note creations, edits, and deletions persist across page reloads and backend restarts directly into MongoDB.
 
 Stop the development database with `docker stop sticky-notes-mongo`; keep its named volume for the next session.
+
+
+## Containerized local stack
+
+The same application runs as three containers with Docker Compose. The runtime of the stack needs neither a JDK nor Node.js on the machine; building the images needs the toolchain of this guide. Build the images once and start the stack:
+
+```sh
+./gradlew buildImages
+./scripts/start-local.sh
+```
+
+The interface is then available at `http://127.0.0.1:8080`. The stack publishes only that port: the API and MongoDB stay inside the Docker network. `./scripts/stop-local.sh` stops the stack and keeps the data in the named volume.
+
+The development override runs the API and MongoDB on the loopback interface and leaves the interface to the Vite development server:
+
+```sh
+./scripts/start-local.sh --dev
+```
+
+The override publishes the API on port `8080` and MongoDB on port `27017`, the same ports of the workflow described above, so the two workflows are alternatives: only one of them runs at a time.
+
+The details of both modes are described in [deployment](deployment.md#delivery-stack).
 
 
 ## Dependency Management and Locking

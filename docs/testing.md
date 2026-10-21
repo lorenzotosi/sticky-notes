@@ -341,6 +341,69 @@ This is a manual integration check, separate from `:backend:check`. Use JDK 21, 
 
 5. Stop this backend with Ctrl-C and remove only the isolated check container and its temporary volumes with `docker rm -f -v sticky-notes-recovery`. Record the observed result separately from automated test reports.
 
+## Compose delivery stack (R4)
+
+The delivery stack is exercised manually with Docker Compose. It is not part of `./gradlew check`, because the procedure starts real containers and needs a running Docker engine.
+
+Build the images and start the stack:
+
+```sh
+./gradlew buildImages
+./scripts/start-local.sh
+```
+
+The script waits until every service reports healthy. Check the result:
+
+```sh
+docker compose ps
+```
+
+Every service must show `healthy`. Only the web service may show a host port, and it must be the loopback interface; the API and MongoDB show their internal port without a published port.
+
+The configuration can be checked without starting anything:
+
+```sh
+docker compose -f compose.yaml config
+```
+
+The command must succeed and must contain exactly one published port, the one of the web service.
+
+Use the stack only through `127.0.0.1:8080`:
+
+```sh
+curl -fsS http://127.0.0.1:8080/api/board
+curl -s -o /dev/null -w '%{http_code} %{content_type}\n' http://127.0.0.1:8080/api/unknown
+```
+
+The first command returns the board snapshot through the reverse proxy. The second answers with a JSON error and not with the frontend document, so an API failure never becomes a page of the interface.
+
+Check that the data survives a stop and a start:
+
+```sh
+revision=$(curl -fsS http://127.0.0.1:8080/api/board | sed -n 's/.*"revision":\([0-9]*\).*/\1/p')
+curl -fsS -X POST -H 'Content-Type: application/json' \
+  -d "{\"content\":\"Persistence check\",\"expectedRevision\":$revision}" \
+  http://127.0.0.1:8080/api/board/notes
+./scripts/stop-local.sh
+docker volume ls | grep sticky-notes_mongo-data
+./scripts/start-local.sh
+curl -fsS http://127.0.0.1:8080/api/board
+```
+
+The revision of the board is read before the command, because the board keeps the revision between the runs of the procedure. The note created before the stop is still there after the start, and the named volume is listed after the stop: a normal stop never removes the data. Delete the note afterwards, with the identifier of the creation response and the revision of the last read.
+
+The development override is checked with the same images:
+
+```sh
+./scripts/stop-local.sh
+./scripts/start-local.sh --dev
+docker compose -f compose.yaml -f compose.dev.yaml ps
+```
+
+The API must be published on `127.0.0.1:8080`, the port the Vite development proxy targets, MongoDB on `127.0.0.1:27017`, and the web container must show no published port.
+
+This procedure exercises the containers, the reverse proxy, the health checks, and the volume. It does not exercise the browser journeys, which the end-to-end suite of the delivery gate covers, and it does not prove that the published images start on a machine without a source checkout.
+
 ## Other test scopes
 
 - `frontend/src/App.test.js` mounts the Kanban interface with mocked HTTP responses and verifies loading, note creation, deletion confirmation, and movement. It does not exercise a real server or database.

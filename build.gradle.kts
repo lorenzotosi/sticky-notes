@@ -161,6 +161,12 @@ tasks.register("fullBuild") {
     )
 }
 
+tasks.register("buildImages") {
+    group = "build"
+    description = "Builds the container images used by the local Compose stack."
+    dependsOn(":backend:dockerImage", ":frontend:buildWebImage")
+}
+
 tasks.register("formatCode") {
     group = "build"
     description = "Formats Kotlin, Java, Gradle, and frontend code."

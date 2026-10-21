@@ -1,11 +1,33 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani
 
-services:
-  mongo:
-    ports:
-      - "127.0.0.1:27017:27017"
+# Development override of the delivery stack.
+#
+# The delivery stack publishes only the web interface. During development the
+# Vite server proxies /api to the API, so the API is published on the loopback
+# interface on the port the proxy targets, and local tooling connects to
+# MongoDB directly.
+#
+# Usage:
+#
+#   docker compose --project-directory . -f compose.yaml -f compose.dev.yaml up --wait
+#
+# The scripts `scripts/start-local.sh --dev` and `scripts/stop-local.sh --dev`
+# apply this override. The reset of the published port needs Docker Compose
+# v2.24 or later.
 
+services:
   api:
     ports:
-      - "127.0.0.1:8081:8080"
+      - "127.0.0.1:${API_PORT:-8080}:8080"
+
+  mongo:
+    ports:
+      - "127.0.0.1:${MONGO_PORT:-27017}:27017"
+
+  web:
+    # The delivery stack publishes the web interface on port 8080. During
+    # development that port belongs to the API container, which the Vite
+    # development proxy targets, so the published port of the web container is
+    # reset instead of added.
+    ports: !reset []

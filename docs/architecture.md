@@ -99,3 +99,20 @@ The dependency direction remains inward: framework and persistence code may depe
 The application service and REST endpoints connect this boundary to each mutating request's expected revision and return `409 REVISION_CONFLICT` when the stored revision does not match.
 
 The accepted rationale and trade-offs are recorded in [ADR 001](adr/001-board-aggregate.md) and [ADR 002](adr/002-local-scope.md).
+
+## 5. Runtime topology
+
+The delivery runtime is defined by `compose.yaml` and described in [deployment](deployment.md#delivery-stack):
+
+```mermaid
+graph LR
+    Browser["Browser"] -->|"http://127.0.0.1:8080"| Web["web: Nginx, unprivileged"]
+    Web -->|"/api, same origin"| Api["api: Spring Boot, unprivileged"]
+    Api --> Mongo[("mongo: MongoDB, named volume")]
+```
+
+The browser reaches only the web container. Nginx forwards the requests under `/api` to the API container keeping the prefix, so the interface and the API share one origin and no CORS configuration exists. The API and MongoDB publish no host port: they are reachable only from the other containers of the stack. The board document lives in the named volume `mongo-data`.
+
+The containers run the images produced by the build: the API image carries the verified JAR, the web image carries the Vite bundle and the Nginx configuration. The stack references those images by name and never builds them, so the runtime needs neither a JDK, nor Node.js, nor a source checkout.
+
+The development override changes the topology of the host: the API and MongoDB publish their port on the loopback interface, the web container publishes nothing, and the interface comes from the Vite development server, which proxies `/api` to the API container. The single origin of the delivery runtime is therefore a property of the delivery runtime, not of the development stack.

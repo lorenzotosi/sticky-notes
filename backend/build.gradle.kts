@@ -215,6 +215,11 @@ val dockerImage =
             "backend/Dockerfile",
             "--tag",
             backendImageTag,
+            // The stable alias is the reference used by the local Compose
+            // stack, whose configuration cannot follow the commit of the
+            // versioned tag.
+            "--tag",
+            "sticky-notes-backend:local",
             "--build-arg",
             "VERSION=$releaseVersion",
             "--build-arg",
