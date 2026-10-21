@@ -18,6 +18,6 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
-docker compose -f compose.yaml up --build -d --wait
+docker compose -f compose.yaml up -d --wait
 
 echo "Sticky Notes is available at http://127.0.0.1:8080"
