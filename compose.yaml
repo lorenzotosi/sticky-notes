@@ -18,25 +18,29 @@ services:
     image: mongo@sha256:f071cbf97a6e52fb7f07ce9ca5d862ad79876bf0eba9ba97758337d740449638
     restart: unless-stopped
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-stickynotes}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-stickynotes_password}
-      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-sticky_notes}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-stickynotes_user}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-stickynotes_local_password}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-stickynotes}
     volumes:
       - mongo-data:/data/db
     networks:
       - internal-net
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.adminCommand({ ping: 1 }).ok ? 0 : 1)"]
-      interval: 5s
+      # The check authenticates with the credentials of the database user, so
+      # the service reports healthy only when the API can connect to it.
+      test:
+        - CMD-SHELL
+        - 'mongosh --quiet --username "$$MONGO_INITDB_ROOT_USERNAME" --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "quit(db.adminCommand({ ping: 1 }).ok ? 0 : 1)"'
+      interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 10s
+      retries: 12
+      start_period: 20s
 
   api:
     image: ${API_IMAGE:-sticky-notes-backend:local}
     restart: unless-stopped
     environment:
-      MONGODB_URI: mongodb://${MONGO_USER:-stickynotes}:${MONGO_PASSWORD:-stickynotes_password}@mongo:27017/${MONGO_DATABASE:-sticky_notes}?authSource=admin
+      MONGODB_URI: mongodb://${MONGO_USER:-stickynotes_user}:${MONGO_PASSWORD:-stickynotes_local_password}@mongo:27017/${MONGO_DATABASE:-stickynotes}?authSource=admin
     depends_on:
       mongo:
         condition: service_healthy
@@ -47,7 +51,7 @@ services:
     image: ${WEB_IMAGE:-sticky-notes-web:local}
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:${WEB_PORT:-8080}:8080"
     depends_on:
       api:
         condition: service_healthy
