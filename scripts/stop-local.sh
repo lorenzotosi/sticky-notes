@@ -47,12 +47,13 @@ if ! docker compose version >/dev/null 2>&1; then
     exit 1
 fi
 
-compose_files="-f $root_dir/compose.yaml"
+# The Compose files are kept as positional parameters, so a repository path
+# with spaces does not split the arguments.
+set -- -f "$root_dir/compose.yaml"
 if [ "$dev" -eq 1 ]; then
-    compose_files="$compose_files -f $root_dir/compose.dev.yaml"
+    set -- "$@" -f "$root_dir/compose.dev.yaml"
 fi
 
-# shellcheck disable=SC2086
-docker compose --project-directory "$root_dir" $compose_files down
+docker compose --project-directory "$root_dir" "$@" down
 
-echo "Sticky Notes stopped. The board data is still in the mongo-data volume."
+echo "Sticky Notes stopped. The board data is still in the named MongoDB volume."

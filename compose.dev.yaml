@@ -10,10 +10,11 @@
 #
 # Usage:
 #
-#   docker compose -f compose.yaml -f compose.dev.yaml up --wait
+#   docker compose --project-directory . -f compose.yaml -f compose.dev.yaml up --wait
 #
 # The scripts `scripts/start-local.sh --dev` and `scripts/stop-local.sh --dev`
-# apply this override.
+# apply this override. The reset of the published port needs Docker Compose
+# v2.24 or later.
 
 services:
   api:

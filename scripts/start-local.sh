@@ -56,18 +56,35 @@ if ! docker compose version >/dev/null 2>&1; then
     exit 1
 fi
 
+if ! docker info >/dev/null 2>&1; then
+    echo "The Docker engine is not running. Start Docker Desktop or the local Docker Engine." >&2
+    exit 1
+fi
+
 if [ ! -f "$root_dir/.env" ]; then
     cp "$root_dir/.env.example" "$root_dir/.env"
     echo "Created .env from .env.example with demonstration values."
 fi
 
-compose_files="-f $root_dir/compose.yaml"
+# The image references are read from the configuration, so the missing image is
+# reported before Compose tries to pull it from a registry.
+api_image=$(sed -n 's/^API_IMAGE=//p' "$root_dir/.env" | tail -1)
+web_image=$(sed -n 's/^WEB_IMAGE=//p' "$root_dir/.env" | tail -1)
+for image in "${api_image:-sticky-notes-backend:local}" "${web_image:-sticky-notes-web:local}"; do
+    if ! docker image inspect "$image" >/dev/null 2>&1; then
+        echo "The image $image is not available. Run './gradlew buildImages' first." >&2
+        exit 1
+    fi
+done
+
+# The Compose files are kept as positional parameters, so a repository path
+# with spaces does not split the arguments.
+set -- -f "$root_dir/compose.yaml"
 if [ "$dev" -eq 1 ]; then
-    compose_files="$compose_files -f $root_dir/compose.dev.yaml"
+    set -- "$@" -f "$root_dir/compose.dev.yaml"
 fi
 
-# shellcheck disable=SC2086
-docker compose --project-directory "$root_dir" $compose_files \
+docker compose --project-directory "$root_dir" "$@" \
     up --detach --wait --wait-timeout "$wait_timeout"
 
 if [ "$dev" -eq 1 ]; then
@@ -76,8 +93,7 @@ if [ "$dev" -eq 1 ]; then
 else
     # The published address is read from the running container, so the message
     # stays correct when the host port differs from the default.
-    # shellcheck disable=SC2086
-    address=$(docker compose --project-directory "$root_dir" $compose_files port web 8080 2>/dev/null || echo "127.0.0.1:8080")
+    address=$(docker compose --project-directory "$root_dir" "$@" port web 8080 2>/dev/null || echo "127.0.0.1:8080")
     echo "Sticky Notes is running at http://$address"
     echo "Stop it with scripts/stop-local.sh"
 fi
