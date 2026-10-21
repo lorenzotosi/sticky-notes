@@ -83,3 +83,19 @@ tasks.register<Exec>("frontendBuild") {
 
     outputs.dir("dist")
 }
+
+tasks.register<Exec>("buildWebImage") {
+    group = "build"
+    description = "Builds the Nginx Docker image for frontend"
+    dependsOn("frontendBuild")
+    workingDir = rootDir
+    commandLine(
+        "docker",
+        "build",
+        "-f",
+        "frontend/Dockerfile",
+        "-t",
+        "sticky-notes-web:local",
+        ".",
+    )
+}
