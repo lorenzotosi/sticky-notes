@@ -70,7 +70,7 @@ The container exposes port 8080 and reads the same environment variables as the 
 
 ## Delivery stack
 
-`compose.yaml` describes the delivery runtime: three services on one internal network.
+`compose.yaml` describes the delivery runtime: three services on one private bridge network. The services are not reachable from the host, and they keep the outgoing access of the containers.
 
 | Service | Image | Role | Published host port |
 | --- | --- | --- | --- |
@@ -86,20 +86,20 @@ The stack references images by name and never builds them, so it runs on a machi
 
 ### Configuration
 
-The environment file `.env` holds the local configuration: the image references, the host ports, and the database credentials. `.env.example` documents the variables with demonstration values, and `scripts/start-local.sh` copies it to `.env` only when `.env` does not exist, so an existing configuration is never overwritten. The file stays out of Git.
+The environment file `.env` holds the local configuration: the image references, the host ports, and the database credentials. `.env.example` documents the variables with demonstration values, and `./scripts/start-local.sh` copies it to `.env` only when `.env` does not exist, so an existing configuration is never overwritten. The file stays out of Git. Compose reads it from the project directory, which the scripts set with `--project-directory`.
 
 | Variable | Purpose | Default |
 | --- | --- | --- |
 | `API_IMAGE` | image of the API service | `sticky-notes-backend:local` |
 | `WEB_IMAGE` | image of the web service | `sticky-notes-web:local` |
 | `WEB_PORT` | host port of the web interface | `8080` |
-| `API_PORT` | host port of the API, development override | `8080` |
+| `API_PORT` | host port of the API, development override; it must match the proxy target of the Vite development server | `8080` |
 | `MONGO_PORT` | host port of the database, development override | `27017` |
 | `MONGO_USER` | database user | `stickynotes_user` |
 | `MONGO_PASSWORD` | password of the database user | `stickynotes_local_password` |
 | `MONGO_DATABASE` | database of the shared board | `stickynotes` |
 
-The credentials are demonstration values for a local Docker network. MongoDB creates the database user on the first start of an empty volume, so changing the credentials afterwards requires removing the volume, which deletes the board. A password with characters that need URL encoding has to be encoded in `MONGODB_URI`, because the stack embeds it in the connection URI.
+The credentials are demonstration values for a local Docker network, and they are the same values the Compose file uses when no `.env` exists, so the volume of an earlier run keeps working. MongoDB creates the database user on the first start of an empty volume, so changing the credentials afterwards requires removing the volume, which deletes the board. A password with characters that need URL encoding has to be encoded in `MONGODB_URI`, because the stack embeds it in the connection URI.
 
 ### Starting and stopping the stack
 
@@ -127,7 +127,7 @@ Build the local images once, then start the stack:
 ./scripts/stop-local.sh --dev
 ```
 
-The scripts are POSIX shell scripts and need Docker Compose only. They run on macOS and Linux with Docker Desktop or with the Compose plugin of a local Docker Engine.
+The scripts are POSIX shell scripts and need Docker Compose only. They run on macOS and Linux with Docker Desktop or with the Compose plugin of a local Docker Engine. They need Docker Compose v2.24 or later: the development override resets a published port and the start script bounds the wait for the healthy state.
 
 ### Published images
 

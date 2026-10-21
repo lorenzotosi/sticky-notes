@@ -349,7 +349,7 @@ Build the images and start the stack:
 
 ```sh
 ./gradlew buildImages
-scripts/start-local.sh
+./scripts/start-local.sh
 ```
 
 The script waits until every service reports healthy. Check the result:
@@ -380,22 +380,23 @@ The first command returns the board snapshot through the reverse proxy. The seco
 Check that the data survives a stop and a start:
 
 ```sh
+revision=$(curl -fsS http://127.0.0.1:8080/api/board | sed -n 's/.*"revision":\([0-9]*\).*/\1/p')
 curl -fsS -X POST -H 'Content-Type: application/json' \
-  -d '{"content":"Persistence check","expectedRevision":0}' \
+  -d "{\"content\":\"Persistence check\",\"expectedRevision\":$revision}" \
   http://127.0.0.1:8080/api/board/notes
-scripts/stop-local.sh
+./scripts/stop-local.sh
 docker volume ls | grep sticky-notes_mongo-data
-scripts/start-local.sh
+./scripts/start-local.sh
 curl -fsS http://127.0.0.1:8080/api/board
 ```
 
-The note created before the stop is still there after the start, and the named volume is listed after the stop: a normal stop never removes the data. Delete the note afterwards, with the identifier of the creation response and the revision of the last read.
+The revision of the board is read before the command, because the board keeps the revision between the runs of the procedure. The note created before the stop is still there after the start, and the named volume is listed after the stop: a normal stop never removes the data. Delete the note afterwards, with the identifier of the creation response and the revision of the last read.
 
 The development override is checked with the same images:
 
 ```sh
-scripts/stop-local.sh
-scripts/start-local.sh --dev
+./scripts/stop-local.sh
+./scripts/start-local.sh --dev
 docker compose -f compose.yaml -f compose.dev.yaml ps
 ```
 

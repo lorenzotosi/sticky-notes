@@ -174,20 +174,22 @@ Stop the development database with `docker stop sticky-notes-mongo`; keep its na
 
 ## Containerized local stack
 
-The same application runs as three containers with Docker Compose, without a JDK or Node.js installed on the machine. Build the images once and start the stack:
+The same application runs as three containers with Docker Compose. The runtime of the stack needs neither a JDK nor Node.js on the machine; building the images needs the toolchain of this guide. Build the images once and start the stack:
 
 ```sh
 ./gradlew buildImages
-scripts/start-local.sh
+./scripts/start-local.sh
 ```
 
-The interface is then available at `http://127.0.0.1:8080`. The stack publishes only that port: the API and MongoDB stay inside the Docker network. `scripts/stop-local.sh` stops the stack and keeps the data in the named volume.
+The interface is then available at `http://127.0.0.1:8080`. The stack publishes only that port: the API and MongoDB stay inside the Docker network. `./scripts/stop-local.sh` stops the stack and keeps the data in the named volume.
 
 The development override runs the API and MongoDB on the loopback interface and leaves the interface to the Vite development server:
 
 ```sh
-scripts/start-local.sh --dev
+./scripts/start-local.sh --dev
 ```
+
+The override publishes the API on port `8080` and MongoDB on port `27017`, the same ports of the workflow described above, so the two workflows are alternatives: only one of them runs at a time.
 
 The details of both modes are described in [deployment](deployment.md#delivery-stack).
 

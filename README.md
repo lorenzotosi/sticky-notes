@@ -63,7 +63,7 @@ The image runs as an unprivileged account, records the version and the commit in
 
 ## Local stack with Docker Compose
 
-The whole application also runs as three containers, without a JDK or Node.js on the machine:
+The whole application also runs as three containers. The runtime of the stack needs neither a JDK nor Node.js on the machine; building the images needs the toolchain of the [development guide](docs/development.md#toolchain-requirements):
 
 ```bash
 ./gradlew buildImages
