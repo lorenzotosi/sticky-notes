@@ -5,10 +5,10 @@
 
 ## Toolchain Requirements
 
-- **JDK 21** for Java and Kotlin multiplatform modules.
+- **JDK 21** for Java and Kotlin multiplatform modules. Gradle provisions it when the machine does not provide it, through the Foojay Disco catalogue declared in `settings.gradle.kts`, so a JDK 17 or later is enough to start Gradle.
 - **Gradle 9.7.1** managed via the official `./gradlew` wrapper.
 - **Node.js 24.21.0**, pinned in `.nvmrc`, compatible with semantic-release and Vite.
-- **Docker with Compose**, running Linux containers, for the backend MongoDB integration tests.
+- **Docker with Compose**, running Linux containers, for the backend MongoDB integration tests and the delivery stack.
 
 The repository uses the official Gradle wrapper. Binary distribution integrity is verified via `distributionSha256Sum` declared in `gradle/wrapper/gradle-wrapper.properties`.
 
@@ -22,6 +22,8 @@ java -version
 ./gradlew --version
 ```
 
+The export is a convenience for the development machine, not a requirement of the build: the modules compile with the JDK 21 toolchain, and Gradle downloads it when no local installation provides it. The daemon itself runs on any JDK 17 or later.
+
 On Windows, point `JAVA_HOME` to your JDK 21 installation path in your active PowerShell session before running `.\gradlew.bat --version`.
 
 For Node.js, use a version manager that supports `.nvmrc` (such as nvm or fnm), then verify:
@@ -32,7 +34,7 @@ node --version
 npm --version
 ```
 
-The toolchain verification must display Java 21 under Gradle's `Daemon JVM` section and Node.js `v24.21.0`.
+The toolchain verification must display Java 21 under Gradle's `Daemon JVM` section when JDK 21 is the active one, and Node.js `v24.21.0`. The toolchains of the build are listed by `./gradlew javaToolchains`, which also reports the JDK downloaded by the resolver.
 
 ## Build and Verification Entry Points
 
