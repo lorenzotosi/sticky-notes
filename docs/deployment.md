@@ -46,6 +46,8 @@ docker inspect sticky-notes-backend:<version> --format '{{json .Config.Labels}}'
 
 The labels are `org.opencontainers.image.version`, `org.opencontainers.image.revision`, `org.opencontainers.image.source`, and `org.opencontainers.image.licenses`.
 
+The same image also receives the stable alias `sticky-notes-backend:local`. The versioned tag identifies the artifact for a release, while the alias is the reference the local Compose stack uses, because the configuration of the stack cannot follow the commit of the versioned tag.
+
 Run the image against a reachable MongoDB:
 
 ```sh
@@ -66,6 +68,67 @@ The container exposes port 8080 and reads the same environment variables as the 
 | Health check | `GET /actuator/health/readiness` |
 | Configuration | `PORT` and `MONGODB_URI` environment variables |
 
-## Runtime deployment
+## Delivery stack
 
-The application deployment target is Docker Compose: one container for the frontend and one for the Java API, with MongoDB reachable only inside the delivery network. The backend image described above is the runtime artifact of the Java API container. The frontend image, the Compose stack, and the published images are not part of this repository yet; future registry or hosting credentials will use GitHub Actions secrets, never repository files.
+`compose.yaml` describes the delivery runtime: three services on one internal network.
+
+| Service | Image | Role | Published host port |
+| --- | --- | --- | --- |
+| `web` | `sticky-notes-web:local` | serves the interface and proxies `/api` | `127.0.0.1:8080` |
+| `api` | `sticky-notes-backend:local` | applies the domain rules and stores the board | none |
+| `mongo` | `mongo` pinned to a digest | stores the `main` board document | none |
+
+Only the web service publishes a port, and only on the loopback interface. The API and MongoDB are reachable from the other containers of the stack and from nowhere else, so the browser always talks to a single origin. The board lives in the named volume `mongo-data`, which survives a stop, a `down` without volumes, and a restart of the machine.
+
+The services start in dependency order. MongoDB reports healthy through an authenticated ping, the API reports healthy through its readiness endpoint, which includes the database, and the web container starts only after the API is healthy. `docker compose up --wait` therefore returns when the board can be used, without any fixed sleep.
+
+The stack references images by name and never builds them, so it runs on a machine without a source checkout, a JDK, or Node.js.
+
+### Configuration
+
+The environment file `.env` holds the local configuration: the image references, the host ports, and the database credentials. `.env.example` documents the variables with demonstration values, and `scripts/start-local.sh` copies it to `.env` only when `.env` does not exist, so an existing configuration is never overwritten. The file stays out of Git.
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `API_IMAGE` | image of the API service | `sticky-notes-backend:local` |
+| `WEB_IMAGE` | image of the web service | `sticky-notes-web:local` |
+| `WEB_PORT` | host port of the web interface | `8080` |
+| `API_PORT` | host port of the API, development override | `8080` |
+| `MONGO_PORT` | host port of the database, development override | `27017` |
+| `MONGO_USER` | database user | `stickynotes_user` |
+| `MONGO_PASSWORD` | password of the database user | `stickynotes_local_password` |
+| `MONGO_DATABASE` | database of the shared board | `stickynotes` |
+
+The credentials are demonstration values for a local Docker network. MongoDB creates the database user on the first start of an empty volume, so changing the credentials afterwards requires removing the volume, which deletes the board. A password with characters that need URL encoding has to be encoded in `MONGODB_URI`, because the stack embeds it in the connection URI.
+
+### Starting and stopping the stack
+
+Build the local images once, then start the stack:
+
+```sh
+./gradlew buildImages
+./scripts/start-local.sh
+```
+
+`start-local.sh` checks that Docker Compose is available, creates `.env` when it is missing, and starts the stack with `up --detach --wait`. The interface is then available at `http://127.0.0.1:8080`.
+
+```sh
+./scripts/stop-local.sh
+```
+
+`stop-local.sh` runs `docker compose down` without `--volumes`: the containers and the network are removed, the board data stays in the named volume. Removing the volume deletes the board and is never part of a normal stop; the backup procedure covers what the volume does not.
+
+### Development override
+
+`compose.dev.yaml` adds the host ports needed during development: the API on `127.0.0.1:8080`, which the Vite development proxy targets, and MongoDB on `127.0.0.1:27017`, for local tooling. The published port of the web container is reset, because that port belongs to the API container in this mode and the interface comes from the Vite development server.
+
+```sh
+./scripts/start-local.sh --dev
+./scripts/stop-local.sh --dev
+```
+
+The scripts are POSIX shell scripts and need Docker Compose only. They run on macOS and Linux with Docker Desktop or with the Compose plugin of a local Docker Engine.
+
+### Published images
+
+The stack uses published images instead of the local ones by setting `API_IMAGE` and `WEB_IMAGE` in `.env` to their published references, including a digest. Publishing the images belongs to the release process; registry credentials belong to GitHub Actions secrets, never to repository files.

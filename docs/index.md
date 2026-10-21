@@ -39,6 +39,7 @@ The project is organized around these functional gates. They define integration 
 - [Shared-domain acceptance evidence](evidence/R1.md)
 - [Persistent CRUD acceptance evidence](evidence/R2.md)
 - [R3 acceptance evidence](evidence/R3.md)
+- [R4 acceptance evidence](evidence/R4.md)
 
 ## Architecture decisions
 

@@ -57,6 +57,7 @@ The project unifies all module checks into a non-circular Gradle task graph.
 | `./gradlew check` | Runs repository-wide verification: formatting, Detekt, license validation, JVM and JavaScript tests, frontend linting, and frontend tests. |
 | `./gradlew fullBuild` | Runs `check`, then builds the Commons libraries, backend executable JAR, frontend production bundle, and documentation artifact. |
 | `./gradlew :backend:dockerImage` | Builds the non-root backend runtime image from the verified JAR. Requires a running Docker engine. The image tag follows the `releaseVersion` property; without it the build identifies its commit. See [deployment](deployment.md#backend-runtime-image). |
+| `./gradlew buildImages` | Builds the backend and web container images used by the local Compose stack. Requires a running Docker engine. See [deployment](deployment.md#delivery-stack). |
 | `./gradlew :commons:browserDomainTest` | Runs the shared Commons domain tests in ChromeHeadless through the Kotlin/JS target. |
 | `./gradlew :frontend:frontendInstall` | Installs the exact npm dependencies recorded in `frontend/package-lock.json` by running `npm ci`. |
 | `./gradlew :frontend:frontendLint` | Installs the frontend dependencies when necessary and runs the ESLint checks. |
@@ -169,6 +170,26 @@ npm run dev
 Open http://localhost:5173 in a browser. Board state, note creations, edits, and deletions persist across page reloads and backend restarts directly into MongoDB.
 
 Stop the development database with `docker stop sticky-notes-mongo`; keep its named volume for the next session.
+
+
+## Containerized local stack
+
+The same application runs as three containers with Docker Compose, without a JDK or Node.js installed on the machine. Build the images once and start the stack:
+
+```sh
+./gradlew buildImages
+scripts/start-local.sh
+```
+
+The interface is then available at `http://127.0.0.1:8080`. The stack publishes only that port: the API and MongoDB stay inside the Docker network. `scripts/stop-local.sh` stops the stack and keeps the data in the named volume.
+
+The development override runs the API and MongoDB on the loopback interface and leaves the interface to the Vite development server:
+
+```sh
+scripts/start-local.sh --dev
+```
+
+The details of both modes are described in [deployment](deployment.md#delivery-stack).
 
 
 ## Dependency Management and Locking
