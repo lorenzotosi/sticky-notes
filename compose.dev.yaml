@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani
+
+services:
+  mongo:
+    ports:
+      - "127.0.0.1:27017:27017"
+
+  api:
+    ports:
+      - "127.0.0.1:8081:8080"
