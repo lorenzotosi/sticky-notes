@@ -129,6 +129,25 @@ Build the local images once, then start the stack:
 
 The scripts are POSIX shell scripts and need Docker Compose only. They run on macOS and Linux with Docker Desktop or with the Compose plugin of a local Docker Engine. They need Docker Compose v2.24 or later: the development override resets a published port and the start script bounds the wait for the healthy state.
 
+### Automated smoke and lifecycle verification
+
+`scripts/smoke-test.sh` automates the verification of the delivery stack in an isolated Compose project (`sticky-notes-smoke` on loopback port `18080` by default), so it never touches the `.env` file or the `sticky-notes_mongo-data` volume of a local session.
+
+Run the script directly after building the images, or invoke the Gradle tasks that build the images and run the check:
+
+```sh
+./gradlew containerSmoke
+./gradlew fullVerify
+```
+The smoke check verifies that:
+- all three containers reach the `healthy` state through `docker compose up --wait` without fixed sleeps;
+- only the `web` service publishes a host port (`127.0.0.1:18080`), while `api` and `mongo` publish no host ports;
+- `web` and `api` run as unprivileged users and carry the OCI version and revision labels; 
+- the web root serves the SPA HTML document and unknown `/api/*` routes return JSON `404` responses rather than the SPA fallback; 
+- `GET /api/board`, note creation (`POST /api/board/notes`), re-reading, note update (`PATCH /api/board/notes/{id}`), and note deletion (`DELETE /api/board/notes/{id}`) succeed through the Nginx reverse proxy with optimistic revision checks; 
+- stopping and restarting `api` and `mongo`, as well as stopping the stack with `docker compose down` and starting it again, preserves the stored board in the named volume; 
+- if any step fails, container statuses and logs are printed before the isolated test containers and test volume are removed in the `EXIT` trap.
+
 ### Published images
 
 The stack uses published images instead of the local ones by setting `API_IMAGE` and `WEB_IMAGE` in `.env` to their published references, including a digest. Publishing the images belongs to the release process; registry credentials belong to GitHub Actions secrets, never to repository files.

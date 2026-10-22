@@ -177,3 +177,27 @@ tasks.register("formatCode") {
         ":frontend:frontendFormat",
     )
 }
+
+val defaultShExecutable =
+    if (System.getProperty("os.name").lowercase().contains("win")) {
+        val gitSh = file("C:/Program Files/Git/bin/sh.exe")
+        if (gitSh.exists()) gitSh.absolutePath else "sh"
+    } else {
+        "sh"
+    }
+val shExecutable = providers.environmentVariable("SH_EXECUTABLE").orElse(defaultShExecutable)
+
+val containerSmoke =
+    tasks.register<Exec>("containerSmoke") {
+        group = "verification"
+        description = "Runs the end-to-end smoke and lifecycle check against an isolated Docker Compose stack."
+        dependsOn("buildImages")
+        workingDir = projectDir
+        commandLine(shExecutable.get(), "scripts/smoke-test.sh")
+    }
+
+tasks.register("fullVerify") {
+    group = "verification"
+    description = "Runs the full build, MongoDB integration tests, and container stack lifecycle verification."
+    dependsOn("fullBuild", containerSmoke)
+}
