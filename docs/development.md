@@ -60,6 +60,8 @@ The project unifies all module checks into a non-circular Gradle task graph.
 | `./gradlew fullBuild` | Runs `check`, then builds the Commons libraries, backend executable JAR, frontend production bundle, and documentation artifact. |
 | `./gradlew :backend:dockerImage` | Builds the non-root backend runtime image from the verified JAR. Requires a running Docker engine. The image tag follows the `releaseVersion` property; without it the build identifies its commit. See [deployment](deployment.md#backend-runtime-image). |
 | `./gradlew buildImages` | Builds the backend and web container images used by the local Compose stack. Requires a running Docker engine. See [deployment](deployment.md#delivery-stack). |
+| `./gradlew containerSmoke` | Builds the container images and runs the end-to-end delivery stack smoke and lifecycle test in an isolated Compose project without touching local user volumes. Requires a running Docker engine. See [deployment](deployment.md#automated-smoke-and-lifecycle-verification). |
+| `./gradlew fullVerify` | Runs `fullBuild` and `containerSmoke`, combining code verification, deliverable packaging, MongoDB integration tests, and container stack lifecycle checks. Requires a running Docker engine. |
 | `./gradlew :commons:browserDomainTest` | Runs the shared Commons domain tests in ChromeHeadless through the Kotlin/JS target. |
 | `./gradlew :frontend:frontendInstall` | Installs the exact npm dependencies recorded in `frontend/package-lock.json` by running `npm ci`. |
 | `./gradlew :frontend:frontendLint` | Installs the frontend dependencies when necessary and runs the ESLint checks. |
