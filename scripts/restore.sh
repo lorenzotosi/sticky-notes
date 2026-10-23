@@ -17,7 +17,7 @@
 #   scripts/restore.sh PATH [--project NAME] [--volume NAME] [--force]
 #
 #   PATH        path to a backup directory produced by scripts/backup.sh
-#   --project   Compose project name (default: sticky-notes-restore-test)
+#   --project   Compose project name (default: sticky-notes-restore-test-<timestamp>)
 #   --volume    Docker volume name (default: <project>_mongo-data)
 #   --force     skip confirmation when overwriting an existing volume
 #
@@ -27,7 +27,7 @@ script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 root_dir=$(dirname -- "$script_dir")
 
 mongo_image="mongo@sha256:f071cbf97a6e52fb7f07ce9ca5d862ad79876bf0eba9ba97758337d740449638"
-project_name="sticky-notes-restore-test"
+project_name="sticky-notes-restore-test-$(date +%s)"
 volume_name=""
 backup_path=""
 force=0
@@ -36,7 +36,7 @@ usage() {
     echo "Usage: $0 PATH [--project NAME] [--volume NAME] [--force]" >&2
     echo
     echo "  PATH        path to a backup directory produced by scripts/backup.sh"
-    echo "  --project   Compose project name (default: sticky-notes-restore-test)"
+    echo "  --project   Compose project name (default: sticky-notes-restore-test-<timestamp>)"
     echo "  --volume    Docker volume name (default: <project>_mongo-data)"
     echo "  --force     skip confirmation when overwriting an existing volume"
     exit 2
@@ -68,13 +68,15 @@ if [ -z "$volume_name" ]; then
     volume_name="${project_name}_mongo-data"
 fi
 
-if [ ! -d "$backup_path" ]; then
-    echo "Backup directory not found: $backup_path" >&2
+archive="$backup_path/dump.archive"
+if [ ! -f "$archive" ]; then
+    echo "Backup archive not found: $archive" >&2
     exit 1
 fi
 
-if [ ! -d "$backup_path/dump" ]; then
-    echo "Invalid backup directory (missing dump/): $backup_path" >&2
+# Verify the archive is non-empty.
+if [ ! -s "$archive" ]; then
+    echo "Backup archive is empty: $archive" >&2
     exit 1
 fi
 
@@ -98,7 +100,6 @@ mongo_database="${MONGO_DATABASE:-stickynotes}"
 if docker volume inspect "$volume_name" >/dev/null 2>&1; then
     if [ "$force" -eq 0 ]; then
         printf "Volume '%s' already exists. Restoring will overwrite its data. Continue? [y/N] " "$volume_name" >&2
-        # shellcheck disable=SC2034
         set +e
         confirmed=""
         if read -r confirmed; then
@@ -116,7 +117,7 @@ fi
 
 network="${project_name}_restore-net"
 
-echo "Restoring backup '$backup_path' into volume '$volume_name'..."
+echo "Restoring backup '$archive' into volume '$volume_name'..."
 
 docker network create "$network" >/dev/null 2>&1 || true
 
@@ -128,28 +129,33 @@ container_id=$(docker run --detach --network "$network" \
     -e MONGO_INITDB_DATABASE="$mongo_database" \
     "$mongo_image")
 
+# Give MongoDB time to run its initialization scripts (create root user)
+# before it starts accepting authenticated connections.
+sleep 15
+
 # Wait until MongoDB is ready, authenticating with the root credentials
 # (same pattern as the compose healthcheck).
-for i in $(seq 1 30); do
+for i in $(seq 1 60); do
     if docker exec "$container_id" mongosh --quiet \
         --username "$mongo_user" --password "$mongo_password" --authenticationDatabase admin \
         --eval "quit(db.adminCommand({ ping: 1 }).ok ? 0 : 1)" >/dev/null 2>&1; then
         break
     fi
-    if [ "$i" -eq 30 ]; then
+    if [ "$i" -eq 60 ]; then
         echo "MongoDB did not become ready in time." >&2
         docker stop "$container_id" >/dev/null 2>&1 || true
         docker rm "$container_id" >/dev/null 2>&1 || true
         exit 1
     fi
-    sleep 1
+    sleep 2
 done
 
-# mongorestore authenticates as root against the admin database.
-docker exec "$container_id" mongorestore \
+# Stream the archive into mongorestore via stdin (--archive reads from stdin
+# when no file argument is given).
+cat "$archive" | docker exec -i "$container_id" mongorestore \
     --uri="mongodb://$mongo_user:$mongo_password@127.0.0.1:27017/$mongo_database?authSource=admin" \
     --drop \
-    "/backup"
+    --archive
 
 docker stop "$container_id" >/dev/null 2>&1 || true
 docker rm "$container_id" >/dev/null 2>&1 || true

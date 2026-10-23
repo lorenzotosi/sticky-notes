@@ -67,9 +67,11 @@ for image in "$api_image" "$web_image"; do
 done
 
 # Two isolated Compose projects so the volumes and networks never collide and
-# neither stack touches the local sticky-notes_mongo-data volume.
-project_a="sticky-notes-backup-verify-a"
-project_b="sticky-notes-backup-verify-b"
+# neither stack touches the local sticky-notes_mongo-data volume. Timestamp
+# suffixes avoid conflicts with leftover volumes from previous runs.
+ts=$(date +%s)
+project_a="sticky-notes-backup-verify-a-${ts}"
+project_b="sticky-notes-backup-verify-b-${ts}"
 web_port_a=18090
 web_port_b=18091
 base_url_a="http://127.0.0.1:${web_port_a}"
@@ -125,7 +127,7 @@ fi
 
 create_resp=$(curl -fsS -X POST "${base_url_a}/api/board/notes" \
     -H 'Content-Type: application/json' \
-    -d "{\"content\":\"Backup verification note\",\"color\":\"RED\",\"expectedRevision\":${rev0}}")
+    -d "{\"content\":\"Backup verification note\",\"color\":\"BLUE\",\"expectedRevision\":${rev0}}")
 
 note_id=$(printf '%s' "$create_resp" | tr -d '\r\n' | sed -n 's/.*"createdNoteId":"\([^"]*\)".*/\1/p')
 rev1=$(printf '%s' "$create_resp" | tr -d '\r\n' | sed -n 's/.*"revision":\([0-9][0-9]*\).*/\1/p')

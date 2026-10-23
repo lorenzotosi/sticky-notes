@@ -6,8 +6,8 @@
 #
 # Runs mongodump inside a temporary container using the same pinned MongoDB
 # image as the delivery stack, authenticates with the credentials from the
-# environment, and writes the dump to a timestamped directory under outputs/.
-# A manifest file records schemaVersion and the image digest used.
+# environment, and writes the archive to a timestamped directory under
+# outputs/. A manifest file records schemaVersion and the image digest used.
 #
 # The backup is read-only: it never modifies the database or the volume.
 #
@@ -77,15 +77,17 @@ fi
 
 mkdir -p "$output_dir"
 
-dump_dir="$output_dir/dump"
 manifest="$output_dir/manifest.txt"
 
 echo "Backing up database '$mongo_database' to $output_dir..."
 
+# Run mongodump in a temporary container on the stack's network. The archive
+# streamed to stdout is redirected to a file on the host. The container is
+# removed automatically when it exits.
 docker run --rm --network "$network" \
-    -v "$dump_dir:/backup:rw" \
     "$mongo_image" \
-    mongodump --uri="mongodb://$mongo_user:$mongo_password@mongo:27017/$mongo_database?authSource=admin" --out=/backup
+    mongodump --uri="mongodb://$mongo_user:$mongo_password@mongo:27017/$mongo_database?authSource=admin" --archive \
+    > "$output_dir/dump.archive"
 
 digest=$(docker image inspect "$mongo_image" --format '{{index .RepoDigests 0}}')
 
