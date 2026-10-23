@@ -196,14 +196,23 @@ val containerSmoke =
         commandLine(shExecutable.get(), "scripts/smoke-test.sh")
     }
 
+val backupRestoreVerify =
+    tasks.register<Exec>("backupRestoreVerify") {
+        group = "verification"
+        description = "Verifies the backup/restore roundtrip against an isolated Docker Compose stack."
+        dependsOn("buildImages")
+        workingDir = projectDir
+        commandLine(shExecutable.get(), "scripts/backup-restore-verify.sh")
+    }
+
 val frontendE2eTask = evaluationDependsOn(":frontend").tasks.named("frontendE2e")
 
 frontendE2eTask.configure {
-    mustRunAfter(containerSmoke)
+    mustRunAfter(containerSmoke, backupRestoreVerify)
 }
 
 tasks.register("fullVerify") {
     group = "verification"
-    description = "Runs the full build, MongoDB integration tests, and container stack lifecycle verification."
-    dependsOn("fullBuild", containerSmoke, frontendE2eTask)
+    description = "Runs the full build, MongoDB integration tests, container stack lifecycle checks, backup and restore, and the browser end-to-end suite."
+    dependsOn("fullBuild", containerSmoke, backupRestoreVerify, frontendE2eTask)
 }

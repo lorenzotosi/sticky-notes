@@ -21,6 +21,7 @@ The project is organized around these functional gates. They define integration 
 - [Local development](development.md)
 - [Testing](testing.md)
 - [Deployment](deployment.md)
+- [Operations](operations.md)
 
 ## Specifications
 

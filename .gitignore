@@ -27,6 +27,9 @@ hs_err_pid*
 *.iws
 out/
 
+# Backup output (never committed)
+outputs/
+
 # Operating systems
 .DS_Store
 Thumbs.db

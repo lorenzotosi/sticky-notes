@@ -151,3 +151,10 @@ The smoke check verifies that:
 ### Published images
 
 The stack uses published images instead of the local ones by setting `API_IMAGE` and `WEB_IMAGE` in `.env` to their published references, including a digest. Publishing the images belongs to the release process; registry credentials belong to GitHub Actions secrets, never to repository files.
+
+### Backup and restore
+
+The named volume preserves data across stops and restarts but is not a backup.
+Use `scripts/backup.sh` and `scripts/restore.sh` to back up and restore the
+board database; see [Operations](operations.md) for the procedures, data
+compatibility, and volume-safety rules.
