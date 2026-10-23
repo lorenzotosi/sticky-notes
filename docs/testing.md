@@ -420,3 +420,21 @@ Coverage reports and domain boundary checks run as part of `./gradlew check` and
 - **Backend (`:backend`)**: JaCoCo measures unit and HTTP test coverage (`:backend:jacocoTestReport`) and enforces a minimum 80% line coverage threshold (`:backend:jacocoTestCoverageVerification`), excluding only the `stickynotes.Main` bootstrap entry point. Reports are generated at `backend/build/reports/jacoco/test/html/index.html` and `backend/build/reports/jacoco/test/jacocoTestReport.xml`.
 - **Frontend (`:frontend`)**: Vitest with `@vitest/coverage-v8` measures coverage across maintained source files under `frontend/src/**/*.{js,vue}`, excluding `src/main.js`, test files, and the generated Kotlin/JS package (`sticky-notes-domain`), enforcing at least 80% line coverage. Reports are generated under `frontend/coverage/index.html` and `frontend/coverage/lcov.info`.
 - **Domain boundary verification (`:commons:verifyDomainBoundaries`)**: verifies that `commons/src/commonMain` contains no JVM-specific imports (`java.*`, `javax.*`, `jdk.*`) and no infrastructure imports (`org.springframework.*`, `org.mongodb.*`), and that `commons/build.gradle.kts` declares no Spring or MongoDB dependencies.
+
+## Browser E2E tests on the production container stack (R4)
+
+`frontend/e2e/kanban.spec.js` runs Playwright with headless Chromium inside an isolated Docker Compose service against the production Nginx web image, Spring Boot API image, and MongoDB.
+
+Run the browser E2E suite from the repository root:
+
+```sh
+./gradlew :frontend:frontendE2e
+```
+
+Or run the complete verification gate:
+
+```sh
+./gradlew fullVerify
+```
+
+The E2E suite exercises CRUD persistence across page reload, WIP limit enforcement, note blocking/unblocking, checklist completion guards, and multi-window conflict recovery.
