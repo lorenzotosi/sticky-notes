@@ -32,8 +32,8 @@ val frontendLint =
         workingDir = projectDir
         commandLine(npm.get(), "run", "lint")
         inputs.dir("src")
-        inputs.file("eslint.config.js")
-        inputs.file("package.json")
+        inputs.dir("e2e")
+        inputs.files("eslint.config.js", "playwright.config.js", "package.json")
     }
 
 val frontendTest =
@@ -45,7 +45,7 @@ val frontendTest =
         commandLine(npm.get(), "run", "test")
         inputs.dir("src")
         inputs.dir(domainPackageDir)
-        inputs.file("package.json")
+        inputs.files("vite.config.js", "package.json")
     }
 
 val frontendCheck =
@@ -63,8 +63,8 @@ val frontendFormat =
         workingDir = projectDir
         commandLine(npm.get(), "run", "lint:fix")
         inputs.dir("src")
-        inputs.file("eslint.config.js")
-        inputs.file("package.json")
+        inputs.dir("e2e")
+        inputs.files("eslint.config.js", "playwright.config.js", "package.json")
     }
 
 tasks.register<Exec>("frontendBuild") {
@@ -97,5 +97,30 @@ tasks.register<Exec>("buildWebImage") {
         "-t",
         "sticky-notes-web:local",
         ".",
+    )
+}
+
+val e2eDown =
+    tasks.register<Exec>("e2eDown") {
+        group = "verification"
+        description = "Stops and removes the isolated E2E Docker Compose environment"
+        workingDir = rootDir
+        commandLine("docker", "compose", "-f", "compose.test.yaml", "down", "-v")
+    }
+
+tasks.register<Exec>("frontendE2e") {
+    group = "verification"
+    description = "Runs Playwright E2E browser journeys inside an isolated container stack"
+    dependsOn(frontendInstall, ":buildImages")
+    finalizedBy(e2eDown)
+    workingDir = rootDir
+    commandLine(
+        "docker", "compose",
+        "-f", "compose.test.yaml",
+        "up",
+        "--build",
+        "--exit-code-from", "e2e",
+        "--abort-on-container-exit",
+        "e2e",
     )
 }

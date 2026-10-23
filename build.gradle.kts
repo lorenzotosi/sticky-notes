@@ -196,8 +196,14 @@ val containerSmoke =
         commandLine(shExecutable.get(), "scripts/smoke-test.sh")
     }
 
+val frontendE2eTask = evaluationDependsOn(":frontend").tasks.named("frontendE2e")
+
+frontendE2eTask.configure {
+    mustRunAfter(containerSmoke)
+}
+
 tasks.register("fullVerify") {
     group = "verification"
     description = "Runs the full build, MongoDB integration tests, and container stack lifecycle verification."
-    dependsOn("fullBuild", containerSmoke)
+    dependsOn("fullBuild", containerSmoke, frontendE2eTask)
 }

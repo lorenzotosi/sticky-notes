@@ -19,6 +19,11 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      'e2e/**'
+    ],
     server: {
       deps: {
         inline: ['sticky-notes-domain']

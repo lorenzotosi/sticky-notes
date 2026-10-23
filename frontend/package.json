@@ -7,8 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "test": "vitest run --coverage",
-    "lint": "eslint src",
-    "lint:fix": "eslint src --fix",
+    "test:e2e": "playwright test",
+    "lint": "eslint src e2e playwright.config.js",
+    "lint:fix": "eslint src e2e playwright.config.js --fix",
     "lint:openapi": "redocly lint ../docs/openapi.yaml"
   },
   "dependencies": {
@@ -16,6 +17,7 @@
     "vue": "^3.5.16"
   },
   "devDependencies": {
+    "@playwright/test": "1.52.0",
     "@redocly/cli": "^2.53.3",
     "@vitejs/plugin-vue": "^6.0.0",
     "@vitest/coverage-v8": "3.2.4",

@@ -41,3 +41,51 @@ services:
       - :testMongoUp
       - -x
       - :testMongoDown
+
+
+  mongo-e2e:
+    image: mongo@sha256:f071cbf97a6e52fb7f07ce9ca5d862ad79876bf0eba9ba97758337d740449638
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: stickynotes_e2e
+      MONGO_INITDB_ROOT_PASSWORD: stickynotes_e2e_password
+      MONGO_INITDB_DATABASE: stickynotes_e2e
+    healthcheck:
+      test: ["CMD-SHELL", 'mongosh --quiet --username "$$MONGO_INITDB_ROOT_USERNAME" --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "quit(db.adminCommand({ ping: 1 }).ok ? 0 : 1)"']
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  api-e2e:
+    image: ${API_IMAGE:-sticky-notes-backend:local}
+    environment:
+      MONGODB_URI: mongodb://stickynotes_e2e:stickynotes_e2e_password@mongo-e2e:27017/stickynotes_e2e?authSource=admin
+    networks:
+      default:
+        aliases:
+          - api
+    depends_on:
+      mongo-e2e:
+        condition: service_healthy
+
+  web-e2e:
+    image: ${WEB_IMAGE:-sticky-notes-web:local}
+    depends_on:
+      api-e2e:
+        condition: service_healthy
+
+  e2e:
+    image: mcr.microsoft.com/playwright:v1.52.0-noble
+    ipc: host
+    working_dir: /workspace/frontend
+    volumes:
+      - .:/workspace
+    environment:
+      CI: "1"
+      E2E_BASE_URL: "http://web-e2e:8080"
+    depends_on:
+      web-e2e:
+        condition: service_started
+    command:
+      - npx
+      - playwright
+      - test
