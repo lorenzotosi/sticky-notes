@@ -196,8 +196,17 @@ val containerSmoke =
         commandLine(shExecutable.get(), "scripts/smoke-test.sh")
     }
 
+val backupRestoreVerify =
+    tasks.register<Exec>("backupRestoreVerify") {
+        group = "verification"
+        description = "Verifies the backup/restore roundtrip against an isolated Docker Compose stack."
+        dependsOn("buildImages")
+        workingDir = projectDir
+        commandLine(shExecutable.get(), "scripts/backup-restore-verify.sh")
+    }
+
 tasks.register("fullVerify") {
     group = "verification"
-    description = "Runs the full build, MongoDB integration tests, and container stack lifecycle verification."
-    dependsOn("fullBuild", containerSmoke)
+    description = "Runs the full build, MongoDB integration tests, and container stack lifecycle verification, including backup/restore."
+    dependsOn("fullBuild", containerSmoke, backupRestoreVerify)
 }
