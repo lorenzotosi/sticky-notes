@@ -213,6 +213,6 @@ frontendE2eTask.configure {
 
 tasks.register("fullVerify") {
     group = "verification"
-    description = "Runs the full build, MongoDB integration tests, container stack lifecycle checks, backup and restore, and the browser end-to-end suite."
+    description = "Runs the full build, MongoDB integration tests, container lifecycle checks, backup and restore, and browser E2E."
     dependsOn("fullBuild", containerSmoke, backupRestoreVerify, frontendE2eTask)
 }
