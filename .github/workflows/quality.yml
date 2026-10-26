@@ -62,6 +62,7 @@ jobs:
             backend/build/libs/backend.jar
             commons/build/libs/
             frontend/dist/
+            build/docs/
       - name: Upload test reports
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
