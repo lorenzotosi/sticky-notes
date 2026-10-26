@@ -10,6 +10,12 @@
 # and compares the snapshots. Neither stack touches the local demonstration
 # board volume.
 #
+# The procedure also asserts that the manifest records the schema version, the
+# database name, the pinned image and a digest; that a restore without flags
+# creates the documented default test target; that a restore into an existing
+# volume cancels when the confirmation cannot be answered; and that the teardown
+# leaves no container, volume, or network behind.
+#
 # Usage:
 #   scripts/backup-restore-verify.sh [--wait-timeout SECONDS]
 #
@@ -23,6 +29,11 @@ failed=1
 snapshot_a=""
 snapshot_b=""
 backup_dir=""
+volume_b=""
+default_project=""
+default_volume=""
+default_network=""
+torn_down=0
 
 usage() {
     echo "Usage: $0 [--wait-timeout SECONDS]" >&2
@@ -56,6 +67,14 @@ if ! docker info >/dev/null 2>&1; then
     exit 1
 fi
 
+# Credentials and the database name are read from .env exactly like scripts/backup.sh
+# and scripts/restore.sh do, so the stacks, the dump and the restore all use the same
+# values. compose.yaml supplies the defaults when the file is absent.
+if [ -f "$root_dir/.env" ]; then
+    # shellcheck disable=SC1090,SC1091
+    . "$root_dir/.env"
+fi
+
 api_image="${API_IMAGE:-sticky-notes-backend:local}"
 web_image="${WEB_IMAGE:-sticky-notes-web:local}"
 
@@ -76,6 +95,7 @@ web_port_a=18090
 web_port_b=18091
 base_url_a="http://127.0.0.1:${web_port_a}"
 base_url_b="http://127.0.0.1:${web_port_b}"
+volume_b="${project_b}_mongo-data"
 
 mongo_user="${MONGO_USER:-stickynotes_user}"
 mongo_password="${MONGO_PASSWORD:-stickynotes_local_password}"
@@ -94,6 +114,24 @@ compose_cmd() {
     docker compose --project-directory "$root_dir" -p "$project" -f "$root_dir/compose.yaml" "$@"
 }
 
+# Removal is idempotent so the procedure can run it as a step and still be
+# covered by the trap when a check fails half way through.
+teardown() {
+    if [ "$torn_down" -ne 0 ]; then
+        return 0
+    fi
+    torn_down=1
+    compose_cmd "$project_a" "$web_port_a" down -v --remove-orphans >/dev/null 2>&1 || true
+    compose_cmd "$project_b" "$web_port_b" down -v --remove-orphans >/dev/null 2>&1 || true
+    docker volume rm "$volume_b" >/dev/null 2>&1 || true
+    docker network rm "${project_b}_restore-net" >/dev/null 2>&1 || true
+    if [ -n "$default_volume" ]; then
+        docker volume rm "$default_volume" >/dev/null 2>&1 || true
+        docker network rm "$default_network" >/dev/null 2>&1 || true
+    fi
+    return 0
+}
+
 cleanup() {
     exit_code=$?
     set +e
@@ -109,9 +147,7 @@ cleanup() {
             rm -rf "$backup_dir"
         fi
     fi
-    compose_cmd "$project_a" "$web_port_a" down -v --remove-orphans >/dev/null 2>&1 || true
-    compose_cmd "$project_b" "$web_port_b" down -v --remove-orphans >/dev/null 2>&1 || true
-    docker volume rm "${project_b}_mongo-data" >/dev/null 2>&1 || true
+    teardown
     exit "$exit_code"
 }
 
@@ -185,6 +221,37 @@ echo "Stack A board created: note=$note_id revision=$rev3"
 backup_dir="$root_dir/outputs/backup-verify-$(date +%Y%m%d-%H%M%S)"
 "$script_dir/backup.sh" --output "$backup_dir" --project "$project_a"
 
+# The manifest is the contract the restore relies on: it records the schema
+# version, the database name the archive holds, and the image the dump came from.
+# The expected image reference is read from the same configuration the stacks use.
+mongo_image_ref=$(docker compose --project-directory "$root_dir" -f "$root_dir/compose.yaml" config --images mongo)
+manifest="$backup_dir/manifest.txt"
+if [ ! -f "$manifest" ]; then
+    echo "backup.sh did not write a manifest: $manifest" >&2
+    exit 1
+fi
+if ! grep -q '^schemaVersion: 1' "$manifest"; then
+    echo "Manifest does not declare schemaVersion 1." >&2
+    cat "$manifest" >&2
+    exit 1
+fi
+if ! grep -q "^database: $mongo_database\$" "$manifest"; then
+    echo "Manifest does not record database '$mongo_database'." >&2
+    cat "$manifest" >&2
+    exit 1
+fi
+if [ -n "$mongo_image_ref" ] && ! grep -qF "image: $mongo_image_ref" "$manifest"; then
+    echo "Manifest does not record the image the stack pins ($mongo_image_ref)." >&2
+    cat "$manifest" >&2
+    exit 1
+fi
+manifest_digest=$(sed -n 's/^digest:[[:space:]]*//p' "$manifest")
+if [ -z "$manifest_digest" ]; then
+    echo "Manifest records an empty digest." >&2
+    cat "$manifest" >&2
+    exit 1
+fi
+
 # The backup is read-only. The source board is re-read to prove the dump
 # left stack A's data unchanged before the stack is stopped.
 snapshot_a_after_backup=$(curl -fsS "${base_url_a}/api/board")
@@ -204,7 +271,6 @@ compose_cmd "$project_a" "$web_port_a" down
 
 # --- Restore into a new volume for stack B ---
 
-volume_b="${project_b}_mongo-data"
 "$script_dir/restore.sh" "$backup_dir" --project "$project_b" --volume "$volume_b" --force
 
 # --- Start stack B against the restored volume ---
@@ -242,5 +308,71 @@ case "$snapshot_b" in
     *) echo "Blocker reason missing after restore: $snapshot_b" >&2; exit 1 ;;
 esac
 
+# --- Exercise the documented default restore target ---
+#
+# Without --project/--volume the restore chooses a timestamped test project,
+# which is the behavior documented for an operator recovering data. The created
+# volume name is taken from the restore output so it can be released afterwards.
+restore_out=$("$script_dir/restore.sh" "$backup_dir" </dev/null 2>&1)
+default_volume=$(printf '%s\n' "$restore_out" | sed -n "s/.*Restore complete: volume '\([^']*\)'/\1/p" | tail -n 1)
+if [ -z "$default_volume" ]; then
+    echo "Could not determine the default restore target from: $restore_out" >&2
+    exit 1
+fi
+default_project="${default_volume%_mongo-data}"
+default_network="${default_project}_restore-net"
+if ! docker volume inspect "$default_volume" >/dev/null 2>&1; then
+    echo "The default restore target does not exist: $default_volume" >&2
+    exit 1
+fi
+
+# --- Exercise the confirmation prompt on an existing volume ---
+#
+# That target now holds data, so a second restore into it must cancel when the
+# confirmation cannot be answered (stdin is closed) and must write nothing.
+cancel_out=""
+if cancel_out=$("$script_dir/restore.sh" "$backup_dir" --project "$default_project" --volume "$default_volume" </dev/null 2>&1); then
+    echo "restore.sh restored into an existing volume without confirmation." >&2
+    exit 1
+fi
+case "$cancel_out" in
+    *"Restore cancelled."*) ;;
+    *) echo "restore.sh did not report a cancelled confirmation: $cancel_out" >&2; exit 1 ;;
+esac
+case "$cancel_out" in
+    *"restored successfully"*)
+        echo "restore.sh wrote data after the confirmation was declined." >&2
+        printf '%s\n' "$cancel_out" >&2
+        exit 1 ;;
+esac
+if ! docker volume inspect "$default_volume" >/dev/null 2>&1; then
+    echo "The cancelled restore removed the volume." >&2
+    exit 1
+fi
+
+# --- Tear down, then prove nothing this run created remains ---
+teardown
+residue=""
+for name in "$project_a" "$project_b" "$default_project"; do
+    if [ -n "$(docker ps -aq --filter "name=$name")" ]; then
+        residue="${residue} container:$name"
+    fi
+    if [ -n "$(docker volume ls -q --filter "name=$name")" ]; then
+        residue="${residue} volume:$name"
+    fi
+    if [ -n "$(docker network ls -q --filter "name=$name")" ]; then
+        residue="${residue} network:$name"
+    fi
+done
+for net in "${project_b}_restore-net" "${default_project}_restore-net"; do
+    if [ -n "$(docker network ls -q --filter "name=$net")" ]; then
+        residue="${residue} network:$net"
+    fi
+done
+if [ -n "$residue" ]; then
+    echo "Teardown left residue:$residue" >&2
+    exit 1
+fi
+
 failed=0
-echo "Backup/restore roundtrip verification passed: snapshot A equals snapshot B."
+echo "Backup/restore verification passed: snapshots equal, manifest recorded, default target created, existing volume protected, teardown clean."
