@@ -62,6 +62,14 @@ before overwriting it, and `--force` skips the prompt. This separates the
 destructive overwrite path from the default test-target behavior. A volume you
 name yourself is left in place after the restore for you to delete.
 
+The archive carries the namespace it was dumped from, so the restored database
+name is the one recorded in `manifest.txt` and not a choice the script can make.
+`scripts/restore.sh` reads that manifest and refuses a backup whose database name
+differs from the `MONGO_DATABASE` of the stack that will read the volume, rather
+than restoring successfully into a database the application never queries. The
+manifest's schema version is reported during the restore; the compatibility rule
+is described [below](#data-compatibility).
+
 Restoring into an existing volume requires the credentials that created it.
 MongoDB creates the root user only on an empty data directory, so a volume
 that already holds data under different credentials cannot be restored in
