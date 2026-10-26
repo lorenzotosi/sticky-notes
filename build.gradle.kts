@@ -58,6 +58,7 @@ tasks.register<Sync>("documentation") {
     }
     from(project(":commons").layout.buildDirectory.dir("dokka/html")) {
         into("api")
+        exclude(".DS_Store", "**/.DS_Store")
     }
     into(layout.buildDirectory.dir("docs"))
 }

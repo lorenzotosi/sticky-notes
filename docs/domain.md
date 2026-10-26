@@ -61,4 +61,4 @@ When updating or deleting a checklist item, note and item presence are checked b
 
 `JvmBoardFacade` gives Java callers static entry points. `evaluateBoardCommand` gives JavaScript callers a JSON entry point.
 
-See the [generated API reference](api/index.html) for types, commands, and function signatures.
+See the generated API reference in `build/docs/api/`, produced by `./gradlew documentation`, for types, commands, and function signatures.
