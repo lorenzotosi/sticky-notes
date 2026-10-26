@@ -101,7 +101,13 @@ docker run --rm --network "$network" \
     mongodump --uri="mongodb://$mongo_user:$mongo_password@mongo:27017/$mongo_database?authSource=admin" --archive \
     > "$output_dir/dump.archive"
 
-digest=$(docker image inspect "$mongo_image" --format '{{index .RepoDigests 0}}')
+# `docker image inspect` exits 0 with empty output when the image has no
+# registry digest (a locally built tag), so the manifest records that case
+# explicitly instead of leaving a blank field.
+digest=$(docker image inspect "$mongo_image" --format '{{index .RepoDigests 0}}' 2>/dev/null || true)
+if [ -z "$digest" ]; then
+    digest="none (locally built image without a registry digest)"
+fi
 
 {
     echo "backup created: $(date -u +%Y-%m-%dT%H:%M:%SZ)"

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani
 
-# Verifies the backup/restore roundtrip (acceptance C43).
+# Verifies the backup/restore roundtrip of the delivery stack.
 #
 # Creates a board with a note, a checklist item, and a blocker on an isolated
 # stack, backs the database up with scripts/backup.sh, restores it into a new

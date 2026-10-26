@@ -109,6 +109,30 @@ mongo_user="${MONGO_USER:-stickynotes_user}"
 mongo_password="${MONGO_PASSWORD:-stickynotes_local_password}"
 mongo_database="${MONGO_DATABASE:-stickynotes}"
 
+# The archive carries the namespace it was dumped from and mongorestore recreates
+# that namespace, so the target database name is not a choice this script can make.
+# Without this check a backup of one database restores cleanly into a database the
+# stack never reads, which would leave the application looking at an empty board.
+manifest="$backup_path/manifest.txt"
+if [ ! -f "$manifest" ]; then
+    echo "Backup manifest not found: $manifest" >&2
+    echo "The manifest is needed to check the database name the archive holds." >&2
+    exit 1
+fi
+
+dumped_database=$(sed -n 's/^database:[[:space:]]*//p' "$manifest")
+dumped_schema_version=$(sed -n 's/^schemaVersion:[[:space:]]*//p' "$manifest")
+if [ -z "$dumped_database" ]; then
+    echo "Backup manifest does not record a database name: $manifest" >&2
+    exit 1
+fi
+if [ "$dumped_database" != "$mongo_database" ]; then
+    echo "This backup holds database '$dumped_database', but the stack reads '$mongo_database'." >&2
+    echo "Restore with a stack configured for MONGO_DATABASE='$dumped_database'." >&2
+    exit 1
+fi
+echo "Backup schema version: ${dumped_schema_version:-unknown}" >&2
+
 if docker volume inspect "$volume_name" >/dev/null 2>&1; then
     if [ "$force" -eq 0 ]; then
         printf "Volume '%s' already exists. Restoring will overwrite its data. Continue? [y/N] " "$volume_name" >&2
@@ -141,6 +165,15 @@ container_id=$(docker run --detach --network "$network" \
     -e MONGO_INITDB_DATABASE="$mongo_database" \
     "$mongo_image")
 
+# The container and its network are released on any exit path, so a failed
+# restore cannot leave a running container holding the target volume.
+cleanup_restore() {
+    docker stop "$container_id" >/dev/null 2>&1 || true
+    docker rm "$container_id" >/dev/null 2>&1 || true
+    docker network rm "$network" >/dev/null 2>&1 || true
+}
+trap 'cleanup_restore' EXIT INT TERM
+
 # Wait until MongoDB accepts authenticated connections with the root
 # credentials (same pattern as the compose healthcheck). During the
 # initialization phase the root user does not exist yet, so an authenticated
@@ -153,8 +186,6 @@ for i in $(seq 1 60); do
     fi
     if [ "$i" -eq 60 ]; then
         echo "MongoDB did not become ready in time." >&2
-        docker stop "$container_id" >/dev/null 2>&1 || true
-        docker rm "$container_id" >/dev/null 2>&1 || true
         exit 1
     fi
     sleep 2
@@ -168,9 +199,5 @@ cat "$archive" | docker exec -i "$container_id" mongorestore \
     --uri="mongodb://$mongo_user:$mongo_password@127.0.0.1:27017/?authSource=admin" \
     --drop \
     --archive
-
-docker stop "$container_id" >/dev/null 2>&1 || true
-docker rm "$container_id" >/dev/null 2>&1 || true
-docker network rm "$network" >/dev/null 2>&1 || true
 
 echo "Restore complete: volume '$volume_name'"
