@@ -26,7 +26,6 @@ set -eu
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 root_dir=$(dirname -- "$script_dir")
 
-mongo_image="mongo@sha256:f071cbf97a6e52fb7f07ce9ca5d862ad79876bf0eba9ba97758337d740449638"
 project_name="sticky-notes-restore-test-$(date +%s)"
 volume_name=""
 backup_path=""
@@ -86,6 +85,19 @@ for cmd in docker; do
         exit 1
     fi
 done
+
+if ! docker compose version >/dev/null 2>&1; then
+    echo "Docker Compose is not available. Install Docker Desktop or the Compose plugin." >&2
+    exit 1
+fi
+
+# The MongoDB image reference comes from the delivery stack configuration, so
+# the server started for the restore matches the stack that reads the volume.
+mongo_image=$(docker compose --project-directory "$root_dir" -f "$root_dir/compose.yaml" config --images mongo)
+if [ -z "$mongo_image" ]; then
+    echo "Could not read the MongoDB image reference from compose.yaml." >&2
+    exit 1
+fi
 
 # Load environment from .env when present (credentials and database name).
 if [ -f "$root_dir/.env" ]; then
@@ -149,9 +161,11 @@ for i in $(seq 1 60); do
 done
 
 # Stream the archive into mongorestore via stdin (--archive reads from stdin
-# when no file argument is given).
+# when no file argument is given). The restored namespaces are the ones inside
+# the archive, so the connection URI carries no database path: leaving one there
+# makes the tool treat it as the deprecated --db/--collection selector.
 cat "$archive" | docker exec -i "$container_id" mongorestore \
-    --uri="mongodb://$mongo_user:$mongo_password@127.0.0.1:27017/$mongo_database?authSource=admin" \
+    --uri="mongodb://$mongo_user:$mongo_password@127.0.0.1:27017/?authSource=admin" \
     --drop \
     --archive
 

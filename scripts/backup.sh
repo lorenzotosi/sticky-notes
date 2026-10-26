@@ -22,7 +22,6 @@ set -eu
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 root_dir=$(dirname -- "$script_dir")
 
-mongo_image="mongo@sha256:f071cbf97a6e52fb7f07ce9ca5d862ad79876bf0eba9ba97758337d740449638"
 project_name="sticky-notes"
 output_dir=""
 
@@ -57,6 +56,19 @@ for cmd in docker; do
         exit 1
     fi
 done
+
+if ! docker compose version >/dev/null 2>&1; then
+    echo "Docker Compose is not available. Install Docker Desktop or the Compose plugin." >&2
+    exit 1
+fi
+
+# The MongoDB image reference comes from the delivery stack configuration, so
+# the dump tool cannot drift away from the server that stores the board.
+mongo_image=$(docker compose --project-directory "$root_dir" -f "$root_dir/compose.yaml" config --images mongo)
+if [ -z "$mongo_image" ]; then
+    echo "Could not read the MongoDB image reference from compose.yaml." >&2
+    exit 1
+fi
 
 # Load environment from .env when present (credentials and database name).
 if [ -f "$root_dir/.env" ]; then

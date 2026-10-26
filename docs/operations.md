@@ -30,8 +30,9 @@ never silently repaired.
 ## Backup
 
 `scripts/backup.sh` dumps the board database with `mongodump` inside a
-temporary container using the same pinned MongoDB image as the delivery stack.
-The dump is written to a timestamped directory under `outputs/` (outside Git)
+temporary container. Both scripts read the MongoDB image reference from
+`compose.yaml`, so the tooling cannot drift away from the pinned server, and
+the dump is written to a timestamped directory under `outputs/` (outside Git)
 together with a manifest that records `schemaVersion`, the database name, and
 the image digest.
 
@@ -53,11 +54,18 @@ container. A backup path is required:
 ./scripts/restore.sh outputs/backup-20260101-120000/
 ```
 
-By default the restore targets a fresh test volume
-(`sticky-notes-restore-test_mongo-data`), never the local demonstration board
-volume. If the target volume already exists, the script asks for confirmation
-before overwriting it; pass `--force` to skip the prompt. The destructive
-overwrite path is explicitly separated from the default test-target behavior.
+By default the restore creates a new test project and volume
+(`sticky-notes-restore-test-<timestamp>_mongo-data`) and never touches the
+local demonstration board volume. Use `--project` and `--volume` to name the
+target instead; if that volume already exists, the script asks for confirmation
+before overwriting it, and `--force` skips the prompt. This separates the
+destructive overwrite path from the default test-target behavior. A volume you
+name yourself is left in place after the restore for you to delete.
+
+Restoring into an existing volume requires the credentials that created it.
+MongoDB creates the root user only on an empty data directory, so a volume
+that already holds data under different credentials cannot be restored in
+place: remove the volume first, or restore into a new one.
 
 After a restore, start a Compose stack against the restored volume so the API
 can serve the recovered board:
