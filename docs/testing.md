@@ -404,6 +404,19 @@ The API must be published on `127.0.0.1:8080`, the port the Vite development pro
 
 This procedure exercises the containers, the reverse proxy, the health checks, and the volume. It does not exercise the browser journeys, which the end-to-end suite of the delivery gate covers, and it does not prove that the published images start on a machine without a source checkout.
 
+### Backup and restore
+
+`scripts/backup.sh` creates a `mongodump` of the board database into a timestamped directory under `outputs/`, together with a manifest that records `schemaVersion` and the image digest. `scripts/restore.sh` restores a backup into a named volume, defaulting to a fresh test volume and asking for confirmation before overwriting an existing one. Neither script touches the local demonstration board volume by default.
+
+The roundtrip is verified by `scripts/backup-restore-verify.sh`, exposed as the `backupRestoreVerify` Gradle task: it creates a board with a note, a checklist item, and a blocker on an isolated stack, backs it up, checks that the manifest records the schema version, the database name, the pinned image, and a digest, re-reads the source snapshot to confirm the dump left it unchanged, restores it into a new volume, starts a second stack against that volume, and compares the snapshots. The procedure then restores the same backup with no target flags to exercise the documented default test target, attempts a restore into that now existing volume without confirmation and requires the cancellation to leave the data untouched, and finally tears both stacks down and fails if any container, volume, or network created by the run remains. Credentials come from `.env`, so the stacks, the dump, and the restore always use the same values.
+
+```sh
+./gradlew buildImages
+./gradlew backupRestoreVerify
+```
+
+The backup/restore procedures and data-compatibility rules are documented in [Operations](operations.md).
+
 ## Other test scopes
 
 - `frontend/src/App.test.js` mounts the Kanban interface with mocked HTTP responses and verifies loading, note creation, deletion confirmation, and movement. It does not exercise a real server or database.
