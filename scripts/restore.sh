@@ -129,12 +129,10 @@ container_id=$(docker run --detach --network "$network" \
     -e MONGO_INITDB_DATABASE="$mongo_database" \
     "$mongo_image")
 
-# Give MongoDB time to run its initialization scripts (create root user)
-# before it starts accepting authenticated connections.
-sleep 15
-
-# Wait until MongoDB is ready, authenticating with the root credentials
-# (same pattern as the compose healthcheck).
+# Wait until MongoDB accepts authenticated connections with the root
+# credentials (same pattern as the compose healthcheck). During the
+# initialization phase the root user does not exist yet, so an authenticated
+# ping is the readiness signal; no fixed sleep is needed.
 for i in $(seq 1 60); do
     if docker exec "$container_id" mongosh --quiet \
         --username "$mongo_user" --password "$mongo_password" --authenticationDatabase admin \

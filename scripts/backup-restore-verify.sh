@@ -101,13 +101,17 @@ cleanup() {
         echo "--- Backup/restore verification failed: collecting stack state ---" >&2
         compose_cmd "$project_a" "$web_port_a" ps >&2 2>&1 || true
         compose_cmd "$project_a" "$web_port_a" logs --no-color >&2 2>&1 || true
+        compose_cmd "$project_b" "$web_port_b" ps >&2 2>&1 || true
+        compose_cmd "$project_b" "$web_port_b" logs --no-color >&2 2>&1 || true
+        echo "--- The backup directory is kept for inspection: $backup_dir ---" >&2
+    else
+        if [ -n "$backup_dir" ] && [ -d "$backup_dir" ]; then
+            rm -rf "$backup_dir"
+        fi
     fi
     compose_cmd "$project_a" "$web_port_a" down -v --remove-orphans >/dev/null 2>&1 || true
     compose_cmd "$project_b" "$web_port_b" down -v --remove-orphans >/dev/null 2>&1 || true
     docker volume rm "${project_b}_mongo-data" >/dev/null 2>&1 || true
-    if [ -n "$backup_dir" ] && [ -d "$backup_dir" ]; then
-        rm -rf "$backup_dir"
-    fi
     exit "$exit_code"
 }
 
@@ -180,6 +184,18 @@ echo "Stack A board created: note=$note_id revision=$rev3"
 
 backup_dir="$root_dir/outputs/backup-verify-$(date +%Y%m%d-%H%M%S)"
 "$script_dir/backup.sh" --output "$backup_dir" --project "$project_a"
+
+# The backup is read-only. The source board is re-read to prove the dump
+# left stack A's data unchanged before the stack is stopped.
+snapshot_a_after_backup=$(curl -fsS "${base_url_a}/api/board")
+if [ "$snapshot_a" != "$snapshot_a_after_backup" ]; then
+    echo "The source board changed after the backup; the dump was not read-only." >&2
+    echo "--- Snapshot A before the backup ---" >&2
+    printf '%s\n' "$snapshot_a" >&2
+    echo "--- Snapshot A after the backup ---" >&2
+    printf '%s\n' "$snapshot_a_after_backup" >&2
+    exit 1
+fi
 
 # --- Stop stack A, preserving its volume ---
 
