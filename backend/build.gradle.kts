@@ -87,20 +87,8 @@ dependencies {
         implementation(libs.tomcat.el)
         implementation(libs.tomcat.websocket)
     }
-    // testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
-
-/*
-application {
-    mainClass.set("stickynotes.Main")
-    applicationDefaultJvmArgs = listOf("--add-modules=jdk.httpserver")
-}
-
-tasks.withType<JavaCompile>().configureEach {
-    options.compilerArgs.addAll(listOf("--add-modules", "jdk.httpserver"))
-}
-*/
 
 tasks.bootJar {
     // The archive name is fixed, so the delivery pipeline, the documentation and
