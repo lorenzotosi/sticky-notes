@@ -206,10 +206,18 @@ val backupRestoreVerify =
         commandLine(shExecutable.get(), "scripts/backup-restore-verify.sh")
     }
 
+containerSmoke.configure {
+    mustRunAfter(tasks.named("fullBuild"))
+}
+
+backupRestoreVerify.configure {
+    mustRunAfter(tasks.named("fullBuild"), containerSmoke)
+}
+
 val frontendE2eTask = evaluationDependsOn(":frontend").tasks.named("frontendE2e")
 
 frontendE2eTask.configure {
-    mustRunAfter(containerSmoke, backupRestoreVerify)
+    mustRunAfter(tasks.named("fullBuild"), containerSmoke, backupRestoreVerify)
 }
 
 tasks.register("fullVerify") {
