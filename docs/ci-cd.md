@@ -7,22 +7,29 @@ Delivery means build artifacts, GitHub Releases, and GitHub Pages; it does not d
 
 ## Workflow execution policy
 
-| Event | Gradle command | Purpose |
-| --- | --- | --- |
-| Push to a development branch | `./gradlew check --no-daemon` | Gives immediate feedback before the pull request is merged. It verifies formatting, SPDX licenses, Detekt rules, JVM and JavaScript tests, frontend linting, and frontend tests. |
-| Pull request targeting `main` | `./gradlew check --no-daemon` | Repeats the verification on the proposed revision and also validates the commits. The pull request title is checked separately against Conventional Commits. |
-| Merge or other push to `main` | `./gradlew fullBuild --no-daemon` | Runs the complete `check` task and then builds every publishable deliverable: Commons libraries, backend executable JAR, frontend production bundle, and documentation artifact. |
-| Manual CI/CD execution | `./gradlew fullBuild --no-daemon` | Allows maintainers to verify and rebuild every deliverable on demand. |
+| Event                         | Jobs executed                                              | Gradle command (`linux-verify`)    | Purpose                                                                                                                                                                 |
+|-------------------------------|------------------------------------------------------------|------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Push to a development branch  | `linux-verify`, `macos-smoke`, `verify`                    | `./gradlew check --no-daemon`      | Gives feedback on formatting, SPDX licenses, Detekt, domain boundaries, JVM/JS tests, coverage, MongoDB integration, and macOS portability.                             |
+| Pull request targeting `main` | `linux-verify`, `macos-smoke`, `verify`                    | `./gradlew fullVerify --no-daemon` | Validates commit messages and PR title, builds all deliverables and container images, and runs container smoke, backup/restore, and Playwright E2E checks before merge. |
+| Merge or other push to `main` | `linux-verify`, `macos-smoke`, `verify`, `release`, `docs` | `./gradlew fullVerify --no-daemon` | Repeats the complete verification gate, uploads the `deliverables` artifact, and gates GitHub Releases and GitHub Pages on an explicit `success` result.                |
+| Manual CI/CD execution        | `linux-verify`, `macos-smoke`, `verify`, `docs`            | `./gradlew fullVerify --no-daemon` | Allows maintainers to run the complete verification gate and rebuild every deliverable on demand.                                                                       |
 
-The development-branch check is the fast quality gate: its purpose is to discover broken code as soon as it is pushed. A merge into `main` appears to GitHub Actions as a push to `main`; this activates the stronger `fullBuild` gate. Because `fullBuild` already depends on `check`, it includes every branch-level control before creating the final artifacts.
 
-Test reports are retained after quality runs. Deliverables are uploaded only by successful full builds, so ordinary branch pushes do not create release artifacts.
+The quality workflow runs two verification jobs in parallel and aggregates them through a final required gate:
 
-The backend integration task starts `mongo-test` through the Gradle `testMongoUp` dependency, waits for its health check, and finalizes with `testMongoDown`. The quality job sets `TEST_MONGODB_URI` to the runner's local port `27018`; the suite is included in both `check` and `fullBuild`. Backend integration reports are uploaded with the other test reports, including after failures. An unconditional Docker Compose cleanup step remains as a safeguard if Gradle is interrupted before its finalizer runs.
+- `linux-verify` (`ubuntu-latest`) runs `./gradlew check --no-daemon` on ordinary branch pushes and `./gradlew fullVerify --no-daemon` on pull requests, pushes to `main`, and manual runs. `fullVerify` combines `fullBuild`, `containerSmoke`, `backupRestoreVerify`, and `:frontend:frontendE2e` against isolated Docker Compose stacks.
+- `macos-smoke` (`macos-latest`) runs the non-Docker portability suite (`spotlessCheck`, `verifyLicense`, `:commons:check` on JVM and ChromeHeadless, `:backend:test`, `:backend:jacocoTestCoverageVerification`, and `:frontend:frontendCheck`) on the operating system used by one of the authors (l'egregissimo Tosi).
+- `verify` runs with `if: always()` after `linux-verify` and `macos-smoke` and fails unless both jobs report `result == 'success'`, preventing skipped or cancelled jobs from satisfying branch protection or triggering a release.
+
+Pull request runs use a concurrency group that cancels superseded runs on the same pull request, while `main` runs never cancel an in-progress verification or release.
+
+Diagnostic reports (`test-reports-linux` and `test-reports-macos`), including JUnit XML/HTML reports, JaCoCo and Vitest coverage, and Playwright E2E HTML reports, JUnit results, traces, and failure screenshots, are uploaded even when a job fails (`if: ${{ !cancelled() }}`) with a 14-day retention period. Local `.env` files and database dumps (`outputs/`) are never uploaded. Deliverables are uploaded only by successful full builds, with a 14-day retention period.
+
+The backend integration task starts `mongo-test` through the Gradle `testMongoUp` dependency, waits for its health check, and finalizes with `testMongoDown`. The Linux job sets `TEST_MONGODB_URI` to the runner's local port `27018`; the suite is included in `check`, `fullBuild`, and `fullVerify`. An unconditional `docker compose -f compose.test.yaml down -v --remove-orphans` cleanup step runs with `if: always()` as a safeguard if Gradle is interrupted before its finalizers complete.
 
 The `deliverables` artifact contains `backend/build/libs/backend.jar`, the Commons libraries from `commons/build/libs/`, the frontend production bundle from `frontend/dist/`, and the documentation bundle from `build/docs/`. The Spring Boot plugin makes `:backend:build` produce the executable JAR, so it is already part of `fullBuild`, and `documentation` generates the bundle from the revision the job checked out. The release workflow packages the downloaded files into `sticky-notes-deliverables.zip`; see [deployment](deployment.md#executable-backend) for the extracted JAR location and startup command.
 
-After a successful full build on `main`, semantic-release derives the next version from squash-merge titles and creates the GitHub release from those deliverables. Release executions are serialized to prevent concurrent version calculations. It uses the workflow `GITHUB_TOKEN`; no repository secret is required. The same push publishes the Markdown documentation and generated Dokka API reference through GitHub Pages.
+After `quality` succeeds on `main` (`needs.quality.result == 'success'`), semantic-release derives the next version from squash-merge titles and creates the GitHub release from those deliverables. Release executions are serialized to prevent concurrent version calculations. It uses the workflow `GITHUB_TOKEN`; no repository secret is required. The same push publishes the Markdown documentation and generated Dokka API reference through GitHub Pages.
 
 ## Release policy
 
