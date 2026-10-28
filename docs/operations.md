@@ -75,8 +75,8 @@ MongoDB creates the root user only on an empty data directory, so a volume
 that already holds data under different credentials cannot be restored in
 place: remove the volume first, or restore into a new one.
 
-After a restore, start a Compose stack against the restored volume so the API
-can serve the recovered board:
+After a restore into a project's default volume (<project>_mongo-data), 
+start a Compose stack with that project name so the API serves the recovered board:
 
 ```sh
 docker compose -p <project> up --detach --wait

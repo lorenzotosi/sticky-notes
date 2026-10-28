@@ -13,7 +13,7 @@ See the [release policy](docs/ci-cd.md#release-policy) for stability criteria, r
 
 ## Start here
 
-Use JDK 21 and the [configured toolchain](docs/development.md#toolchain-requirements). Gradle downloads the JDK 21 when the machine does not provide it, so any JDK 17 or later is enough to start the build. Start the [development MongoDB instance](docs/development.md#full-stack-end-to-end-execution) before using the persistent board, then run these commands from the repository root:
+se JDK 21 and the [configured toolchain](docs/development.md#toolchain-requirements). Gradle downloads the JDK 21 when the machine does not provide it, so any JDK 17 or later is enough to start the build. Make sure a Docker engine is running, because fullBuild executes the isolated MongoDB integration tests. Start the [development MongoDB instance](docs/development.md#full-stack-end-to-end-execution) before using the persistent board, then run these commands from the repository root:
 
 ```bash
 ./gradlew fullBuild

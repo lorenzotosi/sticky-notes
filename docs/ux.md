@@ -4,6 +4,7 @@
 # User Experience & Interface States Specification
 
 This document defines the required layout, user interactions, accessibility behavior, and state transitions for the Sticky Notes Kanban board. The Vue interface loads and changes persistent board state through the HTTP API. Diagrams and card layouts describe the required design; the [testing guide](testing.md) identifies the implemented verification scope, and [Accessibility verification](accessibility.md) records the verified results of the accessibility and responsive requirements.
+Wireframes, diagrams, and example messages in this specification use English labels for architectural clarity; the rendered Vue interface is localized in Italian (`lang="it"`), with the exact control labels and `role="alert"` conflict banner documented in [Accessibility verification](accessibility.md) and [R3 acceptance evidence](evidence/R3.md).
 
 ---
 

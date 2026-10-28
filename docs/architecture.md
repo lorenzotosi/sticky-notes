@@ -3,7 +3,7 @@
 
 # System Architecture and Domain Boundaries
 
-This document separates the architecture implemented today from the planned runtime architecture.
+This document describes the implemented module boundaries, persistence and concurrency model, and container runtime topology.
 
 ## 1. Current architecture
 
@@ -74,7 +74,7 @@ classDiagram
 
 All state changes pass through the aggregate. This keeps WIP limits, ordering, blockers, checklist completion, capacities, and transition rules consistent across JVM and browser runtimes. A note's canonical position is its index inside the board's ordered collection, not an independent coordinate.
 
-## 3. HTTP application boundary (R2)
+## 3. HTTP application boundary
 
 REST controllers and an application service connect the shared domain to the persistence adapter:
 
