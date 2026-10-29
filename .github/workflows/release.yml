@@ -31,12 +31,22 @@ jobs:
         with:
           name: deliverables
           path: release-assets
-      - name: Package deliverables
-        # The ZIP root is the Compose project directory: dot files
-        # (.dockerignore, .env.example) must land in the archive.
-        run: cd release-assets && zip -r --owner=0:0 ../sticky-notes-deliverables.zip .
       - name: Install release tooling
         run: npm ci
+      - name: Stamp the build identity
+        # The release version comes from semantic-release, so the dry run
+        # resolves it before packaging; the values become the labels of the
+        # images the user builds from the ZIP.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version=$(npx semantic-release --dry-run | jq -rs 'map(select(.type == "version"))[0].version // empty')
+          version=${version:-0.0.0-dev+${GITHUB_SHA::12}}
+          printf 'STICKY_NOTES_VERSION=%s\nSTICKY_NOTES_REVISION=%s\n' "$version" "$GITHUB_SHA" > release-assets/.env
+      - name: Package deliverables
+        # The ZIP root is the Compose project directory: dot files
+        # (.dockerignore, .env.example, the stamped .env) must land in the archive.
+        run: cd release-assets && zip -r --owner=0:0 ../sticky-notes-deliverables.zip .
       - name: Create GitHub release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

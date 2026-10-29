@@ -96,6 +96,12 @@ tasks.register<Exec>("buildWebImage") {
         "frontend/Dockerfile",
         "-t",
         "sticky-notes-web:local",
+        // The release identity belongs to the root build, so the web image
+        // carries the same labels as the backend image.
+        "--build-arg",
+        "VERSION=${rootProject.extra["releaseVersion"]}",
+        "--build-arg",
+        "REVISION=${rootProject.extra["gitRevision"]}",
         ".",
     )
 }

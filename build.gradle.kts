@@ -16,6 +16,47 @@ spotless {
     }
 }
 
+/*
+ * Release identity of every deliverable, owned by the root build. A release
+ * build passes the released version through the `releaseVersion` property. A
+ * local build is not a release, so it identifies the commit the artifact was
+ * produced from instead of claiming a version that was never published.
+ *
+ * The revision lookup never stops the build. An environment without the Git
+ * executable, such as the container that runs the integration tests, produces
+ * an unknown revision instead of a configuration failure.
+ */
+val gitRevision: String =
+    (
+        try {
+            providers
+                .exec {
+                    workingDir(rootDir)
+                    commandLine("git", "rev-parse", "HEAD")
+                    isIgnoreExitValue = true
+                }.standardOutput
+                .asText
+                .getOrElse("")
+                .trim()
+        } catch (e: Exception) {
+            ""
+        }
+    ).ifEmpty { "unknown" }
+
+val releaseVersion: String =
+    providers.gradleProperty("releaseVersion").getOrElse("0.0.0-dev+${gitRevision.take(12)}")
+
+/*
+ * A Docker tag does not accept '+', so the build exposes the version once in
+ * its normalized form. Every tag reads imageVersion; every manifest and image
+ * label reads releaseVersion.
+ */
+val imageVersion: String = releaseVersion.replace('+', '-')
+
+extra["gitRevision"] = gitRevision
+extra["releaseVersion"] = releaseVersion
+extra["imageVersion"] = imageVersion
+
 subprojects {
     val lockableConfigurations =
         setOf(

@@ -43,6 +43,9 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+      args:
+        VERSION: ${STICKY_NOTES_VERSION:-0.0.0-dev}
+        REVISION: ${STICKY_NOTES_REVISION:-unknown}
     restart: unless-stopped
     environment:
       MONGODB_URI: mongodb://${MONGO_USER:-stickynotes_user}:${MONGO_PASSWORD:-stickynotes_local_password}@mongo:27017/${MONGO_DATABASE:-stickynotes}?authSource=admin
@@ -57,6 +60,9 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+      args:
+        VERSION: ${STICKY_NOTES_VERSION:-0.0.0-dev}
+        REVISION: ${STICKY_NOTES_REVISION:-unknown}
     restart: unless-stopped
     ports:
       - "127.0.0.1:${WEB_PORT:-8080}:8080"

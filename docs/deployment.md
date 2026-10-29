@@ -19,7 +19,7 @@ After extracting the release ZIP, start the whole product from the extracted dir
 docker compose up --build -d --wait
 ```
 
-Compose builds the API and web images from the JAR and the frontend bundle carried by the ZIP, starts them in dependency order behind MongoDB, and returns when every service is healthy; the command needs Docker Compose v2.19 or later. The interface is then available at `http://127.0.0.1:8080`, and `docker compose down` stops the stack. The services, the volume, and the configuration variables are those of the [delivery stack](#delivery-stack); no `.env` is required because the Compose file carries defaults for every variable.
+Compose builds the API and web images from the JAR and the frontend bundle carried by the ZIP, starts them in dependency order behind MongoDB, and returns when every service is healthy; the command needs Docker Compose v2.19 or later. The ZIP ships a stamped `.env` carrying the release version and the commit of the build that produced it, so the images the command builds carry the same OCI version and revision labels as the images built by Gradle. The interface is then available at `http://127.0.0.1:8080`, and `docker compose down` stops the stack. The services, the volume, and the configuration variables are those of the [delivery stack](#delivery-stack); the defaults in the Compose file cover every variable, so the stamped `.env` can be edited freely.
 
 To run only the backend JAR on the host, with MongoDB provided elsewhere, see [backend runtime configuration](development.md#backend-runtime) for the profiles, environment variables, and liveness check. Stop any backend already using the configured port before starting this process:
 
@@ -104,6 +104,8 @@ The environment file `.env` holds the local configuration: the image references,
 | `MONGO_USER` | database user | `stickynotes_user` |
 | `MONGO_PASSWORD` | password of the database user | `stickynotes_local_password` |
 | `MONGO_DATABASE` | database of the shared board | `stickynotes` |
+| `STICKY_NOTES_VERSION` | version recorded in the labels of the images Compose builds | `0.0.0-dev` |
+| `STICKY_NOTES_REVISION` | commit recorded in the labels of the images Compose builds | `unknown` |
 
 The credentials are demonstration values for a local Docker network, and they are the same values the Compose file uses when no `.env` exists, so the volume of an earlier run keeps working. MongoDB creates the database user on the first start of an empty volume, so changing the credentials afterwards requires removing the volume, which deletes the board. A password with characters that need URL encoding has to be encoded in `MONGODB_URI`, because the stack embeds it in the connection URI.
 
