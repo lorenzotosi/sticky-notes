@@ -13,7 +13,9 @@ plugins {
 spotless {
     kotlinGradle {
         target("**/*.gradle.kts")
-        targetExclude("**/build/**", ".gradle/**")
+        // Generated scripts stay out of the check even when the Gradle user home
+        // lives in the checkout, as `verifyLicense` already assumes.
+        targetExclude("**/build/**", ".gradle/**", ".gradle-user-home/**")
         ktlint()
     }
 }

@@ -30,6 +30,9 @@ out/
 # Backup output (never committed)
 outputs/
 
+# Release asset built by scripts/package-release.sh (never committed)
+/sticky-notes-deliverables.zip
+
 # Operating systems
 .DS_Store
 Thumbs.db
