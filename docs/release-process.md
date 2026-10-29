@@ -3,11 +3,11 @@
 
 # Release process
 
-A release carries the artifacts a recipient can run, the version they share, and the records that let a reader prove the published bytes are the tested bytes. A GitHub release that carries release notes only is not a delivery.
+A release carries the artifacts a recipient can run, the version they share, and the records that let a reader prove the published bytes come from the tested commit and match the version the release publishes. A GitHub release that carries release notes only is not a delivery.
 
 ## One version for every deliverable
 
-Semantic Release computes the next version from the squash-merge titles on `main`, after the quality workflow succeeds; see the [release policy](ci-cd.md#release-policy) for the version rules. The root build owns the value and exposes it to every module:
+Semantic Release computes the next version from the squash-merge titles on `main`, after the quality workflow succeeds; see the [release policy](ci-cd.md#release-policy) for the version rules. The release workflow then runs the same build through the `releaseVersion` property, so every deliverable carries the version the release publishes instead of the identity of the build that verified the commit. The root build owns the value and exposes it to every module:
 
 | Where it lands | Name |
 | --- | --- |
@@ -25,9 +25,15 @@ A release build passes the version through the `releaseVersion` property:
 
 Without that property the build identifies the commit it was produced from, as `0.0.0-dev+<commit>`. Docker tags do not accept `+`, so tags and image references carry the same value with `-` instead. Nothing in the repository hardcodes a version, and no deliverable references `latest`: a version is either the one supplied through that property or the commit the artifact was built from.
 
+## Publishing
+
+Semantic Release computes the version, then its `prepare` hook runs `scripts/package-release.sh <version>`. The script rebuilds the bundle at that version, checks that the records describe the files it just wrote, and packages `sticky-notes-deliverables.zip`; the GitHub plugin uploads the ZIP as a release asset afterwards. A build failure therefore aborts the release before the tag exists.
+
+The rebuild starts from the commit the quality workflow verified and skips the test suite: the tests already ran on that commit, and the release only changes the identity the artifacts declare. The script also refuses a bundle whose recorded revision differs from the checked-out commit, so a publish cannot silently carry the development identity.
+
 ## The bundle
 
-`./gradlew releaseBundle` assembles `build/release-bundle/`, the directory the quality workflow uploads and the release workflow packages as `sticky-notes-deliverables.zip`. The bundle keeps the repository paths, because the Dockerfiles and `compose.yaml` address the artifacts through them: an extracted bundle is a Docker build context.
+`./gradlew releaseBundle` assembles `build/release-bundle/`; the release workflow rebuilds and packages it as `sticky-notes-deliverables.zip`, and the quality workflow builds it on `main` to fail an assembly regression before a release. The bundle keeps the repository paths, because the Dockerfiles and `compose.yaml` address the artifacts through them: an extracted bundle is a Docker build context.
 
 | Path in the bundle | Content |
 | --- | --- |
@@ -55,7 +61,7 @@ shasum -a 256 -c SHA256SUMS            # macOS
 
 `.env` is editable configuration, so it stays out of both records; editing a port or a credential therefore keeps the check green. The version recorded in `manifest.json` is the one the images carry, and the versioned image references in `.env` repeat it.
 
-A bundle built outside a release identifies the commit it was produced from. The tag of the release that carries it identifies the published version: the bundle is attached to the release of the revision the quality workflow built, and the release notes link the documentation of that tag.
+A bundle built outside a release identifies the commit it was produced from; the published bundle carries the version the release publishes and the revision the release job checked out. Either way the release notes link the documentation of the tag that carries the ZIP.
 
 ## Limits
 

@@ -78,9 +78,11 @@ The delivered images carry the identity recorded in `.env`:
 docker image inspect "$API_IMAGE" --format '{{index .Config.Labels "org.opencontainers.image.version"}}'
 ```
 
-The value matches the `version` field of `manifest.json`, which names the commit
-this bundle was built from. The tag of the release that carries the bundle names
-the published version, and its release notes link the documentation of that tag.
+The value matches the `version` field of `manifest.json` and
+`STICKY_NOTES_VERSION` in `.env`. A bundle attached to a release carries the
+version that release publishes; one built outside a release names the commit it
+was produced from. Either way the release notes link the documentation of the
+release tag.
 
 ## Documentation
 
