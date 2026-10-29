@@ -103,14 +103,13 @@ The credentials are demonstration values for a local Docker network, and they ar
 
 ### Starting and stopping the stack
 
-Build the local images once, then start the stack:
+One command builds the local images from the current source and starts the stack:
 
 ```sh
-./gradlew buildImages
-./scripts/start-local.sh
+./gradlew startLocal
 ```
 
-`start-local.sh` checks that Docker Compose is available, creates `.env` when it is missing, and starts the stack with `up --detach --wait`. The interface is then available at `http://127.0.0.1:8080`.
+`startLocal` runs `buildImages` and then `start-local.sh`, which checks that Docker Compose is available, creates `.env` when it is missing, and starts the stack with `up --detach --wait`. The interface is then available at `http://127.0.0.1:8080`.
 
 ```sh
 ./scripts/stop-local.sh

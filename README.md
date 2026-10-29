@@ -66,11 +66,10 @@ The image runs as an unprivileged account, records the version and the commit in
 The whole application also runs as three containers. The runtime of the stack needs neither a JDK nor Node.js on the machine; building the images needs the toolchain of the [development guide](docs/development.md#toolchain-requirements):
 
 ```bash
-./gradlew buildImages
-./scripts/start-local.sh
+./gradlew startLocal
 ```
 
-The interface is available at `http://127.0.0.1:8080`. Only that port is published: the API and MongoDB stay inside the Docker network. The board data is kept in a named volume and survives a stop.
+`startLocal` builds the images from the current source and starts the stack when every service reports healthy. The interface is available at `http://127.0.0.1:8080`. Only that port is published: the API and MongoDB stay inside the Docker network. The board data is kept in a named volume and survives a stop.
 
 ```bash
 ./scripts/stop-local.sh
