@@ -18,11 +18,10 @@ The project is organized around these functional gates. They define integration 
 
 ## Quickstart
 
-The delivered application runs as three containers, and its runtime needs neither a JDK nor Node.js on the machine. Build the images once and start the stack:
+The delivered application runs as three containers, and its runtime needs neither a JDK nor Node.js on the machine. One command builds the images from the current source and starts the stack:
 
 ```sh
-./gradlew buildImages
-./scripts/start-local.sh
+./gradlew startLocal
 ```
 
 The interface is available at `http://127.0.0.1:8080`, and `./scripts/stop-local.sh` stops the stack while keeping the board in the named volume. See [delivery stack](deployment.md#delivery-stack) for the services and the configuration.

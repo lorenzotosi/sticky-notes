@@ -63,6 +63,7 @@ The project unifies all module checks into a non-circular Gradle task graph.
 | `./gradlew :backend:dockerImage` | Builds the non-root backend runtime image from the verified JAR. Requires a running Docker engine. The image tag follows the `releaseVersion` property; without it the build identifies its commit. See [deployment](deployment.md#backend-runtime-image).                                               |
 | `./gradlew :frontend:buildWebImage` | Builds the production frontend bundle and packages it into the unprivileged Nginx runtime image (`sticky-notes-web:local`). Requires a running Docker engine.                                                                                                                                            |
 | `./gradlew buildImages` | Builds the backend and web container images used by the local Compose stack. Requires a running Docker engine. See [deployment](deployment.md#delivery-stack).                                                                                                                                           |
+| `./gradlew startLocal` | Builds the delivery stack images from the current source and starts the local Compose stack, waiting until every service reports healthy. Requires a running Docker engine. See [deployment](deployment.md#delivery-stack).                                                                                          |
 | `./gradlew containerSmoke` | Builds the container images and runs the end-to-end delivery stack smoke and lifecycle test in an isolated Compose project without touching local user volumes. Requires a running Docker engine. See [deployment](deployment.md#automated-smoke-and-lifecycle-verification).                            |
 | `./gradlew backupRestoreVerify` | Builds the container images and verifies the backup and restore roundtrip in two isolated Compose projects without touching local user volumes. Requires a running Docker engine. See [testing](testing.md#backup-and-restore).                                                                          |
 | `./gradlew :frontend:frontendE2e` | Runs the Playwright browser journeys against the production container stack through the isolated `compose.test.yaml` stack, and removes that stack afterwards (`:frontend:e2eDown`). Requires a running Docker engine. See [testing](testing.md#browser-e2e-tests-on-the-production-container-stack-r4). |
@@ -189,12 +190,13 @@ Stop the development database with `docker stop sticky-notes-mongo`; keep its na
 
 ## Containerized local stack
 
-The same application runs as three containers with Docker Compose. The runtime of the stack needs neither a JDK nor Node.js on the machine; building the images needs the toolchain of this guide. Build the images once and start the stack:
+The same application runs as three containers with Docker Compose. The runtime of the stack needs neither a JDK nor Node.js on the machine; building the images needs the toolchain of this guide. One command builds the images from the current source and starts the stack:
 
 ```sh
-./gradlew buildImages
-./scripts/start-local.sh
+./gradlew startLocal
 ```
+
+`./gradlew buildImages` builds the images without starting the stack, and `./scripts/start-local.sh` starts images that are already built.
 
 The interface is then available at `http://127.0.0.1:8080`. The stack publishes only that port: the API and MongoDB stay inside the Docker network. `./scripts/stop-local.sh` stops the stack and keeps the data in the named volume.
 

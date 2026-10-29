@@ -188,6 +188,16 @@ val defaultShExecutable =
     }
 val shExecutable = providers.environmentVariable("SH_EXECUTABLE").orElse(defaultShExecutable)
 
+val startLocal =
+    tasks.register<Exec>("startLocal") {
+        group = "local stack"
+        description = "Builds the delivery stack images and starts the local Compose stack once every service reports healthy."
+        dependsOn("buildImages")
+        workingDir = projectDir
+        // shortcut: scripts/start-local.sh checks the Docker engine, so a missing engine is reported after the images are built.
+        commandLine(shExecutable.get(), "scripts/start-local.sh")
+    }
+
 val containerSmoke =
     tasks.register<Exec>("containerSmoke") {
         group = "verification"
