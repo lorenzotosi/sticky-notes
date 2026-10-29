@@ -60,8 +60,13 @@ jobs:
           name: deliverables
           retention-days: 14
           path: |
+            compose.yaml
+            .dockerignore
+            .env.example
+            backend/Dockerfile
             backend/build/libs/backend.jar
-            commons/build/libs/
+            frontend/Dockerfile
+            frontend/nginx.conf
             frontend/dist/
             build/docs/
       - name: Upload test, coverage, and E2E reports

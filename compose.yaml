@@ -5,9 +5,11 @@ name: sticky-notes
 
 # Delivery stack of the Sticky Notes Kanban board.
 #
-# The services reference images by name and never build them here: the stack
-# runs the artifacts produced by `./gradlew buildImages` and works on a machine
-# without a source checkout, a JDK, or Node.js.
+# The services reference images by name and build them only when they are
+# missing: after `./gradlew buildImages` the stack runs the pre-built images
+# unchanged, while a release ZIP carries the binaries and the Dockerfiles, so
+# `docker compose up --build` assembles the same images on a machine without a
+# source checkout, a JDK, or Node.js.
 #
 # Only the web container publishes a port, and only on the loopback interface,
 # so the browser always talks to a single origin and the API and the database
@@ -38,6 +40,9 @@ services:
 
   api:
     image: ${API_IMAGE:-sticky-notes-backend:local}
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     restart: unless-stopped
     environment:
       MONGODB_URI: mongodb://${MONGO_USER:-stickynotes_user}:${MONGO_PASSWORD:-stickynotes_local_password}@mongo:27017/${MONGO_DATABASE:-stickynotes}?authSource=admin
@@ -49,6 +54,9 @@ services:
 
   web:
     image: ${WEB_IMAGE:-sticky-notes-web:local}
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
     restart: unless-stopped
     ports:
       - "127.0.0.1:${WEB_PORT:-8080}:8080"

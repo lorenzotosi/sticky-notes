@@ -32,7 +32,9 @@ jobs:
           name: deliverables
           path: release-assets
       - name: Package deliverables
-        run: zip -r sticky-notes-deliverables.zip release-assets
+        # The ZIP root is the Compose project directory: dot files
+        # (.dockerignore, .env.example) must land in the archive.
+        run: cd release-assets && zip -r --owner=0:0 ../sticky-notes-deliverables.zip .
       - name: Install release tooling
         run: npm ci
       - name: Create GitHub release
