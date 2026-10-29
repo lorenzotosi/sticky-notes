@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Lorenzo Tosi, Alessandro Stefani
 
+import java.security.MessageDigest
+
 plugins {
     base
     alias(libs.plugins.kotlin.multiplatform) apply false
@@ -103,6 +105,189 @@ tasks.register<Sync>("documentation") {
     }
     into(layout.buildDirectory.dir("docs"))
 }
+
+/*
+ * The release bundle carries every deliverable a release publishes, in the
+ * repository paths the Dockerfiles and the Compose file already use, so an
+ * extracted bundle is a Docker build context: `docker compose up --build`
+ * assembles the images from the binaries the bundle carries.
+ *
+ * The bundle holds no shell script, no source checkout, and no credential: the
+ * identity file next to the stack carries the demonstration defaults only.
+ */
+val releaseBundleDir = layout.buildDirectory.dir("release-bundle")
+
+val stageReleaseBundle =
+    tasks.register<Sync>("stageReleaseBundle") {
+        group = "build"
+        description = "Stages the release deliverables in build/release-bundle with their repository paths."
+        dependsOn(
+            ":backend:bootJar",
+            ":commons:jvmJar",
+            ":commons:exportJsPackage",
+            ":frontend:frontendBuild",
+            "documentation",
+        )
+        from("backend/build/libs/backend.jar") {
+            into("backend/build/libs")
+        }
+        from("backend/Dockerfile") {
+            into("backend")
+        }
+        from("commons/build/libs/commons-jvm.jar") {
+            into("commons/build/libs")
+        }
+        from(project(":commons").layout.buildDirectory.dir("npm/sticky-notes-domain")) {
+            into("commons/build/npm/sticky-notes-domain")
+        }
+        from(listOf("frontend/Dockerfile", "frontend/nginx.conf")) {
+            into("frontend")
+        }
+        from("frontend/dist") {
+            into("frontend/dist")
+        }
+        from(layout.buildDirectory.dir("docs")) {
+            into("build/docs")
+        }
+        from("compose.yaml", ".dockerignore", ".env.example", "LICENSE")
+        from("release/README.md") {
+            rename { "README.md" }
+        }
+        // The documentation bundle is generated, so a Finder artifact from a
+        // local build must not reach the published bytes.
+        exclude(".DS_Store", "**/.DS_Store")
+        into(releaseBundleDir)
+    }
+
+/*
+ * The identity file and the two records are written after the staging, so they
+ * describe the bytes that are actually delivered. The version is the one value
+ * the root build owns; the image references repeat its Docker-safe form so the
+ * stack tags and labels the images with the revision they were built from.
+ *
+ * The `.env` is editable configuration, so it stays out of the checksums.
+ */
+abstract class WriteReleaseBundleRecords : DefaultTask() {
+    @get:Internal
+    abstract val bundleDirectory: DirectoryProperty
+
+    @get:Input
+    abstract val bundleVersion: Property<String>
+
+    @get:Input
+    abstract val bundleRevision: Property<String>
+
+    @get:Input
+    abstract val bundleImageVersion: Property<String>
+
+    @TaskAction
+    fun write() {
+        val root = bundleDirectory.get().asFile
+        val envFile = root.resolve(".env")
+        val manifestFile = root.resolve("manifest.json")
+        val checksumFile = root.resolve("SHA256SUMS")
+
+        envFile.writeText(
+            listOf(
+                "STICKY_NOTES_VERSION=${bundleVersion.get()}",
+                "STICKY_NOTES_REVISION=${bundleRevision.get()}",
+                "API_IMAGE=sticky-notes-backend:${bundleImageVersion.get()}",
+                "WEB_IMAGE=sticky-notes-web:${bundleImageVersion.get()}",
+            ).joinToString("\n", postfix = "\n"),
+        )
+
+        fun digestOf(file: File): String =
+            MessageDigest
+                .getInstance("SHA-256")
+                .digest(file.readBytes())
+                .joinToString("") { "%02x".format(it) }
+
+        fun json(value: String): String = value.replace("\\", "\\\\").replace("\"", "\\\"")
+
+        val payload =
+            root
+                .walkTopDown()
+                .filter { it.isFile && it != envFile && it.name != manifestFile.name && it.name != checksumFile.name }
+                .sortedBy { it.relativeTo(root).invariantSeparatorsPath }
+                .toList()
+
+        val baseImages =
+            listOf("backend/Dockerfile", "frontend/Dockerfile", "compose.yaml")
+                .flatMap { path ->
+                    Regex("""([\w./:@-]+)@sha256:([0-9a-f]{64})""")
+                        .findAll(root.resolve(path).readText())
+                        .map { it.groupValues[1] to it.groupValues[2] }
+                }.distinct()
+
+        val notes =
+            listOf(
+                "backend/build/libs/backend.jar is the only executable artifact: " +
+                    "it embeds the Commons domain and its runtime dependencies.",
+                "commons/ carries the shared domain as a JVM library and a Kotlin/JS package for consumers; the stack does not need it.",
+                ".env carries the build identity and is editable, so it is not part of the checksums.",
+                "The images are built on the target machine from the pinned base images above by the delivered Dockerfiles.",
+            )
+
+        manifestFile.writeText(
+            buildString {
+                appendLine("{")
+                appendLine("""  "name": "sticky-notes",""")
+                appendLine("""  "version": "${json(bundleVersion.get())}",""")
+                appendLine("""  "imageVersion": "${json(bundleImageVersion.get())}",""")
+                appendLine("""  "revision": "${json(bundleRevision.get())}",""")
+                appendLine("""  "source": "https://github.com/lorenzotosi/sticky-notes",""")
+                appendLine("""  "requirements": {""")
+                appendLine("""    "dockerCompose": "2.19 or later",""")
+                appendLine("""    "java": "not required to run the delivery stack"""")
+                appendLine("  },")
+                appendLine("""  "baseImages": [""")
+                appendLine(
+                    baseImages.joinToString(",\n") {
+                        """    {"reference": "${json(it.first)}", "digest": "sha256:${it.second}"}"""
+                    },
+                )
+                appendLine("  ],")
+                appendLine("""  "notes": [""")
+                appendLine(notes.joinToString(",\n") { """    "${json(it)}"""" })
+                appendLine("  ],")
+                appendLine("""  "files": [""")
+                appendLine(
+                    payload.joinToString(",\n") {
+                        val path = it.relativeTo(root).invariantSeparatorsPath
+                        """    {"path": "${json(path)}", "bytes": ${it.length()}, "sha256": "${digestOf(it)}"}"""
+                    },
+                )
+                appendLine("  ]")
+                appendLine("}")
+            },
+        )
+
+        val checksummed =
+            (
+                payload.map { it.relativeTo(root).invariantSeparatorsPath to digestOf(it) } +
+                    ("manifest.json" to digestOf(manifestFile))
+            ).sortedBy { it.first }
+        checksumFile.writeText(checksummed.joinToString("\n", postfix = "\n") { "${it.second}  ${it.first}" })
+    }
+}
+
+val writeReleaseBundleRecords =
+    tasks.register<WriteReleaseBundleRecords>("writeReleaseBundleRecords") {
+        group = "build"
+        description = "Writes the build identity, the manifest, and the checksum record of the release bundle."
+        dependsOn(stageReleaseBundle)
+        bundleDirectory.set(releaseBundleDir)
+        bundleVersion.set(releaseVersion)
+        bundleRevision.set(gitRevision)
+        bundleImageVersion.set(imageVersion)
+    }
+
+val releaseBundle =
+    tasks.register("releaseBundle") {
+        group = "build"
+        description = "Assembles the versioned release bundle in build/release-bundle."
+        dependsOn(stageReleaseBundle, writeReleaseBundleRecords)
+    }
 
 val verifyLicense =
     tasks.register("verifyLicense") {

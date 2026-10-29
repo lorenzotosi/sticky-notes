@@ -43,6 +43,7 @@ See [full-stack execution](development.md#full-stack-end-to-end-execution) for t
 - [Local development](development.md)
 - [Testing](testing.md)
 - [Deployment](deployment.md)
+- [Release process](release-process.md)
 - [Operations](operations.md)
 
 ## Specifications
