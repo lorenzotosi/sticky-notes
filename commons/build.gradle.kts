@@ -188,13 +188,16 @@ abstract class GenerateNpmPackageJson : DefaultTask() {
     @get:OutputFile
     abstract val packageJsonFile: RegularFileProperty
 
+    @get:Input
+    abstract val releaseVersion: Property<String>
+
     @TaskAction
     fun generate() {
         packageJsonFile.get().asFile.writeText(
             """
             {
               "name": "sticky-notes-domain",
-              "version": "1.0.0",
+              "version": "${releaseVersion.get()}",
               "type": "module",
               "main": "./sticky-notes-commons.mjs",
               "module": "./sticky-notes-commons.mjs",
@@ -217,6 +220,7 @@ val generateNpmPackageJson =
         group = "build"
         description = "Generate package.json for npm module sticky-notes-domain"
         packageJsonFile.set(layout.buildDirectory.file("generated/npm/package.json"))
+        releaseVersion.set(rootProject.extra["releaseVersion"] as String)
     }
 
 val exportJsPackage =

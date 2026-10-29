@@ -53,17 +53,23 @@ jobs:
       - name: Run full verification
         if: ${{ inputs.full_build || github.event_name == 'pull_request' }}
         run: ./gradlew fullVerify --no-daemon
+      - name: Build the release bundle
+        if: ${{ inputs.full_build }}
+        run: ./gradlew releaseBundle --no-daemon
       - name: Upload deliverables
         if: ${{ inputs.full_build }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: deliverables
           retention-days: 14
-          path: |
-            backend/build/libs/backend.jar
-            commons/build/libs/
-            frontend/dist/
-            build/docs/
+          # The bundle is the release input, so a missing deliverable must fail
+          # the build that produced it instead of shrinking the release.
+          if-no-files-found: error
+          # The action excludes hidden files by default, and the stack needs
+          # `.dockerignore`, `.env.example`, and the generated `.env`. No secret
+          # travels here: the real `.env` is never a bundle source.
+          include-hidden-files: true
+          path: build/release-bundle/
       - name: Upload test, coverage, and E2E reports
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

@@ -121,12 +121,14 @@ if [ "$api_uid" = "0" ] || [ "$web_uid" = "0" ]; then
     exit 1
 fi
 
-api_version=$(docker image inspect "$api_image" --format '{{index .Config.Labels "org.opencontainers.image.version"}}')
-api_revision=$(docker image inspect "$api_image" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')
-if [ -z "$api_version" ] || [ -z "$api_revision" ]; then
-    echo "Missing OCI version/revision labels on $api_image." >&2
-    exit 1
-fi
+for image in "$api_image" "$web_image"; do
+    image_version=$(docker image inspect "$image" --format '{{index .Config.Labels "org.opencontainers.image.version"}}')
+    image_revision=$(docker image inspect "$image" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')
+    if [ -z "$image_version" ] || [ -z "$image_revision" ]; then
+        echo "Missing OCI version/revision labels on $image." >&2
+        exit 1
+    fi
+done
 
 api_port=$(compose_cmd port api 8080 2>/dev/null || true)
 case "$api_port" in

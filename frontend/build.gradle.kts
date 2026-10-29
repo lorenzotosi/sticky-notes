@@ -96,6 +96,16 @@ tasks.register<Exec>("buildWebImage") {
         "frontend/Dockerfile",
         "-t",
         "sticky-notes-web:local",
+        // Same dual-tag scheme as the backend: the stable alias for the local
+        // stack, the versioned tag for delivery.
+        "-t",
+        "sticky-notes-web:${rootProject.extra["imageVersion"]}",
+        // The release identity belongs to the root build, so the web image
+        // carries the same labels as the backend image.
+        "--build-arg",
+        "VERSION=${rootProject.extra["releaseVersion"]}",
+        "--build-arg",
+        "REVISION=${rootProject.extra["gitRevision"]}",
         ".",
     )
 }

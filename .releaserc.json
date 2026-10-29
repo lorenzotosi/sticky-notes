@@ -36,7 +36,7 @@
         "assets": [
           {
             "path": "sticky-notes-deliverables.zip",
-            "label": "Application deliverables and documentation"
+            "label": "Application deliverables, Docker Compose stack, and documentation"
           }
         ]
       }

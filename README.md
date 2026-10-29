@@ -77,6 +77,10 @@ The whole application also runs as three containers. The runtime of the stack ne
 
 See [deployment](docs/deployment.md#delivery-stack) for the services, the configuration, and the development override.
 
+## Release bundle
+
+`./gradlew releaseBundle` assembles the bundle a release publishes: the executable JAR, the frontend production bundle, the Docker stack that builds both images, the shared-domain libraries, the documentation, and the manifest with the checksums. The extracted bundle starts with `docker compose up --build` and needs neither a JDK nor Node.js. See [release process](docs/release-process.md) for the contents, the version, and the records.
+
 ## Repository layout
 
 - `commons/`: Kotlin Multiplatform domain, targeting JVM and JavaScript.
