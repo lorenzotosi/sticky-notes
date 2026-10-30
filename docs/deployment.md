@@ -19,7 +19,7 @@ After extracting the release ZIP, start the whole product from the extracted dir
 docker compose up --build -d --wait
 ```
 
-Compose builds the API and web images from the JAR and the frontend bundle carried by the ZIP, starts them in dependency order behind MongoDB, and returns when every service is healthy; the command needs Docker Compose v2.19 or later. The ZIP ships a generated `.env` carrying the version the release publishes and the commit it was built from, as image tags and OCI labels, so the images the command builds match the identity of the images `./gradlew buildImages` produces. The interface is then available at `http://127.0.0.1:8080`, and `docker compose down` stops the stack. The services, the volume, and the configuration variables are those of the [delivery stack](#delivery-stack); the defaults in the Compose file cover every variable, so the generated `.env` can be edited freely.
+Compose builds the API and web images from the JAR and the frontend bundle carried by the ZIP, starts them in dependency order behind MongoDB, and returns when every service is healthy; the command needs Docker Compose v2.19 or later. The ZIP stamps the version the release publishes and the commit it was built from into `compose.yaml` as build arguments, and its generated `.env` points the image references at the versioned tags, so the images the command builds carry the OCI identity of the images `./gradlew buildImages` produces. The interface is then available at `http://127.0.0.1:8080`, and `docker compose down` stops the stack. The services, the volume, and the configuration variables are those of the [delivery stack](#delivery-stack); the defaults in the Compose file cover every variable, so the generated `.env` can be edited freely.
 
 The extracted directory also carries `README.md` with the startup and stop commands, `manifest.json` with the version, commit, base images, and file digests, and `SHA256SUMS` for the integrity check:
 
@@ -101,7 +101,7 @@ The stack references images by name and builds them only when they are missing: 
 
 The environment file `.env` holds the local configuration: the image references, the host ports, and the database credentials. `.env.example` documents the variables with demonstration values, and `./scripts/start-local.sh` copies it to `.env` only when `.env` does not exist, so an existing configuration is never overwritten. The file stays out of Git. Compose reads it from the project directory, which the scripts set with `--project-directory`.
 
-The release bundle ships a generated `.env` instead: besides the variables below, it sets `STICKY_NOTES_VERSION` and `STICKY_NOTES_REVISION` for the image labels and points the two image references at the versioned tags.
+The release bundle ships a generated `.env` instead: it points the two image references at the versioned tags and keeps the remaining variables below at their demonstration defaults. The version and the revision are stamped into the bundle `compose.yaml`, which the checksums cover, so `.env` carries runtime variables only and cannot change the identity of the images the stack builds.
 
 | Variable | Purpose | Default |
 | --- | --- | --- |

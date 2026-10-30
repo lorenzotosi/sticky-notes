@@ -38,10 +38,12 @@ volume and the board with it, so it is never part of a normal stop.
 
 ## Configuration
 
-`.env` carries the build identity and the image references of this bundle. The
+`.env` carries the image references and the runtime configuration of this
+bundle. The version and the revision are stamped into `compose.yaml` and covered
+by `SHA256SUMS`, so no editable file can change the identity of the images. The
 Compose file supplies a default for every variable, so the stack also starts
-without that file. To change a port or the demonstration database credentials,
-edit `.env`; the values are documented in `.env.example`.
+without `.env`. To change a port or the demonstration database credentials, edit
+`.env`; the values are documented in `.env.example`.
 
 The credentials are demonstration values for a Docker network that is not
 reachable from other machines. Changing them after the first start requires a
@@ -56,7 +58,7 @@ new volume, because MongoDB creates the database user only on an empty one.
 | `frontend/dist/`, `frontend/Dockerfile`, `frontend/nginx.conf` | Production web bundle, its unprivileged Nginx image, and the reverse proxy that forwards `/api`. |
 | `commons/build/libs/commons-jvm.jar`, `commons/build/npm/sticky-notes-domain/` | The shared domain as a JVM library and a Kotlin/JS package, for consumers. The stack does not need them: the executable JAR embeds the domain. |
 | `compose.yaml` | The delivery stack: services, network, volume, health checks. |
-| `.env`, `.env.example` | Build identity and image references of this bundle, and the documented variables. |
+| `.env`, `.env.example` | Image references and runtime variables of this bundle, and their documented defaults. |
 | `build/docs/` | Documentation of this revision, including the generated domain API reference. |
 | `manifest.json` | Version, commit, source, runtime requirements, base images, and the checksum of every file. |
 | `SHA256SUMS` | SHA-256 checksums of every file except `.env`, which is editable. |
@@ -71,15 +73,15 @@ sha256sum --check --quiet SHA256SUMS   # Linux
 shasum -a 256 -c SHA256SUMS            # macOS
 ```
 
-The delivered images carry the identity recorded in `.env`:
+The delivered images carry the identity stamped into `compose.yaml`:
 
 ```sh
 . ./.env
 docker image inspect "$API_IMAGE" --format '{{index .Config.Labels "org.opencontainers.image.version"}}'
 ```
 
-The value matches the `version` field of `manifest.json` and
-`STICKY_NOTES_VERSION` in `.env`. A bundle attached to a release carries the
+The value matches the `version` field of `manifest.json` and the `VERSION`
+build argument of `compose.yaml`. A bundle attached to a release carries the
 version that release publishes; one built outside a release names the commit it
 was produced from. Either way the release notes link the documentation of the
 release tag.

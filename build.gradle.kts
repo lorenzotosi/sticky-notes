@@ -115,7 +115,8 @@ tasks.register<Sync>("documentation") {
  * assembles the images from the binaries the bundle carries.
  *
  * The bundle holds no shell script, no source checkout, and no credential: the
- * identity file next to the stack carries the demonstration defaults only.
+ * stack file carries the stamped identity, and `.env` carries the runtime
+ * variables only.
  */
 val releaseBundleDir = layout.buildDirectory.dir("release-bundle")
 
@@ -151,7 +152,7 @@ val stageReleaseBundle =
         from(layout.buildDirectory.dir("docs")) {
             into("build/docs")
         }
-        from("compose.yaml", ".dockerignore", ".env.example", "LICENSE")
+        from("compose.yaml", ".dockerignore", "LICENSE")
         from("release/README.md") {
             rename { "README.md" }
         }
@@ -162,10 +163,11 @@ val stageReleaseBundle =
     }
 
 /*
- * The identity file and the two records are written after the staging, so they
+ * The stack file and the two records are written after the staging, so they
  * describe the bytes that are actually delivered. The version is the one value
- * the root build owns; the image references repeat its Docker-safe form so the
- * stack tags and labels the images with the revision they were built from.
+ * the root build owns; it is stamped into the stack file, which the checksums
+ * cover, so the editable `.env` cannot change the identity a bundle claims. The
+ * image references repeat its Docker-safe form.
  *
  * The `.env` is editable configuration, so it stays out of the checksums.
  */
@@ -182,9 +184,19 @@ abstract class WriteReleaseBundleRecords : DefaultTask() {
     @get:Input
     abstract val bundleImageVersion: Property<String>
 
+    // The template stays in the repository: the bundle ships the generated
+    // `.env` only, and does not need a second copy of the same variables.
+    @get:InputFile
+    @get:Optional
+    abstract val envTemplate: RegularFileProperty
+
     @get:OutputFile
     val envFile: Provider<RegularFile>
         get() = bundleDirectory.file(".env")
+
+    @get:OutputFile
+    val composeFile: Provider<RegularFile>
+        get() = bundleDirectory.file("compose.yaml")
 
     @get:OutputFile
     val manifestFile: Provider<RegularFile>
@@ -198,14 +210,23 @@ abstract class WriteReleaseBundleRecords : DefaultTask() {
     fun write() {
         val root = bundleDirectory.get().asFile
         val envOut = envFile.get().asFile
+        val composeOut = composeFile.get().asFile
         val manifestOut = manifestFile.get().asFile
         val checksumOut = checksumFile.get().asFile
         val envExample = root.resolve(".env.example")
 
+        // The identity lives in the stack file, which the checksums cover, so
+        // editing the delivered `.env` cannot change the version or the commit
+        // the images claim to be.
+        composeOut.writeText(
+            composeOut
+                .readText()
+                .replace("\${STICKY_NOTES_VERSION:-0.0.0-dev}", "\"${bundleVersion.get()}\"")
+                .replace("\${STICKY_NOTES_REVISION:-unknown}", "\"${bundleRevision.get()}\""),
+        )
+
         val replacements =
             mapOf(
-                "STICKY_NOTES_VERSION" to bundleVersion.get(),
-                "STICKY_NOTES_REVISION" to bundleRevision.get(),
                 "API_IMAGE" to "sticky-notes-backend:${bundleImageVersion.get()}",
                 "WEB_IMAGE" to "sticky-notes-web:${bundleImageVersion.get()}",
             )
