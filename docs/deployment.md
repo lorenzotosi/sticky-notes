@@ -101,7 +101,7 @@ The stack references images by name and builds them only when they are missing: 
 
 The environment file `.env` holds the local configuration: the image references, the host ports, and the database credentials. `.env.example` documents the variables with demonstration values, and `./scripts/start-local.sh` copies it to `.env` only when `.env` does not exist, so an existing configuration is never overwritten. The file stays out of Git. Compose reads it from the project directory, which the scripts set with `--project-directory`.
 
-The release bundle ships a generated `.env` instead: besides the variables below, it sets `STICKY_NOTES_VERSION` and `STICKY_NOTES_REVISION` for the image labels and points the two image references at the versioned tags. Those two entries describe the build, so they are absent from `.env.example`, which a local checkout copies.
+The release bundle ships a generated `.env` instead: besides the variables below, it sets `STICKY_NOTES_VERSION` and `STICKY_NOTES_REVISION` for the image labels and points the two image references at the versioned tags.
 
 | Variable | Purpose | Default |
 | --- | --- | --- |

@@ -24,6 +24,7 @@ base_url="http://127.0.0.1:${web_port}"
 created_note_id=""
 last_revision=""
 failed=1
+work_dir=""
 
 usage() {
     echo "Usage: $0 [--port PORT] [--wait-timeout SECONDS]" >&2
@@ -81,6 +82,13 @@ for image in "$api_image" "$web_image"; do
     fi
 done
 
+if [ ! -d "$root_dir/build/release-bundle" ]; then
+    echo "Release bundle not found in $root_dir/build/release-bundle. Run './gradlew releaseBundle' first." >&2
+    exit 1
+fi
+
+work_dir=$(mktemp -d "${TMPDIR:-/tmp}/sticky-notes-smoke.XXXXXX")
+
 compose_cmd() {
     WEB_PORT="$web_port" \
     API_IMAGE="$api_image" \
@@ -88,24 +96,41 @@ compose_cmd() {
     MONGO_USER="stickynotes_smoke" \
     MONGO_PASSWORD="stickynotes_smoke_password" \
     MONGO_DATABASE="stickynotes_smoke" \
-    docker compose --project-directory "$root_dir" -p "$project_name" -f "$root_dir/compose.yaml" "$@"
+    docker compose --project-directory "$work_dir" -p "$project_name" -f "$work_dir/compose.yaml" "$@"
 }
 
 cleanup() {
     exit_code=$?
     set +e
-    if [ "$failed" -ne 0 ] || [ "$exit_code" -ne 0 ]; then
-        echo "--- Smoke test failed: collecting container status and logs ---" >&2
-        compose_cmd ps >&2
-        compose_cmd logs --no-color >&2
-    elif [ -n "$created_note_id" ] && [ -n "$last_revision" ]; then
-        curl -fsS -X DELETE "${base_url}/api/board/notes/${created_note_id}?expectedRevision=${last_revision}" >/dev/null 2>&1 || true
+    if [ -n "$work_dir" ] && [ -f "$work_dir/compose.yaml" ]; then
+        if [ "$failed" -ne 0 ] || [ "$exit_code" -ne 0 ]; then
+            echo "--- Smoke test failed: collecting container status and logs ---" >&2
+            compose_cmd ps >&2
+            compose_cmd logs --no-color >&2
+        elif [ -n "$created_note_id" ] && [ -n "$last_revision" ]; then
+            curl -fsS -X DELETE "${base_url}/api/board/notes/${created_note_id}?expectedRevision=${last_revision}" >/dev/null 2>&1 || true
+        fi
+        compose_cmd down -v --remove-orphans >/dev/null 2>&1 || true
     fi
-    compose_cmd down -v --remove-orphans >/dev/null 2>&1 || true
+    if [ -n "$work_dir" ] && [ -d "$work_dir" ]; then
+        rm -rf "$work_dir"
+    fi
     exit "$exit_code"
 }
 
 trap cleanup EXIT INT TERM
+
+cp -R "$root_dir/build/release-bundle/." "$work_dir/"
+
+# Verify bundle integrity and .env validity before compose up
+if command -v sha256sum >/dev/null 2>&1; then
+    (cd "$work_dir" && sha256sum --check --quiet SHA256SUMS)
+else
+    (cd "$work_dir" && shasum -a 256 -c SHA256SUMS)
+fi
+grep -q "^STICKY_NOTES_VERSION=" "$work_dir/.env"
+grep -q "^API_IMAGE=sticky-notes-backend:" "$work_dir/.env"
+grep -q "^WEB_IMAGE=sticky-notes-web:" "$work_dir/.env"
 
 # Clean up any leftover isolated test stack before starting
 compose_cmd down -v --remove-orphans >/dev/null 2>&1 || true
