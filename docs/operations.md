@@ -40,14 +40,14 @@ When deploying from `sticky-notes-deliverables.zip` instead of a source checkout
    ```sh
    sha256sum --check SHA256SUMS
    ```
-3. Inspect or customize `.env` (image references, ports, and database credentials), then start the stack:
+3. Inspect or customize `.env` (ports and database credentials), then start the stack:
    ```sh
    docker compose up --build --detach --wait
    ```
 
-The version and the revision of the bundle are stamped into `compose.yaml` and
-covered by `SHA256SUMS`, so `.env` carries runtime variables only and cannot
-change the identity of the delivered images.
+The version, revision, and image tags of the bundle are stamped into
+`compose.yaml` and covered by `SHA256SUMS`, so `.env` carries runtime variables
+only and cannot change the identity or version of the delivered images.
 
 ## Backup
 

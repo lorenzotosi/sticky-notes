@@ -136,8 +136,13 @@ bundle_version=$(sed -n 's/.*"version": "\([^"]*\)".*/\1/p' "$work_dir/manifest.
 bundle_revision=$(sed -n 's/.*"revision": "\([^"]*\)".*/\1/p' "$work_dir/manifest.json" | head -n 1)
 grep -q "VERSION: \"$bundle_version\"" "$work_dir/compose.yaml"
 grep -q "REVISION: \"$bundle_revision\"" "$work_dir/compose.yaml"
-grep -q "^API_IMAGE=sticky-notes-backend:" "$work_dir/.env"
-grep -q "^WEB_IMAGE=sticky-notes-web:" "$work_dir/.env"
+if grep -q "^API_IMAGE=" "$work_dir/.env" || grep -q "^WEB_IMAGE=" "$work_dir/.env"; then
+    echo "The editable .env must not carry image references or version identity." >&2
+    exit 1
+fi
+bundle_image_version=$(sed -n 's/.*"imageVersion": "\([^"]*\)".*/\1/p' "$work_dir/manifest.json" | head -n 1)
+grep -q "sticky-notes-backend:${bundle_image_version}" "$work_dir/compose.yaml"
+grep -q "sticky-notes-web:${bundle_image_version}" "$work_dir/compose.yaml"
 
 # Clean up any leftover isolated test stack before starting
 compose_cmd down -v --remove-orphans >/dev/null 2>&1 || true

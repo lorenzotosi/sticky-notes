@@ -214,30 +214,25 @@ abstract class WriteReleaseBundleRecords : DefaultTask() {
         val checksumOut = checksumFile.get().asFile
         val template = envTemplate.get().asFile
 
-        // The identity lives in the stack file, which the checksums cover, so
-        // editing the delivered `.env` cannot change the version or the commit
-        // the images claim to be.
         composeOut.writeText(
             composeOut
                 .readText()
                 .replace("\${STICKY_NOTES_VERSION:-0.0.0-dev}", "\"${bundleVersion.get()}\"")
-                .replace("\${STICKY_NOTES_REVISION:-unknown}", "\"${bundleRevision.get()}\""),
+                .replace("\${STICKY_NOTES_REVISION:-unknown}", "\"${bundleRevision.get()}\"")
+                .replace(
+                    "\${API_IMAGE:-sticky-notes-backend:local}",
+                    "\${API_IMAGE:-sticky-notes-backend:${bundleImageVersion.get()}}",
+                )
+                .replace(
+                    "\${WEB_IMAGE:-sticky-notes-web:local}",
+                    "\${WEB_IMAGE:-sticky-notes-web:${bundleImageVersion.get()}}",
+                ),
         )
 
-        val replacements =
-            mapOf(
-                "API_IMAGE" to "sticky-notes-backend:${bundleImageVersion.get()}",
-                "WEB_IMAGE" to "sticky-notes-web:${bundleImageVersion.get()}",
-            )
-
         val envLines =
-            template.readLines().map { line ->
+            template.readLines().filterNot { line ->
                 val key = line.substringBefore('=').trim()
-                if ('=' in line && key in replacements) {
-                    "$key=${replacements.getValue(key)}"
-                } else {
-                    line
-                }
+                key in setOf("API_IMAGE", "WEB_IMAGE", "STICKY_NOTES_VERSION", "STICKY_NOTES_REVISION")
             }
 
         envOut.writeText(envLines.joinToString("\n", postfix = "\n"))
