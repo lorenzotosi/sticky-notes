@@ -182,21 +182,49 @@ abstract class WriteReleaseBundleRecords : DefaultTask() {
     @get:Input
     abstract val bundleImageVersion: Property<String>
 
+    @get:OutputFile
+    val envFile: Provider<RegularFile>
+        get() = bundleDirectory.file(".env")
+
+    @get:OutputFile
+    val manifestFile: Provider<RegularFile>
+        get() = bundleDirectory.file("manifest.json")
+
+    @get:OutputFile
+    val checksumFile: Provider<RegularFile>
+        get() = bundleDirectory.file("SHA256SUMS")
+
     @TaskAction
     fun write() {
         val root = bundleDirectory.get().asFile
-        val envFile = root.resolve(".env")
-        val manifestFile = root.resolve("manifest.json")
-        val checksumFile = root.resolve("SHA256SUMS")
+        val envOut = envFile.get().asFile
+        val manifestOut = manifestFile.get().asFile
+        val checksumOut = checksumFile.get().asFile
+        val envExample = root.resolve(".env.example")
 
-        envFile.writeText(
-            listOf(
-                "STICKY_NOTES_VERSION=${bundleVersion.get()}",
-                "STICKY_NOTES_REVISION=${bundleRevision.get()}",
-                "API_IMAGE=sticky-notes-backend:${bundleImageVersion.get()}",
-                "WEB_IMAGE=sticky-notes-web:${bundleImageVersion.get()}",
-            ).joinToString("\n", postfix = "\n"),
-        )
+        val replacements =
+            mapOf(
+                "STICKY_NOTES_VERSION" to bundleVersion.get(),
+                "STICKY_NOTES_REVISION" to bundleRevision.get(),
+                "API_IMAGE" to "sticky-notes-backend:${bundleImageVersion.get()}",
+                "WEB_IMAGE" to "sticky-notes-web:${bundleImageVersion.get()}",
+            )
+
+        val envLines =
+            if (envExample.exists()) {
+                envExample.readLines().map { line ->
+                    val key = line.substringBefore('=').trim()
+                    if ('=' in line && key in replacements) {
+                        "$key=${replacements.getValue(key)}"
+                    } else {
+                        line
+                    }
+                }
+            } else {
+                replacements.map { (k, v) -> "$k=$v" }
+            }
+
+        envOut.writeText(envLines.joinToString("\n", postfix = "\n"))
 
         fun digestOf(file: File): String =
             MessageDigest
@@ -209,7 +237,7 @@ abstract class WriteReleaseBundleRecords : DefaultTask() {
         val payload =
             root
                 .walkTopDown()
-                .filter { it.isFile && it != envFile && it.name != manifestFile.name && it.name != checksumFile.name }
+                .filter { it.isFile && it != envOut && it != manifestOut && it != checksumOut }
                 .sortedBy { it.relativeTo(root).invariantSeparatorsPath }
                 .toList()
 
@@ -221,6 +249,11 @@ abstract class WriteReleaseBundleRecords : DefaultTask() {
                         .map { it.groupValues[1] to it.groupValues[2] }
                 }.distinct()
 
+        check(baseImages.size >= 3) {
+            "Expected pinned @sha256 digests in backend/Dockerfile, frontend/Dockerfile, and compose.yaml, " +
+                "but found only: $baseImages"
+        }
+
         val notes =
             listOf(
                 "backend/build/libs/backend.jar is the only executable artifact: " +
@@ -230,7 +263,7 @@ abstract class WriteReleaseBundleRecords : DefaultTask() {
                 "The images are built on the target machine from the pinned base images above by the delivered Dockerfiles.",
             )
 
-        manifestFile.writeText(
+        manifestOut.writeText(
             buildString {
                 appendLine("{")
                 appendLine("""  "name": "sticky-notes",""")
@@ -267,9 +300,9 @@ abstract class WriteReleaseBundleRecords : DefaultTask() {
         val checksummed =
             (
                 payload.map { it.relativeTo(root).invariantSeparatorsPath to digestOf(it) } +
-                    ("manifest.json" to digestOf(manifestFile))
+                    ("manifest.json" to digestOf(manifestOut))
             ).sortedBy { it.first }
-        checksumFile.writeText(checksummed.joinToString("\n", postfix = "\n") { "${it.second}  ${it.first}" })
+        checksumOut.writeText(checksummed.joinToString("\n", postfix = "\n") { "${it.second}  ${it.first}" })
     }
 }
 
@@ -289,6 +322,18 @@ val releaseBundle =
         group = "build"
         description = "Assembles the versioned release bundle in build/release-bundle."
         dependsOn(stageReleaseBundle, writeReleaseBundleRecords)
+    }
+
+val packageReleaseZip =
+    tasks.register<Zip>("packageReleaseZip") {
+        group = "build"
+        description = "Packages the release bundle into a reproducible ZIP archive."
+        dependsOn(releaseBundle)
+        from(releaseBundleDir)
+        archiveFileName.set("sticky-notes-deliverables.zip")
+        destinationDirectory.set(layout.projectDirectory)
+        isPreserveFileTimestamps = false
+        isReproducibleFileOrder = true
     }
 
 val verifyLicense =
@@ -387,6 +432,7 @@ tasks.register("fullBuild") {
         ":commons:build",
         ":backend:build",
         ":frontend:frontendBuild",
+        releaseBundle,
     )
 }
 
@@ -430,7 +476,7 @@ val containerSmoke =
     tasks.register<Exec>("containerSmoke") {
         group = "verification"
         description = "Runs the end-to-end smoke and lifecycle check against an isolated Docker Compose stack."
-        dependsOn("buildImages")
+        dependsOn("buildImages", releaseBundle)
         workingDir = projectDir
         commandLine(shExecutable.get(), "scripts/smoke-test.sh")
     }

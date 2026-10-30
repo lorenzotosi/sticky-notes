@@ -27,6 +27,24 @@ JVM/Kotlin domain and revalidated when a snapshot is rehydrated from MongoDB.
 Corrupted or unsupported persisted state produces a diagnostic error and is
 never silently repaired.
 
+## Operating from the Release Bundle
+
+When deploying from `sticky-notes-deliverables.zip` instead of a source checkout:
+
+1. Extract the archive into an empty deployment directory:
+   ```sh
+   unzip sticky-notes-deliverables.zip -d sticky-notes-deploy
+   cd sticky-notes-deploy
+   ```
+2. Verify payload integrity against the signed checksum record (`SHA256SUMS` covers all files including `manifest.json`, while `.env` remains editable):
+   ```sh
+   sha256sum --check SHA256SUMS
+   ```
+3. Inspect or customize `.env` (which pre-populates `STICKY_NOTES_VERSION`, `STICKY_NOTES_REVISION`, `API_IMAGE`, and `WEB_IMAGE`), then start the stack:
+   ```sh
+   docker compose up --build --detach --wait
+   ```
+
 ## Backup
 
 `scripts/backup.sh` dumps the board database with `mongodump` inside a
