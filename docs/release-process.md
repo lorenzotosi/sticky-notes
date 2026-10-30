@@ -42,7 +42,7 @@ The rebuild starts from the commit the quality workflow verified and skips the t
 | `frontend/dist/`, `frontend/Dockerfile`, `frontend/nginx.conf` | Production web bundle, its unprivileged Nginx image, and the same-origin reverse proxy for `/api`. |
 | `commons/build/libs/commons-jvm.jar` | JVM library of the shared domain, for consumers; it needs the Kotlin standard library and is not executable on its own. |
 | `commons/build/npm/sticky-notes-domain/` | Installable Kotlin/JS package of the shared domain, for consumers. |
-| `compose.yaml`, `.dockerignore`, `.env.example` | Delivery stack with the stamped build identity, and its documented configuration. |
+| `compose.yaml`, `.dockerignore` | Delivery stack with the stamped build identity. |
 | `.env` | Image references and runtime variables of this bundle, generated from the same version. |
 | `build/docs/` | Markdown documentation, generated Dokka API reference, and the OpenAPI document of the same revision. |
 | `README.md`, `LICENSE` | Startup instructions for the bundle and the project license. |

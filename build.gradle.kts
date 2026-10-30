@@ -187,7 +187,6 @@ abstract class WriteReleaseBundleRecords : DefaultTask() {
     // The template stays in the repository: the bundle ships the generated
     // `.env` only, and does not need a second copy of the same variables.
     @get:InputFile
-    @get:Optional
     abstract val envTemplate: RegularFileProperty
 
     @get:OutputFile
@@ -213,7 +212,7 @@ abstract class WriteReleaseBundleRecords : DefaultTask() {
         val composeOut = composeFile.get().asFile
         val manifestOut = manifestFile.get().asFile
         val checksumOut = checksumFile.get().asFile
-        val envExample = root.resolve(".env.example")
+        val template = envTemplate.get().asFile
 
         // The identity lives in the stack file, which the checksums cover, so
         // editing the delivered `.env` cannot change the version or the commit
@@ -232,17 +231,13 @@ abstract class WriteReleaseBundleRecords : DefaultTask() {
             )
 
         val envLines =
-            if (envExample.exists()) {
-                envExample.readLines().map { line ->
-                    val key = line.substringBefore('=').trim()
-                    if ('=' in line && key in replacements) {
-                        "$key=${replacements.getValue(key)}"
-                    } else {
-                        line
-                    }
+            template.readLines().map { line ->
+                val key = line.substringBefore('=').trim()
+                if ('=' in line && key in replacements) {
+                    "$key=${replacements.getValue(key)}"
+                } else {
+                    line
                 }
-            } else {
-                replacements.map { (k, v) -> "$k=$v" }
             }
 
         envOut.writeText(envLines.joinToString("\n", postfix = "\n"))
@@ -280,7 +275,7 @@ abstract class WriteReleaseBundleRecords : DefaultTask() {
                 "backend/build/libs/backend.jar is the only executable artifact: " +
                     "it embeds the Commons domain and its runtime dependencies.",
                 "commons/ carries the shared domain as a JVM library and a Kotlin/JS package for consumers; the stack does not need it.",
-                ".env carries the build identity and is editable, so it is not part of the checksums.",
+                ".env carries runtime configuration and is editable, so it is not part of the checksums.",
                 "The images are built on the target machine from the pinned base images above by the delivered Dockerfiles.",
             )
 
@@ -336,6 +331,7 @@ val writeReleaseBundleRecords =
         bundleVersion.set(releaseVersion)
         bundleRevision.set(gitRevision)
         bundleImageVersion.set(imageVersion)
+        envTemplate.set(layout.projectDirectory.file(".env.example"))
     }
 
 val releaseBundle =
