@@ -152,7 +152,7 @@ val stageReleaseBundle =
         from(layout.buildDirectory.dir("docs")) {
             into("build/docs")
         }
-        from("compose.yaml", ".dockerignore", "LICENSE")
+        from(".dockerignore", "LICENSE")
         from("release/README.md") {
             rename { "README.md" }
         }
@@ -189,6 +189,9 @@ abstract class WriteReleaseBundleRecords : DefaultTask() {
     @get:InputFile
     abstract val envTemplate: RegularFileProperty
 
+    @get:InputFile
+    abstract val composeTemplate: RegularFileProperty
+
     @get:OutputFile
     val envFile: Provider<RegularFile>
         get() = bundleDirectory.file(".env")
@@ -213,9 +216,10 @@ abstract class WriteReleaseBundleRecords : DefaultTask() {
         val manifestOut = manifestFile.get().asFile
         val checksumOut = checksumFile.get().asFile
         val template = envTemplate.get().asFile
+        val composeTem = composeTemplate.get().asFile
 
         composeOut.writeText(
-            composeOut
+            composeTem
                 .readText()
                 .replace("\${STICKY_NOTES_VERSION:-0.0.0-dev}", "\"${bundleVersion.get()}\"")
                 .replace("\${STICKY_NOTES_REVISION:-unknown}", "\"${bundleRevision.get()}\"")
@@ -326,6 +330,7 @@ val writeReleaseBundleRecords =
         bundleVersion.set(releaseVersion)
         bundleRevision.set(gitRevision)
         bundleImageVersion.set(imageVersion)
+        composeTemplate.set(layout.projectDirectory.file("compose.yaml"))
         envTemplate.set(layout.projectDirectory.file(".env.example"))
     }
 
