@@ -162,10 +162,6 @@ The smoke check verifies that:
 - stopping and restarting `api` and `mongo`, as well as stopping the stack with `docker compose down` and starting it again, preserves the stored board in the named volume; 
 - if any step fails, container statuses and logs are printed before the isolated test containers and test volume are removed in the `EXIT` trap.
 
-### Published images
-
-The stack uses published images instead of the local ones by setting `API_IMAGE` and `WEB_IMAGE` in `.env` to their published references, including a digest. Publishing the images belongs to the release process; registry credentials belong to GitHub Actions secrets, never to repository files.
-
 ### Backup and restore
 
 The named volume preserves data across stops and restarts but is not a backup.
