@@ -14,7 +14,7 @@ Semantic Release computes the next version from the squash-merge titles on `main
 | Executable JAR | `Implementation-Version` and `Implementation-Revision` in the manifest |
 | Kotlin/JS package | `version` in the generated `package.json` of `sticky-notes-domain` |
 | Container images | `org.opencontainers.image.version` and `…revision` labels, plus the versioned tag |
-| Stack configuration | `STICKY_NOTES_VERSION`, `STICKY_NOTES_REVISION`, and the image references of the bundle `.env` |
+| Stack configuration | The versioned image tags, and the `VERSION` and `REVISION` build arguments stamped into the bundle `compose.yaml` |
 | Release records | `version`, `imageVersion`, and `revision` in `manifest.json` |
 
 A release build passes the version through the `releaseVersion` property:
@@ -42,8 +42,8 @@ The rebuild starts from the commit the quality workflow verified and skips the t
 | `frontend/dist/`, `frontend/Dockerfile`, `frontend/nginx.conf` | Production web bundle, its unprivileged Nginx image, and the same-origin reverse proxy for `/api`. |
 | `commons/build/libs/commons-jvm.jar` | JVM library of the shared domain, for consumers; it needs the Kotlin standard library and is not executable on its own. |
 | `commons/build/npm/sticky-notes-domain/` | Installable Kotlin/JS package of the shared domain, for consumers. |
-| `compose.yaml`, `.dockerignore`, `.env.example` | Delivery stack and its documented configuration. |
-| `.env` | Build identity and image references of this bundle, generated from the same version. |
+| `compose.yaml`, `.dockerignore` | Delivery stack with the stamped image tags and build identity. |
+| `.env` | Runtime variables of this bundle with demonstration defaults. |
 | `build/docs/` | Markdown documentation, generated Dokka API reference, and the OpenAPI document of the same revision. |
 | `README.md`, `LICENSE` | Startup instructions for the bundle and the project license. |
 | `manifest.json`, `SHA256SUMS` | Provenance and integrity records. |
@@ -59,7 +59,7 @@ sha256sum --check --quiet SHA256SUMS   # Linux
 shasum -a 256 -c SHA256SUMS            # macOS
 ```
 
-`.env` is editable configuration, so it stays out of both records; editing a port or a credential therefore keeps the check green. The version recorded in `manifest.json` is the one the images carry, and the versioned image references in `.env` repeat it.
+`.env` is editable configuration, so it stays out of both records; editing a port or a credential therefore keeps the check green. The version recorded in `manifest.json` is the one the images carry: the bundle `compose.yaml` stamps it into the image tags and build arguments, which the checksums cover.
 
 A bundle built outside a release identifies the commit it was produced from; the published bundle carries the version the release publishes and the revision the release job checked out. Either way the release notes link the documentation of the tag that carries the ZIP.
 

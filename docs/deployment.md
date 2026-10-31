@@ -19,7 +19,7 @@ After extracting the release ZIP, start the whole product from the extracted dir
 docker compose up --build -d --wait
 ```
 
-Compose builds the API and web images from the JAR and the frontend bundle carried by the ZIP, starts them in dependency order behind MongoDB, and returns when every service is healthy; the command needs Docker Compose v2.19 or later. The ZIP ships a generated `.env` carrying the version the release publishes and the commit it was built from, as image tags and OCI labels, so the images the command builds match the identity of the images `./gradlew buildImages` produces. The interface is then available at `http://127.0.0.1:8080`, and `docker compose down` stops the stack. The services, the volume, and the configuration variables are those of the [delivery stack](#delivery-stack); the defaults in the Compose file cover every variable, so the generated `.env` can be edited freely.
+Compose builds the API and web images from the JAR and the frontend bundle carried by the ZIP, starts them in dependency order behind MongoDB, and returns when every service is healthy; the command needs Docker Compose v2.19 or later. The ZIP stamps the version the release publishes and the commit it was built from into `compose.yaml` as image tags and build arguments, so the images the command builds carry the OCI identity of the images `./gradlew buildImages` produces. The interface is then available at `http://127.0.0.1:8080`, and `docker compose down` stops the stack. The services, the volume, and the configuration variables are those of the [delivery stack](#delivery-stack); the defaults in the Compose file cover every variable, so the generated `.env` can be edited freely.
 
 The extracted directory also carries `README.md` with the startup and stop commands, `manifest.json` with the version, commit, base images, and file digests, and `SHA256SUMS` for the integrity check:
 
@@ -99,14 +99,14 @@ The stack references images by name and builds them only when they are missing: 
 
 ### Configuration
 
-The environment file `.env` holds the local configuration: the image references, the host ports, and the database credentials. `.env.example` documents the variables with demonstration values, and `./scripts/start-local.sh` copies it to `.env` only when `.env` does not exist, so an existing configuration is never overwritten. The file stays out of Git. Compose reads it from the project directory, which the scripts set with `--project-directory`.
+The environment file `.env` holds the local configuration: host ports and database credentials, plus optional image overrides. `.env.example` documents the runtime variables with demonstration values, and `./scripts/start-local.sh` copies it to `.env` only when `.env` does not exist, so an existing configuration is never overwritten. The file stays out of Git. Compose reads it from the project directory, which the scripts set with `--project-directory`.
 
-The release bundle ships a generated `.env` instead: besides the variables below, it sets `STICKY_NOTES_VERSION` and `STICKY_NOTES_REVISION` for the image labels and points the two image references at the versioned tags.
+The release bundle ships a generated `.env` instead, with the runtime variables below set to their demonstration defaults. The image tags, the version, and the revision are stamped into the bundle `compose.yaml`, which the checksums cover, so `.env` carries runtime variables only and cannot change the identity or version of the images the stack builds.
 
 | Variable | Purpose | Default |
 | --- | --- | --- |
-| `API_IMAGE` | image of the API service | `sticky-notes-backend:local` |
-| `WEB_IMAGE` | image of the web service | `sticky-notes-web:local` |
+| `API_IMAGE` | image of the API service, optional override | `sticky-notes-backend:local` (stamped release tag in bundle) |
+| `WEB_IMAGE` | image of the web service, optional override | `sticky-notes-web:local` (stamped release tag in bundle) |
 | `WEB_PORT` | host port of the web interface | `8080` |
 | `API_PORT` | host port of the API, development override; it must match the proxy target of the Vite development server | `8080` |
 | `MONGO_PORT` | host port of the database, development override | `27017` |
@@ -161,10 +161,6 @@ The smoke check verifies that:
 - `GET /api/board`, note creation (`POST /api/board/notes`), re-reading, note update (`PATCH /api/board/notes/{id}`), and note deletion (`DELETE /api/board/notes/{id}`) succeed through the Nginx reverse proxy with optimistic revision checks; 
 - stopping and restarting `api` and `mongo`, as well as stopping the stack with `docker compose down` and starting it again, preserves the stored board in the named volume; 
 - if any step fails, container statuses and logs are printed before the isolated test containers and test volume are removed in the `EXIT` trap.
-
-### Published images
-
-The stack uses published images instead of the local ones by setting `API_IMAGE` and `WEB_IMAGE` in `.env` to their published references, including a digest. Publishing the images belongs to the release process; registry credentials belong to GitHub Actions secrets, never to repository files.
 
 ### Backup and restore
 

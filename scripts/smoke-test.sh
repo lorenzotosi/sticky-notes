@@ -122,15 +122,27 @@ trap cleanup EXIT INT TERM
 
 cp -R "$root_dir/build/release-bundle/." "$work_dir/"
 
-# Verify bundle integrity and .env validity before compose up
+# Verify bundle integrity, the stamped identity, and the runtime .env
 if command -v sha256sum >/dev/null 2>&1; then
     (cd "$work_dir" && sha256sum --check --quiet SHA256SUMS)
 else
     (cd "$work_dir" && shasum -a 256 -c SHA256SUMS)
 fi
-grep -q "^STICKY_NOTES_VERSION=" "$work_dir/.env"
-grep -q "^API_IMAGE=sticky-notes-backend:" "$work_dir/.env"
-grep -q "^WEB_IMAGE=sticky-notes-web:" "$work_dir/.env"
+if grep -q "^STICKY_NOTES_VERSION=" "$work_dir/.env"; then
+    echo "The editable .env must not carry the build identity." >&2
+    exit 1
+fi
+bundle_version=$(sed -n 's/.*"version": "\([^"]*\)".*/\1/p' "$work_dir/manifest.json" | head -n 1)
+bundle_revision=$(sed -n 's/.*"revision": "\([^"]*\)".*/\1/p' "$work_dir/manifest.json" | head -n 1)
+grep -q "VERSION: \"$bundle_version\"" "$work_dir/compose.yaml"
+grep -q "REVISION: \"$bundle_revision\"" "$work_dir/compose.yaml"
+if grep -q "^API_IMAGE=" "$work_dir/.env" || grep -q "^WEB_IMAGE=" "$work_dir/.env"; then
+    echo "The editable .env must not carry image references or version identity." >&2
+    exit 1
+fi
+bundle_image_version=$(sed -n 's/.*"imageVersion": "\([^"]*\)".*/\1/p' "$work_dir/manifest.json" | head -n 1)
+grep -q "sticky-notes-backend:${bundle_image_version}" "$work_dir/compose.yaml"
+grep -q "sticky-notes-web:${bundle_image_version}" "$work_dir/compose.yaml"
 
 # Clean up any leftover isolated test stack before starting
 compose_cmd down -v --remove-orphans >/dev/null 2>&1 || true
