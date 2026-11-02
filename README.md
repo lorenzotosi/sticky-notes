@@ -3,9 +3,7 @@
 
 # Sticky Notes
 
-A Kanban web application for a single shared board of sticky notes. Notes are created, edited, moved between columns, blocked, and annotated with checklists; the board is stored in MongoDB, so reloading the page or restarting the machine returns the same board.
-
-Kotlin Multiplatform shares the domain between the two applications: a Java/Spring Boot REST API validates every command and persists the board, and a Vue application drives the board through that API, with the generated Kotlin/JS domain package supplying client prevalidation. The delivered shape of the product is a web server that serves the interface and forwards `/api` to the API, a backend container, and a MongoDB container, with only the web port published on the loopback interface.
+A Kanban web application for a single shared board of sticky notes. Notes are created, edited, moved between columns, blocked, and annotated with checklists!
 
 ## Run the released bundle with Docker Compose
 
