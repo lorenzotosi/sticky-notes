@@ -34,6 +34,14 @@ To run only the backend JAR on the host, with MongoDB provided elsewhere, see [b
 java -jar backend/build/libs/backend.jar --spring.profiles.active=local
 ```
 
+The same JAR can also carry the interface: pointing its static resources at the `frontend/dist/` bundle the ZIP extracts serves the board and the API from one origin, so a host run needs no reverse proxy.
+
+```sh
+java -jar backend/build/libs/backend.jar --spring.profiles.active=local --spring.web.resources.static-locations=file:frontend/dist/
+```
+
+This host run is a manual alternative for a machine without containers, not the delivered shape of the product: the delivered shape is the [delivery stack](#delivery-stack), where the web container serves the interface and forwards `/api` to the API container.
+
 ## Backend runtime image
 
 The backend is also delivered as a container image. The image carries the executable JAR on a JRE 21 base image pinned to a digest, and nothing else: no Gradle runtime, no sources, no build cache. The application runs as the unprivileged account `sticky-notes` with UID 10001, and it writes only to the temporary directory inherited from the base image and to its own `/app` directory.
