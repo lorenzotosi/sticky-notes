@@ -45,6 +45,7 @@ See [full-stack execution](development.md#full-stack-end-to-end-execution) for t
 - [Deployment](deployment.md)
 - [Release process](release-process.md)
 - [Operations](operations.md)
+- [Release Recovery](release-recovery.md)
 
 ## Specifications
 

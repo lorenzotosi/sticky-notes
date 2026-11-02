@@ -515,14 +515,27 @@ backupRestoreVerify.configure {
     mustRunAfter(tasks.named("fullBuild"), containerSmoke)
 }
 
+val releaseVerify =
+    tasks.register<Exec>("releaseVerify") {
+        group = "verification"
+        description = "Verifies release bundle integrity, incomplete-bundle detection, and data-safe rollback."
+        dependsOn("buildImages", packageReleaseZip)
+        workingDir = projectDir
+        commandLine(shExecutable.get(), "scripts/verify-release.sh")
+    }
+
+releaseVerify.configure {
+    mustRunAfter(tasks.named("fullBuild"), containerSmoke, backupRestoreVerify)
+}
+
 val frontendE2eTask = evaluationDependsOn(":frontend").tasks.named("frontendE2e")
 
 frontendE2eTask.configure {
-    mustRunAfter(tasks.named("fullBuild"), containerSmoke, backupRestoreVerify)
+    mustRunAfter(tasks.named("fullBuild"), containerSmoke, backupRestoreVerify, releaseVerify)
 }
 
 tasks.register("fullVerify") {
     group = "verification"
     description = "Runs the full build, MongoDB integration tests, container lifecycle checks, backup and restore, and browser E2E."
-    dependsOn("fullBuild", containerSmoke, backupRestoreVerify, frontendE2eTask)
+    dependsOn("fullBuild", containerSmoke, backupRestoreVerify, releaseVerify, frontendE2eTask)
 }
