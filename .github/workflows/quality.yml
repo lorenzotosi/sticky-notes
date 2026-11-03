@@ -5,17 +5,7 @@ name: Quality
 
 on:
   workflow_call:
-    inputs:
-      full_build:
-        description: Build every deliverable after running the checks
-        type: boolean
-        default: false
   workflow_dispatch:
-    inputs:
-      full_build:
-        description: Build every deliverable after running the checks
-        type: boolean
-        default: true
 
 permissions:
   contents: read
@@ -46,19 +36,15 @@ jobs:
           echo "CHROME_BIN=$(command -v google-chrome)" >> "$GITHUB_ENV"
       - name: Validate commits
         if: github.event_name == 'pull_request'
-        run: npx --yes --package @commitlint/cli --package @commitlint/config-conventional commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+        # Pinned inline: a new commitlint release must not break every pull request, and dependabot cannot see packages installed through npx.
+        run: npx --yes --package @commitlint/cli@21.2.4 --package @commitlint/config-conventional@21.2.4 commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
       - name: Run checks
-        if: ${{ !inputs.full_build && github.event_name != 'pull_request' }}
+        if: ${{ github.event_name == 'push' && github.ref != 'refs/heads/main' }}
         run: ./gradlew check --no-daemon
       - name: Run full verification
-        if: ${{ inputs.full_build || github.event_name == 'pull_request' }}
+        # fullVerify already stages, zips, and verifies the release bundle through releaseBundle and releaseVerify.
+        if: ${{ github.event_name != 'push' || github.ref == 'refs/heads/main' }}
         run: ./gradlew fullVerify --no-daemon
-      - name: Build the release bundle
-        if: ${{ inputs.full_build }}
-        # The release job rebuilds the bundle at the published version, so this
-        # run is the cheap smoke check that staging and the records still work:
-        # it fails here instead of inside a release.
-        run: ./gradlew releaseBundle --no-daemon
       - name: Upload test, coverage, and E2E reports
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -82,6 +68,8 @@ jobs:
         run: docker compose -f compose.test.yaml down -v --remove-orphans
 
   macos-smoke:
+    # A development-branch push gets the Linux gate only; the pull request that merges that branch runs the macOS job.
+    if: ${{ github.event_name != 'push' || github.ref == 'refs/heads/main' }}
     runs-on: macos-latest
     timeout-minutes: 20
     steps:
@@ -126,10 +114,18 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Enforce all quality jobs succeeded
+        env:
+          # The macOS job is skipped on development-branch pushes; any other result than the expected one fails the gate.
+          BRANCH_PUSH: ${{ github.event_name == 'push' && github.ref != 'refs/heads/main' }}
         run: |
+          if [ "$BRANCH_PUSH" = "true" ]; then
+            expected_macos="skipped"
+          else
+            expected_macos="success"
+          fi
           echo "linux-verify result: ${{ needs.linux-verify.result }}"
-          echo "macos-smoke result: ${{ needs.macos-smoke.result }}"
-          if [ "${{ needs.linux-verify.result }}" != "success" ] || [ "${{ needs.macos-smoke.result }}" != "success" ]; then
-            echo "Quality gate failed because one or more required jobs did not succeed." >&2
+          echo "macos-smoke result: ${{ needs.macos-smoke.result }} (expected: $expected_macos)"
+          if [ "${{ needs.linux-verify.result }}" != "success" ] || [ "${{ needs.macos-smoke.result }}" != "$expected_macos" ]; then
+            echo "Quality gate failed because one or more required jobs did not report the expected result." >&2
             exit 1
           fi
