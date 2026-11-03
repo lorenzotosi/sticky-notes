@@ -7,7 +7,7 @@ A release carries the artifacts a recipient can run, the version they share, and
 
 ## One version for every deliverable
 
-Semantic Release computes the next version from the squash-merge titles on `main`, after the quality workflow succeeds; see the [release policy](ci-cd.md#release-policy) for the version rules. The release workflow then runs the same build through the `releaseVersion` property, so every deliverable carries the version the release publishes instead of the identity of the build that verified the commit. The root build owns the value and exposes it to every module:
+Semantic Release calculates the next version from the squash-merge commit messages on `main`, after the quality workflow succeeds. See the [release policy](ci-cd.md#release-policy) for the version rules. The release workflow then runs the same build through the `releaseVersion` property, so every deliverable carries the version that the release publishes instead of the identity of the build that verified the commit. The root build owns the value and exposes it to every module:
 
 | Where it lands | Name |
 | --- | --- |
@@ -27,13 +27,13 @@ Without that property the build identifies the commit it was produced from, as `
 
 ## Publishing
 
-Semantic Release computes the version, then its `prepare` hook runs `scripts/package-release.sh <version>`. The script rebuilds the bundle at that version, checks that the records describe the files it just wrote, and packages `sticky-notes-deliverables.zip`; the GitHub plugin uploads the ZIP as a release asset afterwards. A build failure therefore aborts the release before the tag exists.
+Semantic Release computes the version, then its `prepare` hook runs `scripts/package-release.sh <version>`. The script rebuilds the bundle at that version, checks that the records describe the files it just wrote, and packages `sticky-notes-deliverables.zip`. The GitHub plugin then uploads the ZIP as a release asset. A build failure therefore aborts the release before the tag exists.
 
-The rebuild starts from the commit the quality workflow verified and skips the test suite: the tests already ran on that commit, and the release only changes the identity the artifacts declare. The script also refuses a bundle whose recorded revision differs from the checked-out commit, so a publish cannot silently carry the development identity.
+The rebuild starts from the commit that the quality workflow verified and skips the test suite. The tests already ran on that commit. The release only changes the identity that the artifacts declare. The script also refuses a bundle whose recorded revision differs from the checked-out commit. A publish therefore cannot carry the development identity silently.
 
 ## The bundle
 
-`./gradlew releaseBundle` assembles `build/release-bundle/`; the release workflow rebuilds and packages it as `sticky-notes-deliverables.zip`, and the quality workflow builds it on `main` to fail an assembly regression before a release. The bundle keeps the repository paths, because the Dockerfiles and `compose.yaml` address the artifacts through them: an extracted bundle is a Docker build context.
+`./gradlew releaseBundle` assembles `build/release-bundle/`. The release workflow rebuilds and packages it as `sticky-notes-deliverables.zip`. The quality workflow builds and verifies it on pull requests and on `main`, so an assembly or record regression fails before a release. The bundle keeps the repository paths, because the Dockerfiles and `compose.yaml` address the artifacts through them. An extracted bundle is a Docker build context.
 
 | Path in the bundle | Content |
 | --- | --- |

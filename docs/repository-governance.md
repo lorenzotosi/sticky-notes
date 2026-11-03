@@ -10,7 +10,7 @@ These settings live on GitHub and must be checked in the repository settings; th
 - Direct pushes are disabled; changes enter through pull requests.
 - Squash and merge is the accepted merge strategy, with automatic branch deletion after merge.
 - `Quality / verify` and `Conventional pull request title / title` are required status checks.
-- `Quality / verify` runs with `if: always()` after `Quality / linux-verify` (full build, MongoDB integration, container smoke, backup/restore, release bundle verification, and Playwright E2E on Linux) and `Quality / macos-smoke` (JVM, ChromeHeadless, and Vitest portability on macOS, not run on development-branch pushes), and succeeds only when each upstream job reports the result its execution policy expects.
+- `Quality / verify` runs with `if: always()` after `Quality / linux-verify` and `Quality / macos-smoke`. `linux-verify` runs the full build, MongoDB integration tests, container smoke tests, backup and restore, release bundle verification, and Playwright E2E tests on Linux. `macos-smoke` runs JVM, ChromeHeadless, and Vitest portability tests on macOS. This job is skipped after a development-branch push. `Quality / verify` succeeds only when each upstream job reports the result that its execution policy expects.
 - Pull request branches must be up to date with `main` before merging.
 
 Authors may self-merge when all required automated checks pass. Peer review remains recommended for architecture and major feature changes.
