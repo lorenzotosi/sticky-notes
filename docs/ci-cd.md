@@ -51,17 +51,18 @@ Gate references are optional context, not release names or required fields. Do n
 
 ## Version rules
 
-Pull request titles use `type(scope): description`, where the scope is optional. With squash merging, the pull request title becomes the commit message analyzed on `main`.
+Pull request titles use `type(scope): description` or `type(scope)!: description`, where the scope is optional. With squash merging, the pull request title becomes the commit message analyzed on `main`.
 
 | Pull request title | Version change |
 | --- | --- |
 | `fix: correct note validation` | Patch (`0.0.0` to `0.0.1`) |
 | `perf: reduce API response time` | Patch |
 | `feat: add note colors` | Minor (`0.0.0` to `0.1.0`) |
-| `fix: change the notes API` + `BREAKING CHANGE:` footer | Major (`0.0.0` to `1.0.0`) |
+| `feat!: change the notes API` | Major (`0.0.0` to `1.0.0`) |
+| `feat: change the notes API` + `BREAKING CHANGE:` footer | Major |
 | `build:`, `chore:`, `ci:`, `docs:`, `refactor:`, `style:`, `test:` | No release |
 
-A breaking change is declared with a `BREAKING CHANGE:` footer in the squash commit message: the pull request title becomes the commit's first line, and the maintainer writes the footer in the extended description when confirming the squash merge. The footer produces the major release and the breaking-change entry in the notes. The `!` marker after the type is not analyzed by the version calculation and produces no release, so pull request titles must not use it; the title check rejects a title that carries it.
+A breaking change is declared either with `!` before the colon in the pull request title or with a `BREAKING CHANGE:` footer in the squash commit message. With squash merging the title becomes the commit's first line, so `feat(api)!: ...` is analyzed directly; the footer is written in the extended description when confirming the merge. Both forms produce the major release and a `BREAKING CHANGES` entry in the notes; without the footer that entry repeats the title, so the footer is the place for the migration note. The release calculation reads the footer from the commit, not from the pull request description, so it must be part of the squash commit message.
 
 Third-party actions are pinned to immutable commit SHAs, the commit-message linter runs at pinned package versions, permissions are granted per workflow and every job has a bounded execution time.
 
