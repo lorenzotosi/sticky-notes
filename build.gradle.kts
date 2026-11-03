@@ -534,8 +534,21 @@ frontendE2eTask.configure {
     mustRunAfter(tasks.named("fullBuild"), containerSmoke, backupRestoreVerify, releaseVerify)
 }
 
+val cleanInstallVerify =
+    tasks.register<Exec>("cleanInstallVerify") {
+        group = "verification"
+        description = "Verifies a clean Docker-only installation from sticky-notes-deliverables.zip."
+        dependsOn(packageReleaseZip)
+        workingDir = projectDir
+        commandLine(shExecutable.get(), "scripts/clean-install-verify.sh")
+    }
+
+cleanInstallVerify.configure {
+    mustRunAfter(tasks.named("fullBuild"), containerSmoke, backupRestoreVerify)
+}
+
 tasks.register("fullVerify") {
     group = "verification"
     description = "Runs the full build, MongoDB integration tests, container lifecycle checks, backup and restore, and browser E2E."
-    dependsOn("fullBuild", containerSmoke, backupRestoreVerify, releaseVerify, frontendE2eTask)
+    dependsOn("fullBuild", containerSmoke, backupRestoreVerify, cleanInstallVerify, releaseVerify, frontendE2eTask)
 }
