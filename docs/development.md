@@ -169,7 +169,7 @@ To run and test the complete persistent vertical slice locally:
 ```sh
 docker run -d --name sticky-notes-mongo -p 127.0.0.1:27017:27017 \
   -v sticky-notes-mongo-data:/data/db \
-  mongo@sha256:f071cbf97a6e52fb7f07ce9ca5d862ad79876bf0eba9ba97758337d740449638
+  mongo@sha256:e0ce8c35124d4a9f9785532d1f268f39e9728ffa1cb38f46fa482436424c4bd3
 ```
 For later runs, use `docker start sticky-notes-mongo`. The named volume preserves development data. The integration-test container started by `testMongoUp` uses port 27018 and temporary memory-backed storage; it is not this development database.
 2. Start Backend API:
