@@ -5,7 +5,7 @@ name: sticky-notes-tests
 
 services:
   mongo-test:
-    image: mongo@sha256:f071cbf97a6e52fb7f07ce9ca5d862ad79876bf0eba9ba97758337d740449638
+    image: mongo@sha256:e0ce8c35124d4a9f9785532d1f268f39e9728ffa1cb38f46fa482436424c4bd3
     ports:
       - "127.0.0.1:27018:27017"
     tmpfs:
@@ -44,7 +44,7 @@ services:
 
 
   mongo-e2e:
-    image: mongo@sha256:f071cbf97a6e52fb7f07ce9ca5d862ad79876bf0eba9ba97758337d740449638
+    image: mongo@sha256:e0ce8c35124d4a9f9785532d1f268f39e9728ffa1cb38f46fa482436424c4bd3
     environment:
       MONGO_INITDB_ROOT_USERNAME: stickynotes_e2e
       MONGO_INITDB_ROOT_PASSWORD: stickynotes_e2e_password

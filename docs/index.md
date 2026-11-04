@@ -47,6 +47,7 @@ See [full-stack execution](development.md#full-stack-end-to-end-execution) for t
 - [Operations](operations.md)
 - [Release Recovery](release-recovery.md)
 - [Installation Test](installation-test.md)
+- [Dependency, license, and exposure review](dependencies.md)
 
 ## Specifications
 

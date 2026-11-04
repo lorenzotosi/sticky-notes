@@ -302,7 +302,7 @@ This is a manual integration check, separate from `:backend:check`. Use JDK 21, 
 
    ```sh
    docker run -d --name sticky-notes-recovery -p 127.0.0.1:27019:27017 \
-     mongo@sha256:f071cbf97a6e52fb7f07ce9ca5d862ad79876bf0eba9ba97758337d740449638
+     mongo@sha256:e0ce8c35124d4a9f9785532d1f268f39e9728ffa1cb38f46fa482436424c4bd3
    ```
 
    Wait until `docker exec sticky-notes-recovery mongosh --quiet --eval 'db.adminCommand({ping:1}).ok'` returns `1`. In another terminal, start the backend:
@@ -451,3 +451,37 @@ Or run the complete verification gate:
 ```
 
 The E2E suite exercises CRUD persistence across page reload, WIP limit enforcement, note blocking/unblocking, checklist completion guards, and multi-window conflict recovery.
+
+## Dependency, license, and image audit (R4)
+
+The dependency review is recorded in [Dependency, license, and exposure review](dependencies.md). Repeat it when a runtime dependency, a base image, or a lockfile changes, and before a release that changes the delivered artifacts.
+
+Run the npm audits without automatic fixes:
+
+```sh
+npm audit
+(cd frontend && npm audit)
+(cd frontend && npm audit --omit=dev)
+```
+
+Resolve the Java runtime coordinates, then query the OSV batch endpoint for each coordinate:
+
+```sh
+./gradlew :backend:dependencies --configuration runtimeClasspath
+```
+
+Build the images and scan them with the pinned scanner:
+
+```sh
+./gradlew buildImages
+
+docker run --rm \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v "$PWD/scans:/scans" \
+  aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c \
+  image --scanners vuln --severity CRITICAL,HIGH \
+  --format json --output /scans/image.json \
+  sticky-notes-web:local
+```
+
+Repeat the scan for `sticky-notes-backend:local` and for the MongoDB digest in `compose.yaml`. Classify each finding against the runtime path before recording a remediation: a package that exists only in a build or test tool is not a finding in the delivered application, and a package in a base image is not automatically reachable. Record the scanner version, the database update date, and the image digest with the result.
