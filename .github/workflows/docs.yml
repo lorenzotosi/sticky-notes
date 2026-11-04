@@ -18,6 +18,8 @@ concurrency:
 
 jobs:
   deploy:
+    # A manual run can be dispatched against any branch, and Pages publishes the checked-out ref.
+    if: github.ref == 'refs/heads/main'
     timeout-minutes: 15
     environment:
       name: github-pages

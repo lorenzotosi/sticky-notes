@@ -19,15 +19,15 @@ This document defines the human collaboration process. Automated checks and rele
 - **One Task per PR**: Each technical task corresponds to exactly one pull request.
 - **Shared Files Manipulation**: Before modifying shared project configuration (such as root build scripts, lockfiles, or CI workflows), authors coordinate to prevent conflicts.
 
-## 3. Commit Convention & Semantic Release
-All commits and Pull Request titles must adhere strictly to the **Conventional Commits** specification:
-- `feat(...)`: A new user-facing feature (triggers minor release).
-- `fix(...)`: A bug fix (triggers patch release).
-- `docs(...)`: Documentation only changes (no release).
-- `test(...)`: Adding or refactoring tests (no release).
-- `build(...)`: Changes that affect build tooling, Gradle scripts, or dependencies (no release).
-- `ci(...)`: Changes to CI/CD workflows and scripts (no release).
-- `chore(...)`: Maintenance changes, including release preparation (no release).
+## 3. Commit Convention and Semantic Release
+
+All commits and pull request titles must follow the **Conventional Commits** specification:
+
+- `feat(...)`: A new user-facing feature (minor release).
+- `fix(...)`: A bug fix (patch release).
+- `perf(...)`: A performance improvement (patch release).
+- `feat(...)!` or a `BREAKING CHANGE:` footer: An incompatible change (major release).
+- `docs(...)`, `test(...)`, `build(...)`, `ci(...)`, `chore(...)`: A documentation, test, tooling, or maintenance change (no release).
 
 ## 4. Task States & Definition of Done
 Tasks progress through the following states:
@@ -39,5 +39,6 @@ Tasks progress through the following states:
 
 ## 5. Merging Protocol
 - Use **Squash and Merge** exclusively.
-- The squash commit message must match the verified PR title.
-- Delete the remote branch immediately after merging.
+- Use the verified pull request title as the first line of the squash commit message.
+- Add a `BREAKING CHANGE:` footer to the extended description to describe the migration. The version calculation reads this footer from the commit.
+- Delete the remote branch immediately after the merge.

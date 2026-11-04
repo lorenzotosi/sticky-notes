@@ -3,93 +3,62 @@
 
 # Sticky Notes
 
-Kanban web application for persistent sticky notes. Kotlin Multiplatform shares the domain between a Java/Spring Boot backend and a Vue/JavaScript frontend.
+A Kanban web application for a single shared board of sticky notes. Notes are created, edited, moved between columns, blocked, and annotated with checklists!
 
-## Versions
+## Run the released bundle with Docker Compose
 
-Versions `0.x.y` are initial development releases; interfaces and behavior may change incompatibly. Version `1.0.0` establishes the first stable public API and supported product scope. A prerelease suffix such as `-beta.1` identifies a preview of a specific version, not development in general.
+Every GitHub release carries `sticky-notes-deliverables.zip`. Download it from the [releases](https://github.com/lorenzotosi/sticky-notes/releases) page and extract it: the ZIP carries the executable backend JAR, the production frontend bundle, the Dockerfiles, and `compose.yaml`, so the machine needs neither a JDK, nor Node.js, nor a source checkout. The only requirements are Docker Engine with the Compose plugin (Compose v2.19 or later) and network access on the first build, which pulls the base images pinned by digest.
 
-See the [release policy](docs/ci-cd.md#release-policy) for stability criteria, release notes, and the relationship with integration gates R0-R5.
+From the extracted directory:
 
-## Start here
-
-se JDK 21 and the [configured toolchain](docs/development.md#toolchain-requirements). Gradle downloads the JDK 21 when the machine does not provide it, so any JDK 17 or later is enough to start the build. Make sure a Docker engine is running, because fullBuild executes the isolated MongoDB integration tests. Start the [development MongoDB instance](docs/development.md#full-stack-end-to-end-execution) before using the persistent board, then run these commands from the repository root:
-
-```bash
-./gradlew fullBuild
-./gradlew :backend:bootRun --args='--spring.profiles.active=local'
+```sh
+docker compose up --build --detach --wait
 ```
 
-The `local` profile binds the backend to `127.0.0.1`. The default port is `8080`; the `PORT` environment variable overrides it.
+Compose builds the images from the delivered binaries, starts MongoDB, then the API, then the web server, and returns when every service reports healthy. Open `http://127.0.0.1:8080`; only that port is published, so the API and the database stay inside the Docker network.
 
-Check the running application at:
-
-```text
-http://127.0.0.1:8080/actuator/health/liveness
+```sh
+docker compose down
 ```
 
-The liveness endpoint returns HTTP `200` with `{"status":"UP"}` when the application is running, even when MongoDB is unavailable.
+The board lives in the named volume `sticky-notes_mongo-data` and survives a stop and a restart; `docker compose down --volumes` deletes the volume and the board with it. `.env` carries the ports and the demonstration database credentials of the bundle, and the bundle `README.md` documents its configuration, its version records (`manifest.json`), and the `SHA256SUMS` integrity check.
 
-The frontend is started separately during development:
+## Run the released bundle without Docker
 
-```bash
-./gradlew :frontend:frontendInstall
-cd frontend
-npm run dev
+The bundle also runs as plain host processes when you provide a Java 21 runtime and a MongoDB the backend can reach. From the extracted release directory:
+
+```sh
+java -jar backend/build/libs/backend.jar \
+  --spring.profiles.active=local \
+  --spring.web.resources.static-locations=file:frontend/dist/
 ```
 
-See the [local development guide](docs/development.md) for toolchain requirements and verification commands.
+The `local` profile binds the process to `127.0.0.1` on port `8080` (`PORT` overrides it), and the same process serves the frontend bundle at `http://127.0.0.1:8080` and the REST API under `/api`, so no reverse proxy is needed. `http://127.0.0.1:8080/actuator/health/readiness` reports both the application and the database it needs. Stop the process with `Ctrl+C`.
 
-## Executable backend
+The backend reads `MONGODB_URI` and defaults to `mongodb://127.0.0.1:27017/sticky_notes`, so the variable is optional: set it only when your MongoDB listens on another host or port, uses another database name, or requires credentials, as in `MONGODB_URI=mongodb://user:password@127.0.0.1:27017/sticky_notes?authSource=admin java -jar backend/build/libs/backend.jar …`. The MongoDB of the Compose stack above is not reachable from the host because only the web port is published, so the host run needs a database of its own.
 
-Build and run the executable Spring Boot JAR from the repository root:
+This host run is a manual alternative for a machine without containers: the delivered shape of the product is the Compose stack above, and the bundle ships no web-server configuration for the host run.
 
-```bash
-./gradlew :backend:bootJar
-java -jar backend/build/libs/backend.jar --spring.profiles.active=local
-```
+## Run the source tree with Gradle
 
-Stop an existing backend process before starting another instance on the same port. Press `Ctrl+C` in its terminal to stop it.
+From a clone, one Gradle command builds the images from the current source and starts the same stack:
 
-## Backend runtime image
-
-Build the non-root container image that carries the same JAR:
-
-```bash
-./gradlew :backend:dockerImage
-```
-
-The image runs as an unprivileged account, records the version and the commit in its labels, and needs a reachable MongoDB through the `MONGODB_URI` environment variable. See [deployment](docs/deployment.md#backend-runtime-image) for the image metadata and the runtime configuration.
-
-## Local stack with Docker Compose
-
-The whole application also runs as three containers. The runtime of the stack needs neither a JDK nor Node.js on the machine; building the images needs the toolchain of the [development guide](docs/development.md#toolchain-requirements):
-
-```bash
+```sh
+git clone https://github.com/lorenzotosi/sticky-notes.git
+cd sticky-notes
 ./gradlew startLocal
 ```
 
-`startLocal` builds the images from the current source and starts the stack when every service reports healthy. The interface is available at `http://127.0.0.1:8080`. Only that port is published: the API and MongoDB stay inside the Docker network. The board data is kept in a named volume and survives a stop.
+The requirements are a running Docker engine and a JDK 17 or later: the build provisions the JDK 21 of the [configured toolchain](docs/development.md#toolchain-requirements) when the machine does not provide it. `startLocal` creates `.env` from `.env.example` when none exists, and returns when every service reports healthy; the interface is available at `http://127.0.0.1:8080`. Stop the stack with:
 
-```bash
+```sh
 ./scripts/stop-local.sh
 ```
 
-See [deployment](docs/deployment.md#delivery-stack) for the services, the configuration, and the development override.
+For development outside the containers — `./gradlew fullBuild`, `./gradlew :backend:bootRun`, and the Vite development server with the development override of the stack — see the [local development guide](docs/development.md).
 
-## Release bundle
+## Documentation
 
-`./gradlew releaseBundle` assembles the bundle a release publishes: the executable JAR, the frontend production bundle, the Docker stack that builds both images, the shared-domain libraries, the documentation, and the manifest with the checksums. The extracted bundle starts with `docker compose up --build` and needs neither a JDK nor Node.js. See [release process](docs/release-process.md) for the contents, the version, and the records.
-
-## Repository layout
-
-- `commons/`: Kotlin Multiplatform domain, targeting JVM and JavaScript.
-- `backend/`: Java/Spring Boot application with Actuator health endpoints.
-- `frontend/`: Vue application.
-- `docs/`: architecture, process, CI/CD and deployment notes.
-- `compose.yaml`, `compose.dev.yaml`: delivery stack and development override.
-- `scripts/`: local stack lifecycle scripts.
-
-The Vue frontend reads and changes the board through the backend REST API. The generated Kotlin/JS domain package supplies client prevalidation; the backend validates commands and persists the board in MongoDB. Reloading the page fetches the stored board.
-
-See [shared-domain acceptance evidence](docs/evidence/R1.md) for the JVM/browser scenarios, Java/Vue consumers, generated artifacts, and reproduction commands.
+- [Deployment](docs/deployment.md#delivery-stack): the services, the configuration, the runtime image, and the release delivery.
+- [Local development](docs/development.md): toolchain, build entry points, backend runtime, and the containerized stack.
+- [Release process](docs/release-process.md): the bundle contents, the single version it carries, and its records; the [release policy](docs/ci-cd.md#release-policy) covers version rules and release notes.

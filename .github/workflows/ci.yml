@@ -18,11 +18,7 @@ concurrency:
 
 jobs:
   quality:
-    permissions:
-      contents: read
     uses: ./.github/workflows/quality.yml
-    with:
-      full_build: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch' }}
 
   release:
     needs: quality
@@ -35,7 +31,7 @@ jobs:
 
   docs:
     needs: quality
-    if: ((github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch') && needs.quality.result == 'success'
+    if: github.ref == 'refs/heads/main' && needs.quality.result == 'success'
     permissions:
       contents: read
       pages: write
