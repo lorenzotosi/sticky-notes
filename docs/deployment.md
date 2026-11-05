@@ -5,93 +5,62 @@
 
 ## Current delivery
 
-The current continuous-delivery targets are GitHub Releases and GitHub Pages. Each release includes the compiled application deliverables produced by the verified build, while the project documentation is published through GitHub Pages. The application itself is not deployed to a runtime environment automatically: Pages serves the documentation bundle only, and the running application is the delivery stack described [below](#delivery-stack).
+Each GitHub release carries `sticky-notes-deliverables.zip` with the backend JAR, the production frontend bundle, the Dockerfiles, `compose.yaml`, and the documentation. GitHub Pages publishes only the documentation; the application runs as the delivery stack described [below](#delivery-stack).
 
 ## Executable backend
 
-The backend deliverable is `backend/build/libs/backend.jar`, produced by `:backend:bootJar` and included in `fullBuild`. It contains the application, embedded server, and runtime dependencies. Running it requires Java 21; Gradle and the source checkout are not needed.
+The backend deliverable is `backend/build/libs/backend.jar`, produced by `:backend:bootJar` and included in `fullBuild`. It contains the application, the embedded server, and the runtime dependencies. Running it requires Java 21.
 
-`./gradlew releaseBundle` assembles the release bundle in `build/release-bundle/`. The bundle contains this JAR, the frontend production bundle, the Compose stack of the delivery stack, the shared-domain libraries, and the documentation bundle from `documentation`. The quality workflow builds and verifies it on pull requests and on `main`. The release workflow rebuilds it at the published version and packages it as `sticky-notes-deliverables.zip`. The root of the ZIP is the Compose project directory, so a release carries the documentation of the same revision as the binaries. [Release process](release-process.md) describes the bundle, its single version, and its records.
+`./gradlew releaseBundle` assembles the release bundle in `build/release-bundle/` with the JAR, the frontend bundle, the Compose stack, the shared-domain libraries, and the documentation. The release workflow rebuilds it at the published version and packages it as `sticky-notes-deliverables.zip`; the root of the ZIP is the Compose project directory. [Release process](release-process.md) describes the bundle, its version, and its records.
 
-After extracting the release ZIP, start the whole product from the extracted directory with a running Docker engine:
+From the extracted directory, with a running Docker engine:
 
 ```sh
-docker compose up --build -d --wait
+docker compose up --build --detach --wait
 ```
 
-Compose builds the API and web images from the JAR and the frontend bundle carried by the ZIP, starts them in dependency order behind MongoDB, and returns when every service is healthy; the command needs Docker Compose v2.19 or later. The ZIP stamps the version the release publishes and the commit it was built from into `compose.yaml` as image tags and build arguments, so the images the command builds carry the OCI identity of the images `./gradlew buildImages` produces. The interface is then available at `http://127.0.0.1:8080`, and `docker compose down` stops the stack. The services, the volume, and the configuration variables are those of the [delivery stack](#delivery-stack); the defaults in the Compose file cover every variable, so the generated `.env` can be edited freely.
+Compose builds the API and web images from the delivered binaries, starts them in dependency order behind MongoDB, and returns when every service is healthy. The interface is available at `http://127.0.0.1:8080`, and `docker compose down` stops the stack. The defaults in the Compose file cover every variable, so the generated `.env` can be edited freely.
 
-The extracted directory also carries `README.md` with the startup and stop commands, `manifest.json` with the version, commit, base images, and file digests, and `SHA256SUMS` for the integrity check:
+The bundle also carries `README.md`, `manifest.json` with the version, commit, base images, and file digests, and `SHA256SUMS`:
 
 ```sh
 sha256sum --check --quiet SHA256SUMS   # Linux
 shasum -a 256 -c SHA256SUMS            # macOS
 ```
 
-To run only the backend JAR on the host, with MongoDB provided elsewhere, see [backend runtime configuration](development.md#backend-runtime) for the profiles, environment variables, and liveness check. Stop any backend already using the configured port before starting this process:
+The same JAR can serve the interface from `frontend/dist/` when no container is available:
 
 ```sh
-java -jar backend/build/libs/backend.jar --spring.profiles.active=local
+java -jar backend/build/libs/backend.jar --spring.profiles.active=local \
+  --spring.web.resources.static-locations=file:frontend/dist/
 ```
 
-The same JAR can also carry the interface: pointing its static resources at the `frontend/dist/` bundle the ZIP extracts serves the board and the API from one origin, so a host run needs no reverse proxy.
-
-```sh
-java -jar backend/build/libs/backend.jar --spring.profiles.active=local --spring.web.resources.static-locations=file:frontend/dist/
-```
-
-This host run is a manual alternative for a machine without containers, not the delivered shape of the product: the delivered shape is the [delivery stack](#delivery-stack), where the web container serves the interface and forwards `/api` to the API container.
+This host run is a manual alternative. The delivered shape is the Compose stack, where the web container serves the interface and forwards `/api` to the API container.
 
 ## Backend runtime image
 
-The backend is also delivered as a container image. The image carries the executable JAR on a JRE 21 base image pinned to a digest, and nothing else: no Gradle runtime, no sources, no build cache. The application runs as the unprivileged account `sticky-notes` with UID 10001, and it writes only to the temporary directory inherited from the base image and to its own `/app` directory.
-
-Build the image from the repository root with a running Docker engine:
+The API image carries the executable JAR on a JRE 21 base image pinned to a digest, and nothing else. It runs as the unprivileged user `sticky-notes` (UID 10001).
 
 ```sh
 ./gradlew :backend:dockerImage
 ```
 
-The task produces the JAR first and assembles the image from it, so the image carries exactly the artifact the build produced. The image is tagged `sticky-notes-backend:<version>`, with `+` replaced by `-` because a Docker tag does not accept that character. The version itself comes from the `releaseVersion` property, which a release pipeline can pass to Gradle:
-
-```sh
-./gradlew :backend:dockerImage -PreleaseVersion=1.2.3
-```
-
-Without that property the build identifies the commit it was produced from, as `0.0.0-dev+<commit>`. That value is kept unchanged in the JAR manifest and in the image label, while the tag carries the same value as `0.0.0-dev-<commit>`. The version and the full commit are recorded twice: in the JAR manifest and in the image labels. The tag is also written to `backend/build/docker/image-tag.txt`, so a script can address the image without repeating the naming rule.
-
-```sh
-unzip -p backend/build/libs/backend.jar META-INF/MANIFEST.MF
-docker inspect sticky-notes-backend:<version> --format '{{json .Config.Labels}}'
-```
-
-The labels are `org.opencontainers.image.version`, `org.opencontainers.image.revision`, `org.opencontainers.image.source`, and `org.opencontainers.image.licenses`.
-
-The same image also receives the stable alias `sticky-notes-backend:local`. The versioned tag identifies the artifact for a release, while the alias is the reference the local Compose stack uses, because the configuration of the stack cannot follow the commit of the versioned tag.
-
-Run the image against a reachable MongoDB:
-
-```sh
-docker run --rm -p 8080:8080 \
-  -e MONGODB_URI=mongodb://host.docker.internal:27017/sticky_notes \
-  sticky-notes-backend:<version>
-```
-
-The container exposes port 8080 and reads the same environment variables as the executable JAR. Its health check calls the readiness endpoint, which reports the application and the database it needs. `docker stop` sends `SIGTERM`, which the JVM receives directly and answers with a graceful shutdown.
+The image is tagged `sticky-notes-backend:<version>` and also receives the alias `sticky-notes-backend:local`, which the Compose stack uses. The version comes from the `releaseVersion` property; without it the build identifies the commit, as `0.0.0-dev+<commit>`. Docker tags do not accept `+`, so the tag uses `-`.
 
 | Item | Value |
 | --- | --- |
 | Base image | `eclipse-temurin:21-jre` pinned to a digest |
 | Runtime user | `sticky-notes`, UID 10001 |
-| Copied artifact | `backend/build/libs/backend.jar` |
 | Entry point | `java -jar /app/backend.jar` |
 | Stop signal | `SIGTERM` |
 | Health check | `GET /actuator/health/readiness` |
-| Configuration | `PORT` and `MONGODB_URI` environment variables |
+| Configuration | `PORT` and `MONGODB_URI` |
+
+The health check calls readiness, which reports both the application and the database. `docker stop` sends `SIGTERM`, and the JVM answers with a graceful shutdown.
 
 ## Delivery stack
 
-`compose.yaml` describes the delivery runtime: three services on one private bridge network. The services are not reachable from the host, and they keep the outgoing access of the containers.
+`compose.yaml` describes the delivery runtime: three services on one private bridge network.
 
 | Service | Image | Role | Published host port |
 | --- | --- | --- | --- |
@@ -99,97 +68,67 @@ The container exposes port 8080 and reads the same environment variables as the 
 | `api` | `sticky-notes-backend:local` | applies the domain rules and stores the board | none |
 | `mongo` | `mongo` pinned to a digest | stores the `main` board document | none |
 
-Only the web service publishes a port, and only on the loopback interface. The API and MongoDB are reachable from the other containers of the stack and from nowhere else, so the browser always talks to a single origin. The board lives in the named volume `mongo-data`, which survives a stop, a `down` without volumes, and a restart of the machine.
+Only the web service publishes a port, and only on the loopback interface. The API and MongoDB are reachable only from the other containers, so the browser always talks to a single origin. The board lives in the named volume `mongo-data`, which survives a stop, a `down` without volumes, and a machine restart.
 
-The services start in dependency order. MongoDB reports healthy through an authenticated ping, the API reports healthy through its readiness endpoint, which includes the database, and the web container starts only after the API is healthy. `docker compose up --wait` therefore returns when the board can be used, without any fixed sleep.
+The services start in dependency order: MongoDB reports healthy through an authenticated ping, the API through its readiness endpoint, and the web container starts only after the API is healthy. `docker compose up --wait` therefore returns when the board can be used.
 
-The stack references images by name and builds them only when they are missing: after `./gradlew buildImages` the pre-built images run unchanged, and the release ZIP assembles the same images from the binaries it carries, so the stack runs on a machine without a source checkout, a JDK, or Node.js.
+The stack builds its images only when they are missing; after `./gradlew buildImages` the pre-built images run unchanged, and the release ZIP builds the same images from the binaries it carries.
 
 ### Configuration
 
-The environment file `.env` holds the local configuration: host ports and database credentials, plus optional image overrides. `.env.example` documents the runtime variables with demonstration values, and `./scripts/start-local.sh` copies it to `.env` only when `.env` does not exist, so an existing configuration is never overwritten. The file stays out of Git. Compose reads it from the project directory, which the scripts set with `--project-directory`.
-
-The release bundle ships a generated `.env` instead, with the runtime variables below set to their demonstration defaults. The image tags, the version, and the revision are stamped into the bundle `compose.yaml`, which the checksums cover, so `.env` carries runtime variables only and cannot change the identity or version of the images the stack builds.
+`.env` holds the local configuration: host ports, database credentials, and optional image overrides. `.env.example` documents the variables with demonstration values, and `./scripts/start-local.sh` copies it to `.env` only when `.env` does not exist. The file stays out of Git.
 
 | Variable | Purpose | Default |
 | --- | --- | --- |
-| `API_IMAGE` | image of the API service, optional override | `sticky-notes-backend:local` (stamped release tag in bundle) |
-| `WEB_IMAGE` | image of the web service, optional override | `sticky-notes-web:local` (stamped release tag in bundle) |
+| `API_IMAGE` | image of the API service, optional override | `sticky-notes-backend:local` |
+| `WEB_IMAGE` | image of the web service, optional override | `sticky-notes-web:local` |
 | `WEB_PORT` | host port of the web interface | `8080` |
-| `API_PORT` | host port of the API, development override; it must match the proxy target of the Vite development server | `8080` |
+| `API_PORT` | host port of the API, development override | `8080` |
 | `MONGO_PORT` | host port of the database, development override | `27017` |
 | `MONGO_USER` | database user | `stickynotes_user` |
 | `MONGO_PASSWORD` | password of the database user | `stickynotes_local_password` |
 | `MONGO_DATABASE` | database of the shared board | `stickynotes` |
 
-The credentials are demonstration values for a local Docker network, and they are the same values the Compose file uses when no `.env` exists, so the volume of an earlier run keeps working. MongoDB creates the database user on the first start of an empty volume, so changing the credentials afterwards requires removing the volume, which deletes the board. A password with characters that need URL encoding has to be encoded in `MONGODB_URI`, because the stack embeds it in the connection URI.
+The credentials are demonstration values for a local Docker network. MongoDB creates the user on the first start of an empty volume, so changing the credentials afterwards requires removing the volume and the board with it.
 
 ### Starting and stopping the stack
 
-One command builds the local images from the current source and starts the stack:
-
 ```sh
 ./gradlew startLocal
-```
-
-`startLocal` runs `buildImages` and then `start-local.sh`, which checks that Docker Compose is available, creates `.env` when it is missing, and starts the stack with `up --detach --wait`. The interface is then available at `http://127.0.0.1:8080`.
-
-```sh
 ./scripts/stop-local.sh
 ```
 
-`stop-local.sh` runs `docker compose down` without `--volumes`: the containers and the network are removed, the board data stays in the named volume. Removing the volume deletes the board and is never part of a normal stop; the backup procedure covers what the volume does not.
+`startLocal` runs `buildImages` and then `start-local.sh`, which creates `.env` when missing and starts the stack with `up --detach --wait`. `stop-local.sh` runs `docker compose down` without `--volumes`: the containers and network are removed, and the board stays in the named volume. Removing the volume deletes the board and is never part of a normal stop.
 
 ### Development override
 
-`compose.dev.yaml` adds the host ports needed during development: the API on `127.0.0.1:8080`, which the Vite development proxy targets, and MongoDB on `127.0.0.1:27017`, for local tooling. The published port of the web container is reset, because that port belongs to the API container in this mode and the interface comes from the Vite development server.
+`compose.dev.yaml` publishes the API on `127.0.0.1:8080` for the Vite proxy and MongoDB on `127.0.0.1:27017` for local tooling. The web port is reset, because the interface comes from the Vite development server.
 
 ```sh
 ./scripts/start-local.sh --dev
 ./scripts/stop-local.sh --dev
 ```
 
-The scripts are POSIX shell scripts and need Docker Compose only. They run on macOS and Linux with Docker Desktop or with the Compose plugin of a local Docker Engine. They need Docker Compose v2.24 or later: the development override resets a published port and the start script bounds the wait for the healthy state.
-
 ### Automated smoke and lifecycle verification
 
-`scripts/smoke-test.sh` automates the verification of the delivery stack in an isolated Compose project (`sticky-notes-smoke` on loopback port `18080` by default), so it never touches the `.env` file or the `sticky-notes_mongo-data` volume of a local session.
-
-Run the script directly after building the images, or invoke the Gradle tasks that build the images and run the check:
+`scripts/smoke-test.sh` runs the stack in an isolated Compose project (`sticky-notes-smoke`, loopback port `18080`), so it never touches the local `.env` or the `sticky-notes_mongo-data` volume.
 
 ```sh
 ./gradlew containerSmoke
-./gradlew fullVerify
 ```
-The smoke check verifies that:
-- all three containers reach the `healthy` state through `docker compose up --wait` without fixed sleeps;
-- only the `web` service publishes a host port (`127.0.0.1:18080`), while `api` and `mongo` publish no host ports;
-- `web` and `api` run as unprivileged users and carry the OCI version and revision labels; 
-- the web root serves the SPA HTML document and unknown `/api/*` routes return JSON `404` responses rather than the SPA fallback; 
-- `GET /api/board`, note creation (`POST /api/board/notes`), re-reading, note update (`PATCH /api/board/notes/{id}`), and note deletion (`DELETE /api/board/notes/{id}`) succeed through the Nginx reverse proxy with optimistic revision checks; 
-- stopping and restarting `api` and `mongo`, as well as stopping the stack with `docker compose down` and starting it again, preserves the stored board in the named volume; 
-- if any step fails, container statuses and logs are printed before the isolated test containers and test volume are removed in the `EXIT` trap.
+
+The check verifies that all containers reach `healthy`, that only `web` publishes a port, that `web` and `api` run unprivileged, that the SPA and the JSON `/api` error paths are served correctly, and that CRUD works through the proxy with revision checks. It also stops and restarts `api` and `mongo` to confirm that the board survives in the named volume. On failure it prints container statuses and logs, then removes the isolated containers and volume.
 
 ### Backup and restore
 
-The named volume preserves data across stops and restarts but is not a backup.
-Use `scripts/backup.sh` and `scripts/restore.sh` to back up and restore the
-board database; see [Operations](operations.md) for the procedures, data
-compatibility, and volume-safety rules.
+The named volume survives stops and restarts but is not a backup. Use `scripts/backup.sh` and `scripts/restore.sh`; see [Operations](operations.md#backup) for the procedures, data compatibility, and volume-safety rules.
 
 ## Troubleshooting
 
-The checks below read the state the stack itself reports, so they distinguish a
-runtime problem from a domain rejection without changing the board.
-
 | Symptom | Cause | Check and remedy |
 | --- | --- | --- |
-| `./scripts/start-local.sh` exits before any container starts | Docker Engine is not running, or Docker Compose is missing | `docker info` and `docker compose version`. The script checks that both are reachable before `docker compose up --wait`, but it does not compare their versions: a Compose plugin older than v2.24 fails at the `up --wait-timeout` step. See [toolchain requirements](development.md#toolchain-requirements). |
-| Port `8080` is already in use | Another process listens on the interface port of the stack, or on the backend port outside it | `lsof -i :8080` shows the listener. Stop that process, or set `WEB_PORT` in `.env` for the stack and `PORT` for the executable JAR; see [backend runtime](development.md#backend-runtime). |
-| The `web` service never reaches `healthy` | The API is not ready, or MongoDB is unreachable | `docker compose ps`, then the readiness request inside the API container, which is the same one the image health check performs: `docker compose exec api curl --fail --silent -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8080/actuator/health/readiness`. It answers `503` while the database is unavailable. In the delivery stack the API publishes no host port and the web service forwards only `/api/`, so a host request to `/actuator/health/readiness` returns the interface document with HTTP `200`, not the health status. To read readiness from the host, start the stack through [the development override](#development-override), which publishes the API port. |
-| A mutation returns `503 DATABASE_UNAVAILABLE`, or no board exists after startup | MongoDB was unreachable when the backend started | `BoardBootstrap` does not retry in the background; restart the backend once the database is reachable. See [backend runtime](development.md#backend-runtime). |
-| A mutation returns `409 REVISION_CONFLICT` | The submitted snapshot is older than the stored revision | Reload the snapshot and send the command again; the backend never retries a conflicting command. See [concurrent commands](concurrency.md). |
-| `./scripts/restore.sh` refuses the backup | The namespace recorded in `manifest.txt` differs from the `MONGO_DATABASE` of the stack that will read the volume | Compare `manifest.txt` with the stack configuration, or restore with a stack configured for the database named in the manifest. See [restore](operations.md#restore). |
-| A restore into an existing volume fails, or the script cancels at the prompt | That volume already holds data created with different credentials, which MongoDB cannot overwrite in place, or the overwrite was not confirmed | Restore into a new volume, or remove the old volume first. See [restore](operations.md#restore). |
-
-The same paths are exercised automatically, in isolated Compose projects that never touch the local board volume: see [automated smoke and lifecycle verification](#automated-smoke-and-lifecycle-verification), [backup and restore](testing.md#backup-and-restore), and [browser E2E tests](testing.md#browser-e2e-tests-on-the-production-container-stack-r4).
+| The start script exits before any container starts | Docker is not running, or Compose is missing | `docker info` and `docker compose version`. |
+| Port `8080` is in use | Another process listens on the interface port | `lsof -i :8080`; stop it, or set `WEB_PORT` (stack) or `PORT` (JAR). |
+| The `web` service never becomes healthy | The API is not ready, or MongoDB is unreachable | `docker compose ps`, then the readiness request inside the API container: `docker compose exec api curl --fail --silent -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8080/actuator/health/readiness`. It answers `503` while the database is unavailable. |
+| A mutation returns `503 DATABASE_UNAVAILABLE`, or no board exists after startup | MongoDB was unreachable when the backend started | `BoardBootstrap` does not retry in the background; restart the backend once the database is reachable. |
+| A mutation returns `409 REVISION_CONFLICT` | The submitted snapshot is older than the stored revision | Reload the snapshot and send the command again; the backend never retries a conflicting command. |

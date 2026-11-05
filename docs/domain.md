@@ -31,28 +31,6 @@ Commands do not change an existing board. A successful command returns a new boa
 
 When updating or deleting a checklist item, note and item presence are checked before `DONE` immutability, so an absent item returns `ITEM_NOT_FOUND`. For movement, blocker, transition, and checklist checks precede WIP; WIP precedes destination index bounds. Reordering within the current column does not check WIP capacity.
 
-| Code | Meaning |
-| --- | --- |
-| `BOARD_FULL` | The board already has 200 notes. |
-| `CHECKLIST_FULL` | The note already has 20 checklist items. |
-| `CHECKLIST_INCOMPLETE` | The note cannot move to `DONE`. |
-| `DUPLICATE_ID` | The board or checklist already uses the supplied ID. |
-| `INVALID_BLOCK_REASON` | The block reason is empty or too long. |
-| `INVALID_CONTENT` | The note content is empty or too long. |
-| `INVALID_INDEX` | The target position is outside the target status. |
-| `INVALID_LABEL` | The checklist label is empty or too long. |
-| `INVALID_REQUEST` | The JavaScript facade could not decode the input JSON. |
-| `INVALID_SNAPSHOT` | The command engine rejected the board snapshot. |
-| `INVALID_STATUS` | A `DONE` note cannot be blocked. |
-| `INVALID_TRANSITION` | The requested status change is not allowed. |
-| `INVALID_WIP_LIMIT` | The WIP limit is outside the range from 1 to 20. |
-| `ITEM_NOT_FOUND` | The checklist item does not exist. |
-| `NOTE_BLOCKED` | A blocked note cannot change status. |
-| `NOTE_DONE_READ_ONLY` | A checklist in `DONE` cannot change. |
-| `NOTE_NOT_FOUND` | The note does not exist. |
-| `WIP_BELOW_OCCUPANCY` | The new limit is below the current `DOING` count. |
-| `WIP_LIMIT_REACHED` | The `DOING` column has no free slot. |
-
 ## Snapshots and facades
 
 `BoardSnapshot` is the portable board format. Schema version 1 is the only supported version. Rehydration rejects negative revisions, duplicate IDs, non-canonical note order, WIP limits below current occupancy, and `DONE` notes that are blocked or have incomplete checklists. Invalid state is not repaired or replaced with an empty board.
