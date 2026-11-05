@@ -13,17 +13,17 @@ Semantic Release calculates the next version from the squash-merge commit messag
 ./gradlew releaseBundle -PreleaseVersion=1.2.3
 ```
 
-The version lands in the JAR manifest (`Implementation-Version`, `Implementation-Revision`), the generated `sticky-notes-domain` package, the container image labels and tags, the bundle `compose.yaml`, and `manifest.json`. Without the property the build identifies the commit as `0.0.0-dev+<commit>`; Docker tags use `-` instead of `+`. Nothing in the repository hardcodes a version, and no deliverable references `latest`.
+The version lands in the JAR manifest (`Implementation-Version`, `Implementation-Revision`), the generated `sticky-notes-domain` package, the container image labels and tags, the bundle `compose.yaml`, and `manifest.json`. Without the property the build identifies the commit as `0.0.0-dev+<commit>`. Docker tags use `-` instead of `+`. Nothing in the repository hardcodes a version. No deliverable references `latest`.
 
 ## Publishing
 
 Semantic Release computes the version, then its `prepare` hook runs `scripts/package-release.sh <version>`. The script rebuilds the bundle at that version, checks that the records describe the files it wrote, and packages `sticky-notes-deliverables.zip`. The GitHub plugin uploads the ZIP as a release asset. A build failure aborts the release before the tag exists.
 
-The rebuild starts from the commit the quality workflow verified and skips the test suite, which already ran on that commit. The release only changes the identity the artifacts declare. The script also refuses a bundle whose recorded revision differs from the checked-out commit.
+The rebuild starts from the commit the quality workflow verified. It skips the test suite, which already ran on that commit. The release only changes the identity the artifacts declare. The script also refuses a bundle whose recorded revision differs from the checked-out commit.
 
 ## The bundle
 
-`./gradlew releaseBundle` assembles `build/release-bundle/`. The bundle keeps the repository paths, because the Dockerfiles and `compose.yaml` address the artifacts through them; an extracted bundle is a Docker build context.
+`./gradlew releaseBundle` assembles `build/release-bundle/`. The bundle keeps the repository paths, because the Dockerfiles and `compose.yaml` address the artifacts through them. An extracted bundle is a Docker build context.
 
 | Path in the bundle | Content |
 | --- | --- |
@@ -42,17 +42,17 @@ The bundle holds no shell script, no source checkout, and no credential. Every o
 
 ## Records
 
-`manifest.json` records the version, the Docker-safe image version, the full commit, the source repository, the runtime requirements, the base images pinned by digest, and the size and SHA-256 of every file. `SHA256SUMS` records the same digests in the standard format:
+`manifest.json` records the version, the Docker-safe image version, the full commit, and the source repository. It also records the runtime requirements, the base images pinned by digest, and the size and SHA-256 of every file. `SHA256SUMS` records the same digests in the standard format:
 
 ```sh
 sha256sum --check --quiet SHA256SUMS   # Linux
 shasum -a 256 -c SHA256SUMS            # macOS
 ```
 
-`.env` stays out of both records, so editing a port or a credential keeps the check green.
+`.env` stays out of both records. You can edit a port or a credential and the check still passes.
 
 ## Limits
 
-- The stack builds its images on the target machine from digest-pinned base images; the first build needs network access.
+- The stack builds its images on the target machine from digest-pinned base images. The first build needs network access.
 - The delivery covers one shared board without accounts, as described in [local scope](adr/002-local-scope.md).
-- Backup and restore are repository tooling, not part of the bundle; see [backup](operations.md#backup) and [restore](operations.md#restore).
+- Backup and restore are repository tooling, not part of the bundle. [backup](operations.md#backup) and [restore](operations.md#restore) describe them.

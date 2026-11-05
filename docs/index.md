@@ -10,8 +10,8 @@
 - [Deployment](deployment.md)
 - [Release process](release-process.md)
 - [Operations](operations.md)
-- [Release Recovery](release-recovery.md)
-- [Installation Test](installation-test.md)
+- [Release recovery](release-recovery.md)
+- [Installation test](installation-test.md)
 - [Dependencies and licenses](dependencies.md)
 
 ## Specifications

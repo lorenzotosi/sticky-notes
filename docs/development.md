@@ -5,12 +5,12 @@
 
 ## Toolchain Requirements
 
-- **JDK 21** for the Java and Kotlin Multiplatform modules. Gradle downloads it through the Foojay Disco catalogue when the machine does not provide it, so a JDK 17 or later is enough to start Gradle.
+- **JDK 21** for the Java and Kotlin Multiplatform modules. Gradle downloads it through the Foojay Disco catalogue when the machine does not provide it. A JDK 17 or later is enough to start Gradle.
 - **Gradle 9.7.1**, managed by the official `./gradlew` wrapper.
 - **Node.js 24.21.0**, pinned in `.nvmrc`.
 - **Docker with Compose**, running Linux containers, for the MongoDB integration tests and the delivery stack.
 
-The wrapper verifies the distribution through `distributionSha256Sum` in `gradle/wrapper/gradle-wrapper.properties`.
+The wrapper checks the distribution through `distributionSha256Sum` in `gradle/wrapper/gradle-wrapper.properties`.
 
 ## Build and Verification Entry Points
 
@@ -27,7 +27,7 @@ The wrapper verifies the distribution through `distributionSha256Sum` in `gradle
 | `./gradlew updateDependencyLocks` | Regenerates the Gradle lockfiles after a dependency change. |
 | `./gradlew formatCode` | Formats Kotlin, Java, Gradle, and frontend sources. |
 | `./gradlew prepareCommit` | Runs `formatCode` and `verifyLicense` before committing. |
-| `./gradlew documentation` | Generates the Dokka API reference and copies it with the Markdown documentation into `build/docs/`. |
+| `./gradlew documentation` | Generates the Dokka API reference. Copies it and the Markdown documentation into `build/docs/`. |
 | `./gradlew verifyLicense` | Checks the SPDX license header on sources and configuration files. |
 | `./gradlew testMongoUp` | Starts the pinned MongoDB test container on port `27018`. |
 | `./gradlew testMongoDown` | Stops and removes the test container. |
@@ -37,13 +37,13 @@ The wrapper verifies the distribution through `distributionSha256Sum` in `gradle
 | `./gradlew buildImages` | Builds the backend and web container images. Requires Docker. |
 | `./gradlew startLocal` | Builds the images from the current source and starts the local Compose stack. |
 | `./gradlew containerSmoke` | Runs the delivery stack smoke and lifecycle test in an isolated Compose project. |
-| `./gradlew backupRestoreVerify` | Verifies the backup and restore roundtrip in isolated Compose projects. |
+| `./gradlew backupRestoreVerify` | Checks the backup and restore roundtrip in isolated Compose projects. |
 | `./gradlew :frontend:frontendE2e` | Runs the Playwright journeys against the production container stack. |
 | `./gradlew fullVerify` | Runs `fullBuild`, `containerSmoke`, `backupRestoreVerify`, `releaseVerify`, and the browser journeys. |
 | `./gradlew releaseBundle` | Assembles the release bundle in `build/release-bundle/`. |
 | `./gradlew releaseVerify` | Checks the release bundle contents, records, and digests. |
 
-The `:backend:integrationTest` task starts MongoDB through `testMongoUp` and always finalizes with `testMongoDown`; `:backend:check`, `fullTest`, `check`, and `fullBuild` inherit that lifecycle. Docker must be running, but the test container does not need to be started manually.
+The `:backend:integrationTest` task starts MongoDB through `testMongoUp`. It always ends with `testMongoDown`. `:backend:check`, `fullTest`, `check`, and `fullBuild` inherit the same lifecycle. Docker must be running. You do not start the test container by hand.
 
 ### Gradle Configuration Cache
 
@@ -61,7 +61,7 @@ The backend uses Spring Boot with embedded Tomcat. Run it from the repository ro
 ./gradlew :backend:bootRun --args='--spring.profiles.active=local'
 ```
 
-The configuration is in `backend/src/main/resources/application.yml`. The `local` profile binds the server to `127.0.0.1`; the `test` profile uses an assigned HTTP port and a separate database name.
+The configuration is in `backend/src/main/resources/application.yml`. The `local` profile binds the server to `127.0.0.1`. The `test` profile uses an assigned HTTP port and a separate database name.
 
 | Environment variable | Purpose | Default |
 | --- | --- | --- |
@@ -69,9 +69,9 @@ The configuration is in `backend/src/main/resources/application.yml`. The `local
 | `MONGODB_URI` | MongoDB connection URI outside the `test` profile. | `mongodb://127.0.0.1:27017/sticky_notes` |
 | `TEST_MONGODB_URI` | MongoDB connection URI in the `test` profile. | `mongodb://127.0.0.1:27017/sticky_notes_test` |
 
-Supply credentials through the environment; do not commit them.
+Supply credentials through the environment. Do not commit them.
 
-At startup, `BoardBootstrap` creates an empty `main` board when none exists. Insert-only fields preserve an existing board across restarts. If MongoDB is unreachable, startup continues with a warning, and initialization is retried by restarting the backend after recovery.
+At startup, `BoardBootstrap` creates an empty `main` board when none exists. Insert-only fields preserve an existing board across restarts. If MongoDB is unreachable, startup continues with a warning. Restart the backend after recovery to retry initialization.
 
 Check liveness after startup:
 
@@ -79,7 +79,7 @@ Check liveness after startup:
 curl -i http://127.0.0.1:8080/actuator/health/liveness
 ```
 
-The expected response is `200 {"status":"UP"}`. `GET /actuator/health/readiness` adds MongoDB connectivity and returns `503` when the database is unavailable. Management exposure is limited to `health` and `info`, with health details hidden.
+The expected response is `200 {"status":"UP"}`. `GET /actuator/health/readiness` also checks MongoDB connectivity. It returns `503` when the database is unavailable. Management exposes only `health` and `info`. Health details are not shown.
 
 Build and run the executable JAR with JDK 21:
 
@@ -100,7 +100,7 @@ cd frontend
 npm run dev
 ```
 
-The application is available at `http://localhost:5173`. Requests matching `/api` are proxied to the Spring Boot server on `http://localhost:8080` by `frontend/vite.config.js`.
+The Vite dev server serves the app at `http://localhost:5173`. `frontend/vite.config.js` proxies requests that match `/api` to the Spring Boot server on `http://localhost:8080`.
 
 ### Full-Stack End-to-End Execution
 
@@ -112,7 +112,7 @@ The application is available at `http://localhost:5173`. Requests matching `/api
      mongo@sha256:e0ce8c35124d4a9f9785532d1f268f39e9728ffa1cb38f46fa482436424c4bd3
    ```
 
-   Later runs use `docker start sticky-notes-mongo`. The test container started by `testMongoUp` uses port 27018 and temporary storage; it is not this database.
+   Later runs use `docker start sticky-notes-mongo`. The test container from `testMongoUp` uses port 27018 and temporary storage. It is not this database.
 
 2. Start the backend:
 
@@ -129,22 +129,22 @@ The application is available at `http://localhost:5173`. Requests matching `/api
    npm run dev
    ```
 
-Open `http://localhost:5173`. Note creations, edits, and deletions persist across page reloads and backend restarts in MongoDB. Stop the development database with `docker stop sticky-notes-mongo`.
+Open `http://localhost:5173`. New notes, edits, and deletions persist in MongoDB across page reloads and backend restarts. Stop the development database with `docker stop sticky-notes-mongo`.
 
 ## Containerized local stack
 
-The application runs as three containers with Docker Compose. One command builds the images from the current source and starts the stack:
+The application runs as three Docker Compose containers. One command builds the images from the current source and starts the stack:
 
 ```sh
 ./gradlew startLocal
 ```
 
-`./gradlew buildImages` builds the images without starting them, and `./scripts/start-local.sh` starts images that are already built. The interface is available at `http://127.0.0.1:8080`; only that port is published. `./scripts/stop-local.sh` stops the stack and keeps the data in the named volume.
+`./gradlew buildImages` builds the images without starting them. `./scripts/start-local.sh` starts images that are already built. The app is reachable at `http://127.0.0.1:8080`. Compose publishes only that port. `./scripts/stop-local.sh` stops the stack and keeps the data in the named volume.
 
-The development override runs the API and MongoDB on the loopback interface and leaves the interface to the Vite server:
+The development override publishes the API and MongoDB on loopback. The Vite server serves the app:
 
 ```sh
 ./scripts/start-local.sh --dev
 ```
 
-It publishes the API on `8080` and MongoDB on `27017`, so it is an alternative to the manual workflow above. The details of both modes are in [deployment](deployment.md#delivery-stack).
+It publishes the API on `8080` and MongoDB on `27017`. This is an alternative to the manual workflow above. The details of both modes are in [deployment](deployment.md#delivery-stack).

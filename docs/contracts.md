@@ -11,8 +11,14 @@ The Vue frontend and the Java backend communicate through the REST API under `/a
 
 - **Base URL**: `/api`, behind the same-origin Nginx proxy.
 - **Content-Type**: `application/json` for every request body.
-- **JSON structure**: bodies must be objects containing only declared fields. Numeric strings, fractional integers, and numeric enum ordinals return `400`. Integers must fit a Java `int`. Structural failures use `INVALID_REQUEST`; invalid indices, WIP limits, and enum names keep their specific codes. For note creation and updates, a missing or null optional field means omitted: creation defaults to `YELLOW`, and PATCH leaves the value unchanged. A note PATCH needs at least one non-null mutable field.
-- **Payload size limit**: POST, PUT, PATCH, and DELETE bodies under `/api` are capped at 65,536 bytes, including chunked requests without `Content-Length`. Larger bodies receive `413 PAYLOAD_TOO_LARGE` before JSON decoding or any service call. Oversized requests leave the board and revision unchanged.
+- **JSON structure**:
+  - Bodies must be objects containing only declared fields.
+  - Numeric strings, fractional integers, and numeric enum ordinals return `400`.
+  - Integers must fit a Java `int`.
+  - Structural failures use `INVALID_REQUEST`. Invalid indices, WIP limits, and enum names keep their specific codes.
+  - For note creation and updates, a missing or null optional field means omitted. Creation defaults to `YELLOW`. PATCH leaves the value unchanged.
+  - A note PATCH needs at least one non-null mutable field.
+- **Payload size limit**: The API caps POST, PUT, PATCH, and DELETE bodies under `/api` at 65,536 bytes. Chunked requests without `Content-Length` count too. Larger bodies get `413 PAYLOAD_TOO_LARGE` before JSON decoding or any service call. Oversized requests leave the board and revision unchanged.
 - **Concurrency guard**: every state-mutating call supplies `expectedRevision` (in the body for POST/PUT/PATCH, as `?expectedRevision=N` for DELETE).
 
 ## 2. Error Catalog & HTTP Status Codes
@@ -45,14 +51,14 @@ The Vue frontend and the Java backend communicate through the REST API under `/a
 | `REVISION_OVERFLOW` | 500 | The revision cannot be incremented within the Java `int` range. |
 | `INTERNAL_SERVER_ERROR` | 500 | Unexpected failure with a neutral message. |
 
-Errors include `field` only when the failure identifies one and `currentRevision` only for a revision conflict that can report it. Logs record the error code and HTTP status and omit request bodies, credentials, exception messages, and stack traces.
+Errors include `field` only when the failure identifies one. `currentRevision` appears only for a revision conflict that can report it. Logs record the error code and HTTP status. They omit request bodies, credentials, exception messages, and stack traces.
 
 ## 3. Server-Side Validation Precedence Order
 
-A mutating command is validated in this order. The body-size filter runs before step 1.
+The backend validates a mutating command in this order. The body-size filter runs before step 1.
 
 1. **Structural validation**: JSON parsing, unknown field rejection, scalar types, and enum range → `400`.
-2. **Persistence load**: the board is read from MongoDB. An unavailable database returns `503`; persisted state is rehydrated through the shared domain mapper, and invalid state returns `500 INVALID_SNAPSHOT`. Invalid state is never replaced with an empty board or saved silently.
+2. **Persistence load**: the backend reads the board from MongoDB. An unavailable database returns `503`. The shared domain mapper rehydrates persisted state, and invalid state returns `500 INVALID_SNAPSHOT`. The backend never replaces invalid state with an empty board and never saves it silently.
 3. **Concurrency check**: `expectedRevision != board.revision` → `409 REVISION_CONFLICT` with `currentRevision`.
 4. **Entity presence**: the target note and checklist item must exist → `404`.
 5. **Domain invariants** (`BoardEngine`): `DONE` immutability, blocker, transition validity, checklist completion, WIP limit, and destination index bounds.
@@ -68,9 +74,9 @@ A mutating command is validated in this order. The body-size filter runs before 
 | `PATCH` | `/api/board/notes/{id}/checklist/{itemId}` | `200` with the saved board |
 | `DELETE` | `/api/board/notes/{id}/checklist/{itemId}` | `200` with the saved board |
 
-POST accepts `label` and `expectedRevision`. PATCH accepts `label` and/or `completed` with `expectedRevision`; omitted fields stay unchanged, and explicit null values are rejected. DELETE takes `expectedRevision` from the query.
+POST accepts `label` and `expectedRevision`. PATCH accepts `label` and/or `completed` with `expectedRevision`. Omitted fields stay unchanged. Explicit null values are rejected. DELETE takes `expectedRevision` from the query.
 
-A `{itemId}` that is blank or whitespace-only returns `400 INVALID_REQUEST` with `field: "itemId"` before the service call. Unknown item IDs return `404 ITEM_NOT_FOUND`. The service generates the item UUID, and the controller returns it from the appended item on the saved board.
+A `{itemId}` that is blank or whitespace-only returns `400 INVALID_REQUEST` with `field: "itemId"` before the service call. Unknown item IDs return `404 ITEM_NOT_FOUND`. The service generates the item UUID. The controller returns it from the appended item on the saved board.
 
 ## 5. Snapshot response shape
 

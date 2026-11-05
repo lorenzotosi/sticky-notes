@@ -7,7 +7,7 @@ The shared Kotlin module owns the board rules. Java and JavaScript use the same 
 
 ## Board invariants
 
-A board has between 1 and 20 work-in-progress slots. The default limit is 3.
+A board has between 1 and 20 WIP slots. The default limit is 3.
 
 A board can contain at most 200 notes. Each note ID must be unique within the board.
 
@@ -29,7 +29,7 @@ A checklist label cannot be empty and has a limit of 120 units. Each note can co
 
 Commands do not change an existing board. A successful command returns a new board. A failed command returns an error code and can name the invalid field.
 
-When updating or deleting a checklist item, note and item presence are checked before `DONE` immutability, so an absent item returns `ITEM_NOT_FOUND`. For movement, blocker, transition, and checklist checks precede WIP; WIP precedes destination index bounds. Reordering within the current column does not check WIP capacity.
+When you update or delete a checklist item, the engine checks note and item presence before `DONE` immutability. An absent item therefore returns `ITEM_NOT_FOUND`. For movement, blocker, transition, and checklist checks come before WIP. WIP comes before destination index bounds. Reordering within the current column does not check WIP capacity.
 
 ## Snapshots and facades
 

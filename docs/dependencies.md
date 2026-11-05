@@ -3,11 +3,11 @@
 
 # Dependencies and licenses
 
-Sticky Notes runs on Java 21 and Spring Boot on the backend and on Vue in the browser. The runtime dependencies and the licenses of the delivered artifacts are listed below.
+Sticky Notes runs on Java 21 and Spring Boot on the backend and on Vue in the browser.
 
 ## Scope
 
-The review covers what a recipient runs: the backend runtime classpath, the frontend production tree and browser bundle, the three container images, and the release bundle. Build and test dependencies are listed separately because they do not enter the delivered application.
+The inventory covers what a recipient runs: the backend runtime classpath, the frontend production tree and browser bundle, the three container images, and the release bundle. Build and test dependencies get their own list, because they do not enter the delivered application.
 
 ## Runtime inventory
 
@@ -19,8 +19,8 @@ The backend runs on Java 21 and Spring Boot 4.1.1. The resolved runtime classpat
 | --- | --- | --- |
 | Spring Boot | 4.1.1 | Platform BOM and starters |
 | Spring Framework | 7.0.9 | Transitive from Spring Boot |
-| Apache Tomcat (embedded) | 11.0.26 | Constraint; the BOM requests 11.0.24 |
-| Logback | 1.6.5 | Constraint; the BOM requests 1.5.38 |
+| Apache Tomcat (embedded) | 11.0.26 | Constraint. The BOM requests 11.0.24 |
+| Logback | 1.6.5 | Constraint. The BOM requests 1.5.38 |
 | SLF4J | 2.0.19 | Logging facade |
 | MongoDB driver | 5.11.1 | Synchronous driver and BSON |
 | Jackson | 3.1.7 | JSON binding |
@@ -63,15 +63,15 @@ The 67 Java runtime artifacts use these licenses:
 | CC0 and BSD 2-Clause (HdrHistogram) | 1 |
 | Apache License 2.0 (JetBrains annotations) | 1 |
 
-All are permissive or weak-copyleft licenses. No GPL-only component is distributed in the runtime.
+All are permissive or weak-copyleft licenses. No GPL-only component ships in the runtime.
 
-The production frontend tree contains 20 MIT packages, the MIT-licensed `sticky-notes-domain` package, `entities` under BSD 2-Clause, `source-map-js` under BSD 3-Clause, and `picocolors` under ISC. All are permissive.
+The production frontend tree contains 20 MIT packages and the MIT-licensed `sticky-notes-domain` package. `entities` is BSD 2-Clause, `source-map-js` is BSD 3-Clause, and `picocolors` is ISC. All are permissive.
 
-The base images carry their own licenses: Nginx under BSD 2-Clause, Eclipse Temurin under GPL 2.0 with the Classpath Exception, and the MongoDB Community image under the Server Side Public License. The repository references the MongoDB image by digest; it does not redistribute the image.
+The base images carry their own licenses: Nginx under BSD 2-Clause, Eclipse Temurin under GPL 2.0 with the Classpath Exception, and the MongoDB Community image under the Server Side Public License. The repository references the MongoDB image by digest. It does not redistribute the image.
 
 ## Third-party notices
 
-The release bundle carries this document, the project `LICENSE`, and the generated documentation. The following attributions apply to the redistributed components:
+The release bundle carries this document, the project `LICENSE`, and the generated documentation. The attributions below apply to the redistributed components:
 
 - Vue.js, Copyright (c) 2018-present Yuxi (Evan) You, MIT License.
 - Spring Boot, Spring Framework, Spring Data, and Spring Security, copyright the Spring project authors, Apache License 2.0.
@@ -87,4 +87,4 @@ The release bundle carries this document, the project `LICENSE`, and the generat
 - Eclipse Temurin, copyright the Eclipse Adoptium project, GPL 2.0 with the Classpath Exception.
 - MongoDB Community Server, copyright MongoDB, Inc., Server Side Public License.
 
-The license texts remain in the upstream artifacts and base images. MIT and BSD attribution lines are reproduced here or inside the distributed artifacts. Anyone who republishes an artifact outside the release bundle must carry the corresponding license text with it.
+The license texts remain in the upstream artifacts and base images. MIT and BSD attribution lines appear here or inside the distributed artifacts. Anyone who republishes an artifact outside the release bundle must carry the corresponding license text with it.
