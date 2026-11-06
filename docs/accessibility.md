@@ -10,7 +10,7 @@ The board must:
 - keep the four note colours readable.
 - stay usable at 200% zoom and at a 360 pixel viewport.
 
-The required behaviour is in [UI and interaction design](ux.md).
+The required behaviour is in [UI and interaction design](ux.md#4-accessibility-and-responsive-behaviour).
 
 ## Verification environment
 

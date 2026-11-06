@@ -68,7 +68,7 @@ jobs:
         run: docker compose -f compose.test.yaml down -v --remove-orphans
 
   macos-smoke:
-    # A development-branch push gets the Linux gate only; the pull request that merges that branch runs the macOS job.
+    # A development-branch push gets the Linux verification only; the pull request that merges that branch runs the macOS job.
     if: ${{ github.event_name != 'push' || github.ref == 'refs/heads/main' }}
     runs-on: macos-latest
     timeout-minutes: 20
@@ -115,7 +115,7 @@ jobs:
     steps:
       - name: Enforce all quality jobs succeeded
         env:
-          # The macOS job is skipped on development-branch pushes; any other result than the expected one fails the gate.
+          # The macOS job is skipped on development-branch pushes; any other result than the expected one fails the quality check.
           BRANCH_PUSH: ${{ github.event_name == 'push' && github.ref != 'refs/heads/main' }}
         run: |
           if [ "$BRANCH_PUSH" = "true" ]; then
@@ -126,6 +126,6 @@ jobs:
           echo "linux-verify result: ${{ needs.linux-verify.result }}"
           echo "macos-smoke result: ${{ needs.macos-smoke.result }} (expected: $expected_macos)"
           if [ "${{ needs.linux-verify.result }}" != "success" ] || [ "${{ needs.macos-smoke.result }}" != "$expected_macos" ]; then
-            echo "Quality gate failed because one or more required jobs did not report the expected result." >&2
+            echo "Quality check failed because one or more required jobs did not report the expected result." >&2
             exit 1
           fi

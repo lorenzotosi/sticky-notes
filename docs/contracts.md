@@ -64,7 +64,7 @@ The backend validates a mutating command in this order. The body-size filter run
 5. **Domain invariants** (`BoardEngine`): `DONE` immutability, blocker, transition validity, checklist completion, WIP limit, and destination index bounds.
 6. **Conditional save**: one replacement filtered by `_id="main"` and `revision=expectedRevision`. A match count of zero → `409 REVISION_CONFLICT`.
 
-## 4. Checklist endpoints (R3)
+## 4. Checklist endpoints
 
 `ChecklistController` exposes:
 

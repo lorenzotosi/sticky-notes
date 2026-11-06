@@ -125,7 +125,7 @@ The check covers:
 - The SPA and the JSON `/api` error paths are served correctly.
 - CRUD works through the proxy, with revision checks.
 
-The check also stops and restarts `api` and `mongo` to confirm that the board survives in the named volume. On failure it prints container statuses and logs, then removes the isolated containers and volume.
+The check also stops the whole stack with `docker compose down`, keeps the named volume, and starts the stack again to confirm that the board survives the restart. On failure it prints container statuses and logs, then removes the isolated containers and volume.
 
 ### Backup and restore
 

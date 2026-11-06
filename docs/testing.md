@@ -64,7 +64,7 @@ The same scenarios run on the JVM and in ChromeHeadless. `frontend/src/domain.te
 
 `BoardServiceTest` calls every `BoardService` mutation against an in-memory fake repository. It covers generated UUIDs, partial updates, one conditional save per command, revision increments, stale revisions, a competing write, revision overflow, corrupt persisted state, and conflict metadata. `BoardServiceTest` checks domain rejections without a save. These tests do not exercise MongoDB or HTTP.
 
-## Checklist HTTP tests (R3)
+## Checklist HTTP tests
 
 ```sh
 ./gradlew :backend:test --tests stickynotes.api.ChecklistHttpTest
@@ -72,7 +72,7 @@ The same scenarios run on the JVM and in ChromeHeadless. `frontend/src/domain.te
 
 `ChecklistHttpTest` starts the Spring HTTP server with a mocked `BoardService`. It covers rejected JSON types, numeric strings, decimal revisions, explicit nulls, unknown fields, malformed bodies, missing revisions, a PATCH without mutable fields, and whitespace-only item IDs. Accepted requests check the values passed to the service, including explicit `false` and omitted fields. Simulated infrastructure failures check neutral `500` and `503` responses. They also check that logs carry no request content or exception details.
 
-## Command JSON validation (R3)
+## Command JSON validation
 
 ```sh
 ./gradlew :backend:test --tests stickynotes.api.CommandJsonHttpTest
@@ -80,7 +80,7 @@ The same scenarios run on the JVM and in ChromeHeadless. `frontend/src/domain.te
 
 `CommandJsonHttpTest` uses the real HTTP server and a mocked service. It rejects unknown fields, wrong scalar types, numeric enum ordinals, fractional indices, and invalid revisions before a service call. It checks that omitted and null optional note fields behave as documented.
 
-## HTTP command body-size limit (R3)
+## HTTP command body-size limit
 
 ```sh
 ./gradlew :backend:test --tests stickynotes.api.CommandBodyLimitHttpTest
@@ -98,17 +98,17 @@ The suite checks that POST, PUT, PATCH, and DELETE bodies above 65,536 bytes ret
 
 These tests check the adapter decisions and arguments. They do not exercise BSON conversion or a real MongoDB server. The integration suite covers those.
 
-## Backend MongoDB integration tests (R2)
+## Backend MongoDB integration tests
 
 ```sh
 ./gradlew :backend:integrationTest --rerun-tasks
 ```
 
-The task starts the isolated container from `compose.test.yaml` on `127.0.0.1:27018`. It finalizes with cleanup. Each test creates a unique `sticky_notes_it_…` database and drops only that database.
+The task starts the isolated container from `compose.test.yaml` on `127.0.0.1:27018`. It finalizes with cleanup. Each test creates a unique database, named `sticky_notes_it_…` or `sticky_notes_http_it_…`, and drops only that database.
 
 `MongoBoardRepositoryIntegrationTest` checks bootstrap creation without overwrites, snapshot survival across an application restart, conditional saves with a stale revision, revision overflow, and two connections competing for the last WIP slot.
 
-## Concurrent HTTP commands and MongoDB (R3)
+## Concurrent HTTP commands and MongoDB
 
 ```sh
 ./gradlew :backend:integrationTest \
@@ -122,7 +122,7 @@ The task starts the isolated container from `compose.test.yaml` on `127.0.0.1:27
 
 `ConcurrentBoardTest.lastWipSlotAllowsExactlyOneMove` fails if you remove the `revision` predicate from the replacement query. Both commands would save and the expected `409` would become a second `200`. Restore the predicate after the experiment.
 
-## Checklist HTTP and MongoDB integration tests (R3)
+## Checklist HTTP and MongoDB integration tests
 
 ```sh
 ./gradlew :backend:integrationTest --tests stickynotes.integration.ChecklistHttpIntegrationTest
@@ -130,7 +130,7 @@ The task starts the isolated container from `compose.test.yaml` on `127.0.0.1:27
 
 `ChecklistHttpIntegrationTest` runs the real HTTP server, service, shared domain, and MongoDB. It covers every documented endpoint and status, snapshot fields, revision increments, the twentieth item, restart persistence, guarded completion and reopening, an empty checklist, rejected labels, missing items, stale revisions, oversized chunked bodies, unknown JSON fields, and an empty board. The test compares each rejected command with the raw stored document and a fresh GET before and after the request.
 
-## MongoDB outage and recovery (R3)
+## MongoDB outage and recovery
 
 This manual check uses JDK 21, Docker, and ports `27019` and `8081`:
 
@@ -140,7 +140,7 @@ This manual check uses JDK 21, Docker, and ports `27019` and `8081`:
 4. Start MongoDB and wait for readiness `200 UP`. The saved GET snapshot and BSON document are unchanged. A new WIP update returns `200` at revision 2.
 5. Remove the container and its volumes.
 
-## Compose delivery stack (R4)
+## Compose delivery stack
 
 These checks start real containers and are not part of `./gradlew check`.
 
@@ -175,7 +175,7 @@ The task backs up a board with a note, a checklist item, and a blocker. It check
 - **Frontend**: Vitest with `@vitest/coverage-v8` enforces 80% line coverage on maintained sources.
 - **Domain boundaries**: `:commons:verifyDomainBoundaries` rejects JVM and infrastructure imports in `commonMain` and Spring or MongoDB dependencies in `commons/build.gradle.kts`.
 
-## Browser E2E tests on the production container stack (R4)
+## Browser E2E tests on the production container stack
 
 ```sh
 ./gradlew :frontend:frontendE2e

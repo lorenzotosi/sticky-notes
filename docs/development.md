@@ -39,7 +39,7 @@ The wrapper checks the distribution through `distributionSha256Sum` in `gradle/w
 | `./gradlew containerSmoke` | Runs the delivery stack smoke and lifecycle test in an isolated Compose project. |
 | `./gradlew backupRestoreVerify` | Checks the backup and restore roundtrip in isolated Compose projects. |
 | `./gradlew :frontend:frontendE2e` | Runs the Playwright journeys against the production container stack. |
-| `./gradlew fullVerify` | Runs `fullBuild`, `containerSmoke`, `backupRestoreVerify`, `releaseVerify`, and the browser journeys. |
+| `./gradlew fullVerify` | Runs `fullBuild`, `containerSmoke`, `backupRestoreVerify`, `cleanInstallVerify`, `releaseVerify`, and the browser journeys. |
 | `./gradlew releaseBundle` | Assembles the release bundle in `build/release-bundle/`. |
 | `./gradlew releaseVerify` | Checks the release bundle contents, records, and digests. |
 

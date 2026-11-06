@@ -23,10 +23,10 @@ For a board at revision 7 with WIP limit 1 and two `TODO` notes, both commands m
 | First replacement | Matches revision 7, saves revision 8 | Candidate still carries revision 7 | 8 |
 | Second replacement | Receives HTTP `200` | Cannot match revision 7. Receives HTTP `409` | 8 |
 
-Either request may win. Only the conditional MongoDB replacement is atomic. The earlier read and validation are not. See [MongoDB atomicity guarantees](https://www.mongodb.com/docs/manual/core/write-operations-atomicity/).
+Either request may win. Only the conditional MongoDB replacement is atomic. The earlier read and validation are not.
 
 ## Independent backend instances
 
 A Java monitor coordinates only the callers that share it. It cannot replace the database predicate when two backend instances write the same board. `ConcurrentBoardTest` covers that case with two Spring application contexts in one JVM, separate HTTP ports, and separate MongoDB clients. A shared `CyclicBarrier` pauses both calls at the start of `save()`. Both services validate revision 7 before either write proceeds. MongoDB decides which conditional replacement succeeds.
 
-The tests cover independent service instances and real database writes. They do not launch separate JVM processes or exercise database failover. The execution commands are in the [testing guide](testing.md#concurrent-http-commands-and-mongodb-r3). The recorded results are in [R3 evidence](evidence/R3.md#concurrent-commands-and-conditional-writes).
+The tests cover independent service instances and real database writes. They do not launch separate JVM processes or exercise database failover. The execution commands are in the [testing guide](testing.md#concurrent-http-commands-and-mongodb).
