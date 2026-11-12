@@ -47,31 +47,25 @@ A partial publication can occur when the tag `vX.Y.Z` exists on `main` and the u
 
 ## Local data-safe rollback
 
-A local deployment runs from an extracted release bundle and stores the board in the named volume `sticky-notes_mongo-data` (`schemaVersion=1`). Rolling back to an earlier bundle replaces the `api` and `web` containers while keeping the MongoDB volume intact:
+A local deployment runs from an extracted release bundle and stores the board in the named volume `sticky-notes_mongo-data` (`schemaVersion=1`). Rolling back to an earlier bundle replaces the `api` and `web` containers while keeping the MongoDB volume intact (the bundle ships no shell scripts; backup and restore tooling belongs to the source repository, as documented in [Operations](operations.md#backup)):
 
 1. Check `build/docs/operations.md` in the target older bundle to confirm it uses a compatible persisted schema (`schemaVersion=1`).
-2. Back up the current board before changing versions:
-
-   ```sh
-   ./scripts/backup.sh --output outputs/pre-rollback-backup
-   ```
-
-3. From the current deployment directory, stop the running containers without `--volumes`:
+2. From the current deployment directory, stop the running containers without `--volumes`:
 
    ```sh
    docker compose down
    ```
 
-4. Check that the named volume `sticky-notes_mongo-data` is still present:
+3. Check that the named volume `sticky-notes_mongo-data` is still present:
 
    ```sh
    docker volume inspect sticky-notes_mongo-data
    ```
 
-5. Switch to the extracted directory of the previous verified release bundle. Check it with `sha256sum --check SHA256SUMS`, copy any custom port or credential settings into its `.env`, and start the previous version:
+4. Switch to the extracted directory of the previous verified release bundle. Check it with `sha256sum --check SHA256SUMS`, copy any custom port or credential settings into its `.env`, and start the previous version:
 
    ```sh
    docker compose up --build --detach --wait
    ```
 
-6. Check `http://127.0.0.1:8080/api/board`. The existing notes, ordering, checklist items, blockers, and board revision must be preserved.
+5. Check `http://127.0.0.1:8080/api/board`. The existing notes, ordering, checklist items, blockers, and board revision must be preserved.

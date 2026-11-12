@@ -15,5 +15,5 @@ One term per concept across requirements, domain entities, API contracts, and us
 | **WIP Limit** | Cap: the maximum number of notes in `DOING` at once.                       | `board.wipLimit: Int` |
 | **Blocker** | Impediment that blocks a state change on a note, with a non-empty reason.                  | `note.blockedReason: String?` |
 | **Checklist Item**| Subtask of a note, with a label and a completion flag.                                      | `stickynotes.domain.ChecklistItem` |
-| **Revision** | Non-negative counter in the board snapshot. Conditional MongoDB writes check it, and each saved command increments it once. | `board.revision: Int` |
+| **Revision** | Non-negative counter in the board snapshot. Conditional MongoDB writes check it, and each saved command increments it once. | `boardSnapshot.revision: Int` |
 | **Destination Index** | Zero-based target insertion index for a note within a column after removal from source.                       | `command.destinationIndex: Int` |
