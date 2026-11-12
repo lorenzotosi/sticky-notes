@@ -3,7 +3,7 @@
 
 # Clean installation verification
 
-This guide documents how to install and verify Sticky Notes from `sticky-notes-deliverables.zip` in an empty directory without a source checkout, a JDK, Gradle, or Node.js.
+Install and verify Sticky Notes from `sticky-notes-deliverables.zip` in an empty directory, without a source checkout, a JDK, Gradle, or Node.js.
 
 ## Prerequisites
 
@@ -14,31 +14,50 @@ This guide documents how to install and verify Sticky Notes from `sticky-notes-d
 
 1. Download `sticky-notes-deliverables.zip` from the GitHub Release into an empty directory outside the repository and extract it:
 
-       mkdir sticky-notes-clean && cd sticky-notes-clean
-       unzip /path/to/sticky-notes-deliverables.zip
+   ```sh
+   mkdir sticky-notes-clean && cd sticky-notes-clean
+   unzip /path/to/sticky-notes-deliverables.zip
+   ```
 
-2. Verify the integrity of all delivered files against `SHA256SUMS`:
+2. Check the integrity of all delivered files against `SHA256SUMS`:
 
-       sha256sum --check --quiet SHA256SUMS   # Linux / Git Bash
-       shasum -a 256 -c SHA256SUMS            # macOS
+   ```sh
+   sha256sum --check --quiet SHA256SUMS   # Linux / Git Bash
+   shasum -a 256 -c SHA256SUMS            # macOS
+   ```
 
-3. Inspect `.env` if you need to change `WEB_PORT` (default `8080`) or the demonstration MongoDB credentials, then build and start the stack using Docker Compose only:
+3. Inspect `.env` if you need to change `WEB_PORT` (default `8080`) or the demonstration MongoDB credentials. Then build and start the stack with Docker Compose only:
 
-       docker compose up --build --detach --wait
+   ```sh
+   docker compose up --build --detach --wait
+   ```
 
-4. Open `[http://127.0.0.1:8080](http://127.0.0.1:8080)` and verify that only the `web` service publishes a host port while `api` and `mongo` stay isolated on the internal Docker network:
+4. Open the app at `http://127.0.0.1:8080`. Check that only the `web` service publishes a host port. `api` and `mongo` stay isolated on the internal Docker network:
 
-       docker compose ps
+   ```sh
+   docker compose ps
+   ```
 
 5. Stop the stack preserving the `sticky-notes_mongo-data` volume and restart it to confirm persistence:
 
-       docker compose down
-       docker compose up --detach --wait
+   ```sh
+   docker compose down
+   docker compose up --detach --wait
+   ```
 
 ## Automated verification from Gradle
 
-Maintainers and CI execute the clean-room installation check in an isolated temporary directory and Compose project via Gradle:
+Maintainers and CI run the clean-room check in an isolated temporary directory and Compose project:
 
-    ./gradlew cleanInstallVerify
+```sh
+./gradlew cleanInstallVerify
+```
 
-The task packages `sticky-notes-deliverables.zip`, extracts it into a temporary directory outside the repository, checks `SHA256SUMS`, starts the stack with `docker compose up --build --detach --wait`, exercises note creation, WIP limit enforcement, blockers, checklist completion, and restart persistence, and tears down all test containers and volumes on exit.
+The task:
+
+1. Packages `sticky-notes-deliverables.zip`.
+2. Extracts it into a temporary directory outside the repository.
+3. Checks `SHA256SUMS`.
+4. Starts the stack with `docker compose up --build --detach --wait`.
+5. Exercises note creation, WIP limit enforcement, blockers, checklist completion, and restart persistence.
+6. Tears down all test containers and volumes on exit.

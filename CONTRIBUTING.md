@@ -3,23 +3,13 @@
 
 # Contributing & Development Workflow
 
-This document defines the human collaboration process. Automated checks and release behavior are documented in [CI/CD](docs/ci-cd.md).
-
-## 1. Roles and Responsibilities
-- **Person A**: Domain modeling, JVM interop, backend services, and persistence.
-- **Person B**: Build automation, JavaScript interop, frontend UI, and containerization.
-- Work is distributed according to primary ownership, but collaboration remains agile.
-- Peer review is recommended for major feature and architecture changes, while minor fixes or documentation updates can be fast-tracked to avoid bottlenecks.
-- Both authors share responsibility for the overall system consistency and build stability.
-
-## 2. Branching & Lifecycle
+## 1. Branching & Lifecycle
 - **Protected Main**: Direct pushes to `main` are disabled. All changes must land via Pull Requests.
 - **Short-Lived Branches**: Branch names must follow the convention:
   `tNNN-short-description`.
 - **One Task per PR**: Each technical task corresponds to exactly one pull request.
-- **Shared Files Manipulation**: Before modifying shared project configuration (such as root build scripts, lockfiles, or CI workflows), authors coordinate to prevent conflicts.
 
-## 3. Commit Convention and Semantic Release
+## 2. Commit Convention and Semantic Release
 
 All commits and pull request titles must follow the **Conventional Commits** specification:
 
@@ -29,15 +19,7 @@ All commits and pull request titles must follow the **Conventional Commits** spe
 - `feat(...)!` or a `BREAKING CHANGE:` footer: An incompatible change (major release).
 - `docs(...)`, `test(...)`, `build(...)`, `ci(...)`, `chore(...)`: A documentation, test, tooling, or maintenance change (no release).
 
-## 4. Task States & Definition of Done
-Tasks progress through the following states:
-1. **To Do**: Ready to be picked up once prerequisites are merged.
-2. **In Progress**: Active work on the dedicated branch.
-3. **In Review**: Pull Request submitted with passing CI checks.
-4. **Done**: Pull Request reviewed, approved, squash-merged into `main`, with `main` CI checks passing and verification evidence linked.
-5. **Blocked**: Work halted due to an external dependency or critical blocker.
-
-## 5. Merging Protocol
+## 3. Merging Protocol
 - Use **Squash and Merge** exclusively.
 - Use the verified pull request title as the first line of the squash commit message.
 - Add a `BREAKING CHANGE:` footer to the extended description to describe the migration. The version calculation reads this footer from the commit.

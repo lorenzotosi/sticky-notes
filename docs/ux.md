@@ -3,110 +3,58 @@
 
 # User Experience & Interface States Specification
 
-This document defines the required layout, user interactions, accessibility behavior, and state transitions for the Sticky Notes Kanban board. The Vue interface loads and changes persistent board state through the HTTP API. Diagrams and card layouts describe the required design; the [testing guide](testing.md) identifies the implemented verification scope, and [Accessibility verification](accessibility.md) records the verified results of the accessibility and responsive requirements.
-Wireframes, diagrams, and example messages in this specification use English labels for architectural clarity; the rendered Vue interface is localized in Italian (`lang="it"`), with the exact control labels and `role="alert"` conflict banner documented in [Accessibility verification](accessibility.md) and [R3 acceptance evidence](evidence/R3.md).
-
----
+The Vue app loads and changes board state through the HTTP API.
 
 ## 1. Board Layout & Visual Hierarchy
 
-The interface presents a responsive 3-column layout (`TODO`, `DOING`, `DONE`). On desktop screens, columns are side-by-side; on viewports of 768 pixels or less, columns stack vertically and the note cards remain fully visible without horizontal scrolling.
+The board shows a 3-column layout: `TODO`, `DOING`, `DONE`. On desktop, columns sit side by side. On viewports of 768 pixels or less, columns stack vertically. Note cards stay fully visible without horizontal scrolling.
 
-```mermaid
-graph TD
-  Header["Board Header: Title, Create Note Trigger"]
-  subgraph KanbanColumns["Kanban Columns"]
-    TODO["TODO Column<br/>(Cards, Move to DOING, Reorder Up/Down)"]
-    DOING["DOING Column<br/>[WIP: current / limit, WIP Limit Editor]<br/>(Move to TODO/DONE, Block/Unblock, Checklist)"]
-    DONE["DONE Column<br/>(ReadOnly Checklist, Reopen to DOING)"]
-  end
-  Header --> KanbanColumns
-```
+## 2. Interaction States & Transitions
 
-## 2. Note Card Component Layout
-
-```plaintext
-+-------------------------------------------------------------+
-| [Color Badge: GREEN]                         [Delete Button]|
-|                                                             |
-| Note text content displayed with preserved whitespace...    |
-| (1..500 UTF-16 code units)                                  |
-|                                                             |
-| [Blocker Alert: "Waiting for API specs"] (if blocked)       |
-|                                                             |
-| Checklist Progress: [ 2 / 3 completed ]                     |
-| > [x] Task 1                                                |
-| > [ ] Task 2                                                |
-| > [x] Task 3                                                |
-|                                                             |
-| [Up] [Down] | [Move to DOING / Move to DONE / Reopen]       |
-| [Edit Note] | [Manage Checklist] | [Block/Unblock]          |
-+-------------------------------------------------------------+
-```
-## 3. Interaction States & Transitions
-
-### 3.1 Allowed In-Card Actions by Column State
+### 2.1 Allowed In-Card Actions by Column State
 
 | Action | `TODO`                                       | `DOING` | `DONE`                                 |
 | :--- |:---------------------------------------------| :--- |:---------------------------------------|
 | **Edit Text / Color** | Allowed                                      | Allowed | Allowed                                |
 | **Reorder Up / Down** | Allowed                                      | Allowed | Allowed                                |
-| **Move to DOING** | Allowed (if unblocked and DOING < WIP Limit) | N/A | Allowed (Reopen, if DOING < WIP Limit) |
+| **Move to DOING** | Allowed (if unblocked and DOING < WIP limit) | N/A | Allowed (Reopen, if DOING < WIP limit) |
 | **Move to TODO** | N/A                                          | Allowed (if unblocked) | Rejected (`INVALID_TRANSITION`)        |
-| **Move to DONE** | Rejected (`INVALID_TRANSITION`)              | Allowed (if unblocked & checklist complete) | N/A                                    |
-| **Block / Unblock** | Allowed                                      | Allowed | Controls unavailable; blocking returns `INVALID_STATUS`. |
-| **Edit Checklist** | Allowed                                      | Allowed | Read-Only                              |
+| **Move to DONE** | Rejected (`INVALID_TRANSITION`)              | Allowed (if unblocked and checklist complete) | N/A                                    |
+| **Block / Unblock** | Allowed                                      | Allowed | Controls unavailable. Blocking returns `INVALID_STATUS`. |
+| **Edit Checklist** | Allowed                                      | Allowed | Read-only                              |
 | **Delete Note** | Allowed (with confirmation)                  | Allowed (with confirmation) | Allowed (with confirmation)            |
 
-### 3.2 State Lifecycle & Edge Cases
+## 3. Request States and Conflict Handling
 
-```mermaid
-flowchart TD
-    Start([Open App]) --> Loading[Loading Board from API]
+The interface never changes the board before the server confirms a command. While a command runs, the controls that would send another command stay disabled. A polite live region reports loading, saving, and error states.
 
-    Loading -->|Success| Ready[Kanban Board Ready]
-    Loading -->|Error / Offline| NetworkError[Show Error]
+On `409 REVISION_CONFLICT`, the app:
 
-    Ready -->|User clicks Action| Submitting[Submitting Command...]
+- keeps the note text or checklist input in a local draft buffer;
+- reloads the board from the server;
+- shows an assertive `aria-live` notice that another window changed the board and that the input was preserved;
+- leaves resubmission to the user.
 
-    Submitting -->|200 / 201 OK| Ready
-    Submitting -->|400 Invalid Payload| ShowInlineError[Show Error Message]
-    Submitting -->|409 Domain Rejection| ShowInlineError
-    Submitting -->|409 Revision Conflict| Conflict[Show Conflict Notice<br/>Keep user draft intact & reload board]
-    Submitting -->|500 / 503 / Network Fail| ShowInlineError
+Automatic retry is forbidden. The user reviews the reloaded board and submits the draft again against the new `currentRevision`.
 
-    ShowInlineError --> Ready
-    Conflict --> Ready
-```
-## 4. Concurrency & Conflict Handling
+## 4. Accessibility and Responsive Behaviour
 
-When an operation fails with `409 REVISION_CONFLICT`:
+### 4.1 Keyboard, Names, and Focus
 
-* **Never mutate optimistically**: The UI never assumes state mutation before receiving server confirmation.
-* **Preserve Draft**: In-memory input (e.g., edited note text or newly typed checklist item) is preserved in a local draft buffer.
-* **Banner Notification**: An `aria-live="assertive"` banner informs the user: *"The board was updated in another window. Your changes have been preserved. Please review the updated board and click Submit again."*
-* **Resubmit Protocol**: Automatic retries are strictly forbidden. The user must manually confirm resubmission against the freshly reloaded `currentRevision`.
+All actions use buttons or form controls. No operation requires drag and drop or a pointer. Every control is reachable in document order, exposes an accessible name through visible text, an `aria-label`, or an associated label, and shows a visible focus indicator. A disabled control is not focusable.
 
----
+The four note colours form a radio group inside a `fieldset` with a `legend`. Icon-only controls, the reorder arrows, the checklist checkbox, and the conflict-notice dismissal carry an `aria-label`.
 
-## 5. Accessibility & Responsive Behavior
+Focus behaviour:
 
-### 5.1 Keyboard Navigation and Focus Management
+- Opening an editor moves focus into its first field. Closing the editor returns focus to the control that opened it.
+- Cancelling a deletion returns focus to the delete control. Confirming it moves focus to the first remaining note of the column, or to the "Nuova nota" button when the column is empty.
+- Saving a checklist rename returns focus to the rename button when the request settles.
 
-* **No Drag-and-Drop Requirement**: All movements are executed via accessible `<button>` elements (e.g., "Move to Doing", "Move Up", "Move Down").
-* **Focus Restoration**:
-    * Opening an editor moves focus into its first field.
-    * Closing an editor restores focus to the control that opened it.
-    * A deletion confirmation takes the focus and returns it to the deletion control when it is cancelled.
-    * Deleting a note moves focus to the first remaining card of the same column, or to the "Add Note" button if the column becomes empty.
-* **Form Controls**: Labels and input fields are explicitly associated via `id` and `for` attributes.
+### 4.2 Colour, Contrast, and Messages
 
-### 5.2 Visual & Sensory Cues
+The four note colours (`YELLOW`, `BLUE`, `GREEN`, `PINK`) are always available as text, and a blocked note always shows its reason, so no state depends on colour alone. Note text, colour badges, checkboxes, counters, buttons, alerts, and the conflict notice meet the WCAG AA ratio of 4.5:1 for normal text. The focus indicator meets 3:1.
 
-* **Color Representation**: Visual sticky note colors (`YELLOW`, `BLUE`, `GREEN`, `PINK`) are accompanied by explicit text badges (e.g., `[Yellow]`, `[Blue]`) and meet WCAG AA contrast standards. The measured ratios of the rendered interface are recorded in [Accessibility verification](accessibility.md).
-* **Blocked State**: A blocked note features an alert banner with the textual reason, avoiding reliance on icons alone.
+### 4.3 Reflow and Zoom
 
-### 5.3 Responsive Adaptability
-
-* **Desktop**: 3 side-by-side flex/grid columns.
-* **Mobile / Narrow Viewport (down to 360px)**: Columns stack vertically or scroll horizontally with prominent section headers. No interactive control is truncated or clipped outside the viewport.
+At 360 pixels the board shows its stacked column without horizontal scrolling or clipped text. At 200% zoom, or 640 CSS pixels, the layout stays usable without clipping. Long text wraps instead of being truncated.

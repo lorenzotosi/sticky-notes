@@ -11,7 +11,7 @@ assignees: ''
 
 ### Task Metadata
 - **Task ID**: TXXX
-- **Milestone / Gate**: R0 / R1 / R2 / R3 / R4 / R5
+- **Milestone**: Project milestone
 - **Assignee (Lead)**: Person A / Person B
 - **Reviewer**: Person A / Person B
 
