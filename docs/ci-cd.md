@@ -10,7 +10,7 @@ Delivery means build artifacts, GitHub Releases, and GitHub Pages. The pipeline 
 | Event | Jobs | Gradle command | Purpose |
 | --- | --- | --- | --- |
 | Push to a development branch | `linux-verify`, `verify` | `./gradlew check --no-daemon` | Formatting, licenses, Detekt, domain boundaries, tests, coverage, and MongoDB integration. |
-| Pull request targeting `main` | `linux-verify`, `macos-smoke`, `verify` | `./gradlew fullVerify --no-daemon` | Complete build and delivery checks: container smoke, backup and restore, clean installation, release bundle, and browser E2E. |
+| Pull request targeting `main` | `linux-verify`, `macos-smoke`, `verify` | `./gradlew fullVerify --no-daemon` | Complete build and delivery checks: container smoke, clean installation, release bundle, and browser E2E. |
 | Push to `main` | `linux-verify`, `macos-smoke`, `verify`, `release`, `docs` | `./gradlew fullVerify --no-daemon` | Repeats the full verification, then publishes the release and the documentation. |
 | Manual run from `main` | `linux-verify`, `macos-smoke`, `verify`, `docs` | `./gradlew fullVerify --no-daemon` | Runs the full verification and rebuilds every deliverable. |
 | Manual run from another branch | `linux-verify`, `macos-smoke`, `verify` | `./gradlew fullVerify --no-daemon` | Runs the full verification without publishing. |

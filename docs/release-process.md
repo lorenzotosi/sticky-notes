@@ -55,4 +55,3 @@ shasum -a 256 -c SHA256SUMS            # macOS
 
 - The stack builds its images on the target machine from digest-pinned base images. The first build needs network access.
 - The delivery covers one shared board without accounts, as described in [local scope](adr/002-local-scope.md).
-- Backup and restore are repository tooling, not part of the bundle. [backup](operations.md#backup) and [restore](operations.md#restore) describe them.
