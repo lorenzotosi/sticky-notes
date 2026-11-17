@@ -4,26 +4,26 @@
 # ADR 001: Board as the Sole Aggregate Root and Persistence Document
 
 ## Context
-The application domain requires enforcing cross-card rules, such as:
-1. Work-In-Progress limit: the `DOING` column cannot exceed `wipLimit` cards.
+The application domain requires rules across notes, such as:
+1. WIP limit: the `DOING` column cannot exceed `wipLimit` notes.
 2. Notes blocked with a reason cannot transition states.
 3. Notes cannot enter `DONE` unless all checklist items are completed.
 4. Deterministic ordered list across discrete lifecycle columns.
 
-If individual notes were modeled as independent aggregate roots stored in a separate `notes` MongoDB collection, cross-card rules like WIP limits would require distributed locking, multi-document ACID transactions, or complex saga patterns across separate document writes to prevent race conditions.
+Notes as independent aggregate roots in a separate `notes` MongoDB collection would put the WIP limit across documents. That would need distributed locking, multi-document ACID transactions, or a saga to keep the writes consistent.
 
 ## Decision
-We model `Board` as the single **Aggregate Root**. The domain stores notes and checklist items inside the aggregate. The persistence adapter stores that aggregate as a **single document** (`_id: "main"`):
-- All mutative operations pass through `Board` aggregate methods.
-- Startup creates an empty board using an insert-only upsert; an existing board is never overwritten or reset during initialization.
-- Concurrency is guarded using optimistic locking with an atomic single-document compare and swap update on the board's `revision` field.
-- The collection size is constrained to a maximum of 200 notes and 20 items per note, bounding the document size well below MongoDB's 16 MB BSON threshold.
+We model `Board` as the single aggregate root. The domain stores notes and checklist items inside the aggregate. The persistence adapter stores that aggregate as a single document (`_id: "main"`):
+- All state changes pass through `Board` methods.
+- Startup creates an empty board with an insert-only upsert. Initialization never overwrites or resets an existing board.
+- The board's `revision` field carries the optimistic lock. Each write is one atomic compare-and-swap on that field.
+- The board holds at most 200 notes and 20 items per note. The document stays well below the 16 MB BSON limit in MongoDB.
 
 ## Consequences
 ### Positive
-- **Guaranteed Consistency**: WIP constraints and ordering cannot be bypassed by concurrent updates.
-- **Transactional Simplicity**: No need for MongoDB replica sets or multi-document transactions in local development.
-- **Single Source of Truth**: The complete canonical board state is returned atomically upon mutation.
+- WIP constraints and ordering cannot be bypassed by concurrent updates.
+- Local development needs no MongoDB replica set and no multi-document transactions.
+- Each mutation returns the complete board state in one response.
 
 ### Negative / Trade-offs
-- **Write Contention**: Concurrent updates to distinct notes compete for the same board revision lock, resulting in `409 REVISION_CONFLICT` rejections. This trade-off is accepted given the single-team, local collaborative scope.
+- Concurrent updates to distinct notes compete for the same board revision. They return `409 REVISION_CONFLICT`. We accept this trade-off for the single-team, local scope.

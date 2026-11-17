@@ -35,7 +35,7 @@ java -jar backend/build/libs/backend.jar \
 
 The `local` profile binds the process to `127.0.0.1` on port `8080` (`PORT` overrides it), and the same process serves the frontend bundle at `http://127.0.0.1:8080` and the REST API under `/api`, so no reverse proxy is needed. `http://127.0.0.1:8080/actuator/health/readiness` reports both the application and the database it needs. Stop the process with `Ctrl+C`.
 
-The backend reads `MONGODB_URI` and defaults to `mongodb://127.0.0.1:27017/sticky_notes`, so the variable is optional: set it only when your MongoDB listens on another host or port, uses another database name, or requires credentials, as in `MONGODB_URI=mongodb://user:password@127.0.0.1:27017/sticky_notes?authSource=admin java -jar backend/build/libs/backend.jar …`. The MongoDB of the Compose stack above is not reachable from the host because only the web port is published, so the host run needs a database of its own.
+The backend reads `MONGODB_URI` and defaults to `mongodb://127.0.0.1:27017/sticky_notes` (while the Compose stack above configures `stickynotes`), so the variable is optional: set it only when your MongoDB listens on another host or port, uses another database name (such as `stickynotes`), or requires credentials, as in `MONGODB_URI=mongodb://user:password@127.0.0.1:27017/sticky_notes?authSource=admin java -jar backend/build/libs/backend.jar …`. The MongoDB of the Compose stack above is not reachable from the host because only the web port is published, so the host run needs a database of its own.
 
 This host run is a manual alternative for a machine without containers: the delivered shape of the product is the Compose stack above, and the bundle ships no web-server configuration for the host run.
 
