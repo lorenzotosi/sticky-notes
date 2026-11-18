@@ -19,7 +19,7 @@
 - [Requirements](requirements.md)
 - [UI and interaction design](ux.md)
 - [API contracts](contracts.md)
-- [OpenAPI definition](openapi.yaml)
+- [API reference](api-reference.html) ([raw openapi.yaml](openapi.yaml))
 
 ## Implementation
 
