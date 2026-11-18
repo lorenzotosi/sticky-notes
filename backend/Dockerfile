@@ -8,7 +8,7 @@
 # Gradle runtime, no sources, no build cache. The base image is pinned to a
 # digest, so the runtime does not change under an unchanged tag.
 
-FROM eclipse-temurin:21-jre@sha256:0b99b3376fbb50dbf9c0af8535fdd5b8eb0d3fdfc8b1e4967f383b6919f6901a
+FROM eclipse-temurin:24-jre@sha256:8cb2387a28af84cf0db0948d9c67d4480192f4e567027a3963f145d218e8b4f2
 
 # The version and the commit are supplied by the build and stored as labels,
 # so a candidate image can be traced back to the source it was produced from.
