@@ -498,21 +498,8 @@ val containerSmoke =
         commandLine(shExecutable.get(), "scripts/smoke-test.sh")
     }
 
-val backupRestoreVerify =
-    tasks.register<Exec>("backupRestoreVerify") {
-        group = "verification"
-        description = "Verifies the backup/restore roundtrip against an isolated Docker Compose stack."
-        dependsOn("buildImages")
-        workingDir = projectDir
-        commandLine(shExecutable.get(), "scripts/backup-restore-verify.sh")
-    }
-
 containerSmoke.configure {
     mustRunAfter(tasks.named("fullBuild"))
-}
-
-backupRestoreVerify.configure {
-    mustRunAfter(tasks.named("fullBuild"), containerSmoke)
 }
 
 val releaseVerify =
@@ -525,13 +512,13 @@ val releaseVerify =
     }
 
 releaseVerify.configure {
-    mustRunAfter(tasks.named("fullBuild"), containerSmoke, backupRestoreVerify)
+    mustRunAfter(tasks.named("fullBuild"), containerSmoke)
 }
 
 val frontendE2eTask = evaluationDependsOn(":frontend").tasks.named("frontendE2e")
 
 frontendE2eTask.configure {
-    mustRunAfter(tasks.named("fullBuild"), containerSmoke, backupRestoreVerify, releaseVerify)
+    mustRunAfter(tasks.named("fullBuild"), containerSmoke, releaseVerify)
 }
 
 val cleanInstallVerify =
@@ -544,11 +531,12 @@ val cleanInstallVerify =
     }
 
 cleanInstallVerify.configure {
-    mustRunAfter(tasks.named("fullBuild"), containerSmoke, backupRestoreVerify)
+    mustRunAfter(tasks.named("fullBuild"), containerSmoke)
 }
 
 tasks.register("fullVerify") {
     group = "verification"
-    description = "Runs the full build, MongoDB integration tests, container lifecycle checks, backup and restore, and browser E2E."
-    dependsOn("fullBuild", containerSmoke, backupRestoreVerify, cleanInstallVerify, releaseVerify, frontendE2eTask)
+    description = "Runs the full build, MongoDB integration tests, container lifecycle checks, " +
+        "clean installation, release bundle, and browser E2E."
+    dependsOn("fullBuild", containerSmoke, cleanInstallVerify, releaseVerify, frontendE2eTask)
 }

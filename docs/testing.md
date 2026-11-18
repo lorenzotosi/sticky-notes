@@ -152,15 +152,6 @@ docker compose ps
 
 Every service must be `healthy`. Only `web` publishes a port, on `127.0.0.1:8080`. `GET /api/board` must return the snapshot through the proxy. An unknown `/api/*` path must return JSON rather than the page. A note created before `./scripts/stop-local.sh` must still exist after `./scripts/start-local.sh`. The development override is checked with `./scripts/start-local.sh --dev`. It publishes the API on `8080`, MongoDB on `27017`, and nothing for `web`.
 
-### Backup and restore
-
-```sh
-./gradlew buildImages
-./gradlew backupRestoreVerify
-```
-
-The task backs up a board with a note, a checklist item, and a blocker. It checks the manifest, restores into a new volume, starts a second stack, and compares the snapshots. It also checks that a restore into an existing volume stops without confirmation, and that teardown leaves no container, volume, or network behind. Procedures are in [Operations](operations.md#backup).
-
 ## Other test scopes
 
 - `frontend/src/App.test.js` mounts the app with mocked HTTP and checks loading, creation, deletion confirmation, and movement.

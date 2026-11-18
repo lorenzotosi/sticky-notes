@@ -127,10 +127,6 @@ The check covers:
 
 The check also stops the whole stack with `docker compose down`, keeps the named volume, and starts the stack again to confirm that the board survives the restart. On failure it prints container statuses and logs, then removes the isolated containers and volume.
 
-### Backup and restore
-
-The named volume survives stops and restarts but is not a backup. Use `scripts/backup.sh` and `scripts/restore.sh`. [Operations](operations.md#backup) has the procedures, data compatibility, and volume-safety rules.
-
 ## Troubleshooting
 
 | Symptom | Cause | Check and remedy |

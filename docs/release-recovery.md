@@ -47,7 +47,7 @@ A partial publication can occur when the tag `vX.Y.Z` exists on `main` and the u
 
 ## Local data-safe rollback
 
-A local deployment runs from an extracted release bundle and stores the board in the named volume `sticky-notes_mongo-data` (`schemaVersion=1`). Rolling back to an earlier bundle replaces the `api` and `web` containers while keeping the MongoDB volume intact (the bundle ships no shell scripts; backup and restore tooling belongs to the source repository, as documented in [Operations](operations.md#backup)):
+A local deployment runs from an extracted release bundle and stores the board in the named volume `sticky-notes_mongo-data` (`schemaVersion=1`). Rolling back to an earlier bundle replaces the `api` and `web` containers while keeping the MongoDB volume intact:
 
 1. Check `build/docs/operations.md` in the target older bundle to confirm it uses a compatible persisted schema (`schemaVersion=1`).
 2. From the current deployment directory, stop the running containers without `--volumes`:
