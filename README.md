@@ -3,7 +3,7 @@
 
 # Sticky Notes
 
-A Kanban web application for a single shared board of sticky notes. Notes are created, edited, moved between columns, blocked, and annotated with checklists!
+A Kanban web application for a single shared board of sticky notes. Notes are created, edited, moved between columns, blocked, and annotated with checklists.
 
 ## Run the released bundle with Docker Compose
 
